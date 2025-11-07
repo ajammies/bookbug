@@ -6,5 +6,5 @@
 4. **Chat plumbing** – Use the shared `ChatCli` helper to manage readline loops. Specialized runners (e.g., concierge intake) should be composed by passing their chat interface into this class rather than duplicating CLI logic elsewhere.
 5. **Interface layout** – CLI and future entrypoints (API, MCP, etc.) live under `src/workflows/` alongside the main workflow so callers share one coordination layer.
 6. **Naming conventions** – Continue using the studio metaphor (“Concierge”, “Author”, “ArtDirector”, “Illustrator”, “MainWorkflow”) across code, docs, and configuration files.
-7. **Agent configuration** – Keep OpenAI model selection and env parsing within the agents domain (`agentConfig`); avoid scattering model names in unrelated directories.
+7. **Agent configuration** – Keep provider selection and env parsing within the agents domain (`agentSecrets` + adapters); avoid scattering model names in unrelated directories.
 8. **Future TODO** – Add a chat interfaces directory when we expand beyond the CLI so reusable chat types stay organized.

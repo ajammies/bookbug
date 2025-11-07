@@ -1,10 +1,10 @@
 // ConciergeAgent is the greeter node in our system. It chats with humans,
 // collects story specs, and hands over a clean StoryBrief to downstream agents.
 // Think of it as the warm receptionist for the narrative factory.
-import { Agent, type AgentInputItem, run } from '@openai/agents';
 import { StoryBrief, StoryBriefSchema } from '../protocols/storyProtocols.js';
 import { logger as defaultLogger } from '@bookbug/shared';
-import { AgentConfig } from './agentConfig.js';
+import { run, type AgentMessage, type AgentProvider } from './providers/agentProvider.js';
+import { OpenAIAgentProvider } from './providers/openAIAgentProvider.js';
 
 export const READY_TO_EXTRACT_TOKEN = '[READY_TO_EXTRACT]';
 
@@ -13,28 +13,26 @@ export interface ConciergeChat {
   extract(): Promise<StoryBrief>;
 }
 
-export interface ConciergeAgentConfig {
-  model?: string;
-  log?: typeof defaultLogger;
-}
-
 export class ConciergeAgent {
-  private readonly conversationAgent: Agent;
-  private readonly extractionAgent: Agent<StoryBrief, typeof StoryBriefSchema>;
+  private readonly conversationAgent: AgentProvider<string>;
+  private readonly extractionAgent: AgentProvider<StoryBrief>;
   private readonly log: typeof defaultLogger;
 
-  constructor({ model = AgentConfig.model('concierge'), log = defaultLogger }: ConciergeAgentConfig = {}) {
+  constructor(log: typeof defaultLogger = defaultLogger) {
     this.log = log;
-    this.conversationAgent = new Agent({
+    const conversationInstructions = buildIntakeConversationInstructions();
+    const extractionInstructions = buildIntakeExtractionInstructions();
+
+    this.conversationAgent = new OpenAIAgentProvider<string>({
       name: 'BookBug Concierge Companion',
-      instructions: buildIntakeConversationInstructions(),
-      model,
+      instructions: conversationInstructions,
+      model: 'gpt-4.1-mini',
     });
 
-    this.extractionAgent = new Agent({
+    this.extractionAgent = new OpenAIAgentProvider<StoryBrief>({
       name: 'BookBug Concierge Extractor',
-      instructions: buildIntakeExtractionInstructions(),
-      model,
+      instructions: extractionInstructions,
+      model: 'gpt-4.1-mini',
       outputType: StoryBriefSchema,
     });
   }
@@ -42,7 +40,7 @@ export class ConciergeAgent {
   // Each chat instance represents an onboarding session with one author.
   // We keep the thread locally so the extractor can read the full history later.
   createChat(): ConciergeChat {
-    let thread: AgentInputItem[] = [];
+    let thread: AgentMessage[] = [];
 
     return {
       send: async (message: string) => {
@@ -53,11 +51,7 @@ export class ConciergeAgent {
       },
       extract: async () => {
         const extractionResult = await run(this.extractionAgent, thread);
-        const parsed = extractionResult.finalOutput;
-        if (!parsed) {
-          throw new Error('Concierge agent did not return structured intake data');
-        }
-
+        const parsed = extractionResult.finalOutput as StoryBrief;
         this.log.info({ title: parsed.title }, 'Concierge agent produced story intake');
         return parsed;
       },

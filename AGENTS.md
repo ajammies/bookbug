@@ -11,7 +11,8 @@
   - `logs/` – CLI transcripts and debugging notes; delete as needed.
   - `src/` – authoring source tree:
     - `index.ts` – single export surface consumed by downstream apps.
-    - `agents/` – role classes (`conciergeAgent.ts`, `artDirectorAgent.ts`, etc.) plus `agentConfig.ts` for model/env wiring.
+    - `agents/` – role classes (`conciergeAgent.ts`, `artDirectorAgent.ts`, etc.) plus `agentSecrets.ts` for retrieving optional API keys.
+    - `agents/providers/` – the `AgentProvider` base class plus `OpenAIAgentProvider` and `ClaudeAgentProvider`, each in their own file; agents instantiate these directly.
     - `workflows/` – orchestration (`mainWorkflow.ts`, `briefToBookWorkflow.ts`).
     - `interfaces/cli/` – terminal UI glue (`cliInterface.ts`, `chatCli.ts`).
     - `protocols/` – Zod schemas for `StoryBrief`, `StoryDraft`, etc.
@@ -32,4 +33,4 @@ Use 2-space indentation, ESM imports, and strict TS. Classes stay PascalCase, fu
 Write short imperative commits (“Add art director prompts”) that cover one change. Reference issue IDs when available. Every PR needs a summary, the commands you ran (`npm run dev`, `npm run lint`, etc.), screenshots or sample story output for UX-facing tweaks, and a note about new env vars or config switches. Call out directory or schema additions so reviewers can map them to the overview above.
 
 ## Security & Configuration Tips
-`OPENAI_API_KEY` is validated via `src/agents/agentConfig.ts`; export it in your shell or `.env.local` before running workflows. Never commit secrets or raw story data. When overriding model selections, update `AgentConfig.MODELS` or pass constructor overrides so all agents reference a single source of truth, and document the change inside your PR description.
+`OPENAI_API_KEY` and `ANTHROPIC_API_KEY` stay optional until runtime; `src/agents/agentSecrets.ts` exposes helpers the adapters call right before hitting each API. Set whichever key you need in your shell, never commit secrets, and document any provider/model changes when you edit an agent constructor.

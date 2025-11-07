@@ -1,36 +1,21 @@
 // IllustratorAgent is the production floor. It consumes art director briefs and
 // outputs tangible image metadata while logging any failures for the org.
-import { Agent, run } from '@openai/agents';
 import { IllustrationPlan, RenderedImage, RenderedImageSchema } from '../protocols/storyProtocols.js';
 import { ImageStore } from '../utils/imageStore.js';
 import { logger as defaultLogger } from '@bookbug/shared';
-import { AgentConfig } from './agentConfig.js';
+import { run, type AgentProvider } from './providers/agentProvider.js';
+import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 import { z } from 'zod';
-
-export interface IllustratorAgentConfig {
-  model?: string;
-  log?: typeof defaultLogger;
-}
 
 export class IllustratorAgent {
   // Renderer relies on planner input plus the shared ImageStore to leave
   // artifacts other systems can reuse (web preview, print, etc.).
-  private readonly agent: Agent<IllustratorContext, typeof IMAGE_RENDER_RESPONSE_SCHEMA>;
+  private readonly agent: AgentProvider<ImageRenderResult>;
   private readonly log: typeof defaultLogger;
 
-  constructor({ model = AgentConfig.model('illustrator'), log = defaultLogger }: IllustratorAgentConfig = {}) {
+  constructor(log: typeof defaultLogger = defaultLogger) {
     this.log = log;
-    this.agent = new Agent({
-      name: 'BookBug Illustrator',
-      instructions: ({ context }) => {
-        if (!context) {
-          throw new Error('Illustrator agent requires context');
-        }
-        return buildIllustratorInstructions(context);
-      },
-      model,
-      outputType: IMAGE_RENDER_RESPONSE_SCHEMA,
-    });
+    this.agent = this.createAdapter();
   }
 
   async render(storyTitle: string, plan: IllustrationPlan, imageStore: ImageStore): Promise<RenderedImage[]> {
@@ -39,13 +24,7 @@ export class IllustratorAgent {
     for (const page of plan.pages) {
       const response = await run(
         this.agent,
-        '',
-        {
-          context: {
-            prompt: page.prompt,
-            stylePreset: page.stylePreset,
-          },
-        }
+        buildIllustratorPrompt({ prompt: page.prompt, stylePreset: page.stylePreset })
       );
 
       const parsed = response.finalOutput as ImageRenderResult | undefined;
@@ -71,12 +50,18 @@ export class IllustratorAgent {
     this.log.info({ title: storyTitle, pages: renders.length }, 'Illustrator agent produced images');
     return renders;
   }
-}
 
-type IllustratorContext = {
-  prompt: string;
-  stylePreset?: string;
-};
+  private createAdapter(): AgentProvider<ImageRenderResult> {
+    const instructions = ILLUSTRATOR_SYSTEM_INSTRUCTIONS;
+    return new ClaudeAgentProvider<ImageRenderResult>({
+      name: 'BookBug Illustrator',
+      instructions,
+      model: CLAUDE_ILLUSTRATOR_MODEL,
+      outputType: IMAGE_RENDER_RESPONSE_SCHEMA,
+      maxOutputTokens: 1024,
+    });
+  }
+}
 
 const IMAGE_RENDER_RESPONSE_SCHEMA = z.object({
   status: z.enum(['success', 'failed']),
@@ -87,10 +72,13 @@ const IMAGE_RENDER_RESPONSE_SCHEMA = z.object({
 
 type ImageRenderResult = z.infer<typeof IMAGE_RENDER_RESPONSE_SCHEMA>;
 
-function buildIllustratorInstructions(context: IllustratorContext): string {
-  const styleText = context.stylePreset ? `Style preset: ${context.stylePreset}\n` : '';
-  return `${styleText}Primary prompt:
-${context.prompt}
+const ILLUSTRATOR_SYSTEM_INSTRUCTIONS = `You are the BookBug Illustrator. When prompted, decide whether the description can be rendered. Respond with JSON containing status, optional imageUrl, optional seed, and optional errorMessage.`;
 
-Render a single high-quality illustration that matches the description. Respond with JSON containing {"status":"success"|"failed","imageUrl":"<url>","seed":<number?>,"errorMessage":"<optional>"}.`;
+function buildIllustratorPrompt(context: { prompt: string; stylePreset?: string }): string {
+  const styleText = context.stylePreset ? `Style preset: ${context.stylePreset}` : 'Style preset: default storybook';
+  return `${styleText}
+Primary prompt:
+${context.prompt}`;
 }
+
+const CLAUDE_ILLUSTRATOR_MODEL = 'claude-3-5-sonnet-20241022';

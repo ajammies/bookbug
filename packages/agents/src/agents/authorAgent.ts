@@ -1,45 +1,38 @@
 // AuthorAgent is the novelist node. It receives the story brief and
 // produces a structured draft the rest of the organization can trust.
-import { Agent, run } from '@openai/agents';
 import { StoryDraft, StoryDraftSchema, StoryBrief } from '../protocols/storyProtocols.js';
 import { logger as defaultLogger } from '@bookbug/shared';
-import { AgentConfig } from './agentConfig.js';
-
-export interface AuthorAgentConfig {
-  model?: string;
-  log?: typeof defaultLogger;
-}
+import { run, type AgentProvider } from './providers/agentProvider.js';
+import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 
 export class AuthorAgent {
   // This agent sits between brief capture and illustration planning. Everyone
   // downstream relies on its JSON output, so we validate aggressively.
-  private readonly agent: Agent<StoryBrief, typeof StoryDraftSchema>;
+  private readonly agent: AgentProvider<StoryDraft>;
   private readonly log: typeof defaultLogger;
 
-  constructor({ model = AgentConfig.model('author'), log = defaultLogger }: AuthorAgentConfig = {}) {
+  constructor(log: typeof defaultLogger = defaultLogger) {
     this.log = log;
-    this.agent = new Agent({
-      name: 'BookBug Author',
-      instructions: ({ context }) => {
-        if (!context) {
-          throw new Error('Author agent requires a story brief context');
-        }
-        return buildAuthorInstructions(context);
-      },
-      model,
-      outputType: StoryDraftSchema,
-    });
+    this.agent = this.createAdapter();
   }
 
   async draft(brief: StoryBrief): Promise<StoryDraft> {
-    const result = await run(this.agent, '', { context: brief });
-    const parsed = result.finalOutput;
-    if (!parsed) {
-      throw new Error('Author agent did not return a structured story draft');
-    }
-
+    const prompt = buildAuthorPrompt(brief);
+    const result = await run(this.agent, prompt);
+    const parsed = result.finalOutput as StoryDraft;
     this.log.info({ title: parsed.title, pages: parsed.pages.length }, 'Author agent produced draft');
     return parsed;
+  }
+
+  private createAdapter(): AgentProvider<StoryDraft> {
+    const instructions = buildAuthorSystemInstructions();
+    return new ClaudeAgentProvider<StoryDraft>({
+      name: 'BookBug Author',
+      instructions,
+      model: CLAUDE_AUTHOR_MODEL,
+      outputType: StoryDraftSchema,
+      maxOutputTokens: 4096,
+    });
   }
 }
 
@@ -107,28 +100,28 @@ QUICK VERIFY:
 
 Final test: Would a parent enjoy rereading this? Does it feel emotionally honest? Could a child see themselves in it?`;
 
-function buildAuthorInstructions(brief: StoryBrief): string {
-  const briefJson = JSON.stringify(brief, null, 2);
-  const schemaDescription = JSON.stringify(StoryDraftSchema.shape, null, 2);
-  const plotGuidance = buildPlotGuidance(brief.plotBeats, brief.allowCreativeLiberty);
+const STORY_DRAFT_SCHEMA_TEXT = JSON.stringify(StoryDraftSchema.shape, null, 2);
+const CLAUDE_AUTHOR_MODEL = 'claude-3-5-sonnet-20241022';
 
-  return `Generate a high-quality children's storybook with exactly the requested number of pages based on these input parameters:
+function buildAuthorSystemInstructions(): string {
+  return `You are the BookBug Author. Follow the quality checklist, honor any plot requirements, and respond with JSON only.
 
-${briefJson}
-
-${plotGuidance}QUALITY GUIDELINES:
+Quality checklist:
 ${STORY_QUALITY_GUIDELINES}
 
-TECHNICAL REQUIREMENTS:
-- Produce the requested page count; each page requires text and imagePrompt fields.
-- Image prompts should be detailed visual descriptions (setting, characters, actions, mood).
-- Page numbers must be sequential starting from 1.
+Return objects that satisfy this schema:
+${STORY_DRAFT_SCHEMA_TEXT}`;
+}
 
-Return ONLY valid JSON matching this output schema:
+function buildAuthorPrompt(brief: StoryBrief): string {
+  const briefJson = JSON.stringify(brief, null, 2);
+  const plotGuidance = buildPlotGuidance(brief.plotBeats, brief.allowCreativeLiberty);
+  return `Story brief:
+${briefJson}
 
-${schemaDescription}
-
-Do not include any other text, explanation, or markdown formatting.`;
+${plotGuidance}TASK:
+- Produce ${brief.pageCount} pages with "pageNumber", "summary", "text", and "imagePrompt".
+- Keep tone age-appropriate and consistent with theme, moral, and characters.`;
 }
 
 function buildPlotGuidance(plotPoints: string[] | undefined, allowCreativeLiberty: boolean | undefined): string {

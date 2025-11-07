@@ -41,8 +41,10 @@ During the CLI session you’ll chat with the receptionist directly in your term
 
 ## Customizing the Crew
 
-- Swap models: pass custom `OPENAI_MODELS` entries into each agent’s constructor.
+- Swap models/providers by editing each agent constructor (they now default to Claude everywhere except the concierge, which stays on GPT-4.1 mini for conversation/extraction).
 - Replace utils: implement the `ImageStore` interface (e.g., S3, database) and inject it into `MainWorkflow`.
 - Provide your own brief: instantiate `BriefToBookWorkflow` with a validated `StoryBrief` to skip the concierge entirely.
+
+All role classes call into `src/agents/providers/`, which houses the `AgentProvider` base class plus concrete `OpenAIAgentProvider` and `ClaudeAgentProvider`. The adapters read API keys from `agentSecrets.ts` only when invoked, so keep `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` unset until you actually run that provider—then export the one you need or hardcode secrets when editing a constructor.
 
 Because every agent is a tiny class with a single verb (`createChat`, `draft`, `plan`, `render`), you can test or replace them independently without touching the others. The studio stays understandable, friendly, and easy to reconfigure.

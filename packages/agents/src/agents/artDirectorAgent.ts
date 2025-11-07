@@ -1,35 +1,20 @@
 // ArtDirectorAgent literally acts as art director. It reads the writer's draft and
 // briefs the illustrator with page-by-page visual goals.
-import { Agent, run } from '@openai/agents';
 import { IllustrationPlan, IllustrationPlanSchema, StoryDraft } from '../protocols/storyProtocols.js';
 import { logger as defaultLogger } from '@bookbug/shared';
-import { AgentConfig } from './agentConfig.js';
+import { run, type AgentProvider } from './providers/agentProvider.js';
+import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 import { z } from 'zod';
-
-export interface ArtDirectorAgentConfig {
-  model?: string;
-  log?: typeof defaultLogger;
-}
 
 export class ArtDirectorAgent {
   // The planner bridges narrative beats and future renders, so its output
   // keeps track of consistent style guidance for every visual node.
-  private readonly agent: Agent<ArtDirectorContext, typeof IMAGE_PROMPT_SCHEMA>;
+  private readonly agent: AgentProvider<ImagePrompt>;
   private readonly log: typeof defaultLogger;
 
-  constructor({ model = AgentConfig.model('artDirector'), log = defaultLogger }: ArtDirectorAgentConfig = {}) {
+  constructor(log: typeof defaultLogger = defaultLogger) {
     this.log = log;
-    this.agent = new Agent({
-      name: 'BookBug Art Director',
-      instructions: ({ context }) => {
-        if (!context) {
-          throw new Error('Art director agent requires context');
-        }
-        return buildArtDirectorInstructions(context);
-      },
-      model,
-      outputType: IMAGE_PROMPT_SCHEMA,
-    });
+    this.agent = this.createAdapter();
   }
 
   async plan(draft: StoryDraft): Promise<IllustrationPlan> {
@@ -38,21 +23,15 @@ export class ArtDirectorAgent {
         const stylePreset = draft.styleNotes || draft.characters[0]?.traits.join(', ') || DEFAULT_IMAGE_STYLE;
         const response = await run(
           this.agent,
-          '',
-          {
-            context: {
-              storyTitle: draft.title,
-              pageSummary: page.summary,
-              imageConcept: page.imageConcept,
-              preferredStyle: stylePreset,
-            },
-          }
+          buildArtDirectorPrompt({
+            storyTitle: draft.title,
+            pageSummary: page.summary,
+            imageConcept: page.imageConcept,
+            preferredStyle: stylePreset,
+          })
         );
 
-        const parsed = response.finalOutput as ImagePrompt | undefined;
-        if (!parsed) {
-          throw new Error('Art director agent did not return structured prompt data');
-        }
+        const parsed = response.finalOutput as ImagePrompt;
 
         return {
           pageNumber: page.pageNumber,
@@ -74,6 +53,17 @@ export class ArtDirectorAgent {
     this.log.info({ title: plan.storyTitle, pages: plan.pages.length }, 'Art director agent produced prompts');
     return validated;
   }
+
+  private createAdapter(): AgentProvider<ImagePrompt> {
+    const instructions = ART_DIRECTOR_SYSTEM_INSTRUCTIONS;
+    return new ClaudeAgentProvider<ImagePrompt>({
+      name: 'BookBug Art Director',
+      instructions,
+      model: CLAUDE_ART_DIRECTOR_MODEL,
+      outputType: IMAGE_PROMPT_SCHEMA,
+      maxOutputTokens: 1024,
+    });
+  }
 }
 
 export const DEFAULT_IMAGE_STYLE = 'storybook-watercolor';
@@ -93,26 +83,18 @@ type ArtDirectorContext = {
 
 type ImagePrompt = z.infer<typeof IMAGE_PROMPT_SCHEMA>;
 
-function buildArtDirectorInstructions(context: ArtDirectorContext): string {
-  const preferredStyle = context.preferredStyle ? `\nPreferred style from user/story context: ${context.preferredStyle}` : '';
-  return `Story Title: ${context.storyTitle}
+const ART_DIRECTOR_SYSTEM_INSTRUCTIONS = `You are the BookBug Art Director. When you receive a request, respond with JSON containing prompt, negativePrompt (optional), and stylePreset. Maintain visual continuity, highlight emotional beats, and keep outputs kid-friendly.`;
 
-Story Page Summary:
-${context.pageSummary}
+const CLAUDE_ART_DIRECTOR_MODEL = 'claude-3-5-sonnet-20241022';
 
-Author Image Concept:
-${context.imageConcept}
+function buildArtDirectorPrompt(context: ArtDirectorContext): string {
+  const preferredStyle = context.preferredStyle ? `Preferred style cues: ${context.preferredStyle}` : 'Preferred style cues: none provided';
+  return `Story title: ${context.storyTitle}
+Page summary: ${context.pageSummary}
+Author concept: ${context.imageConcept}
+${preferredStyle}
 
-${IMAGE_STYLE_GUIDANCE}
-
-Respond with a single JSON object:
-{
-  "prompt": "<detailed image prompt>",
-  "negativePrompt": "<optional negatives>",
-  "stylePreset": "<style instructions>"
-}
-
-If the user provided a preferred style, integrate it naturally. Provide concrete visual details (lighting, mood, composition).${preferredStyle}`;
+${IMAGE_STYLE_GUIDANCE}`;
 }
 
 const IMAGE_STYLE_GUIDANCE = `Image Generation Guidelines
