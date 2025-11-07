@@ -1,0 +1,1 @@
+{"version":3,"file":"mcpServer.js","sourceRoot":"","sources":["../../../src/interfaces/mcp/mcpServer.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,iCAAiC,CAAC;AAC/D,OAAO,EAAE,oBAAoB,EAAE,MAAM,2BAA2B,CAAC;AAEjE,MAAM,CAAC,KAAK,UAAU,cAAc;IAClC,MAAM,QAAQ,GAAG,IAAI,YAAY,CAAC,IAAI,oBAAoB,EAAE,CAAC,CAAC;IAC9D,yDAAyD;IACzD,OAAO,EAAE,QAAQ,EAAE,CAAC;AACtB,CAAC"}
