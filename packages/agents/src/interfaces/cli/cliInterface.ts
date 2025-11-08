@@ -2,7 +2,8 @@
 // watches the main workflow coordinate the rest.
 import { MainWorkflow } from '../../workflows/mainWorkflow.js';
 import { FileSystemImageStore } from '../../utils/imageStore.js';
-import { logger } from '@bookbug/shared';
+import '../../config/loadEnv.js';
+import { logger } from '../../shared/logger.js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 

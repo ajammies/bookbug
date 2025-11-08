@@ -34,6 +34,9 @@ Each protocol (schema) lives in `src/protocols/storyProtocols.ts` so the entire 
 ```bash
 cd packages/agents
 npm install
+# copy env template and add your keys
+cp .env.example .env
+# edit .env with OPENAI/ANTHROPIC keys
 npm run dev   # launches src/interfaces/cli/cliInterface.ts via tsx watch (see package.json script)
 ```
 
@@ -45,6 +48,6 @@ During the CLI session you’ll chat with the receptionist directly in your term
 - Replace utils: implement the `ImageStore` interface (e.g., S3, database) and inject it into `MainWorkflow`.
 - Provide your own brief: instantiate `BriefToBookWorkflow` with a validated `StoryBrief` to skip the concierge entirely.
 
-All role classes call into `src/agents/providers/`, which houses the `AgentProvider` base class plus concrete `OpenAIAgentProvider` and `ClaudeAgentProvider`. The adapters read API keys from `agentSecrets.ts` only when invoked, so keep `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` unset until you actually run that provider—then export the one you need or hardcode secrets when editing a constructor.
+All role classes call into `src/agents/providers/`, which houses the `AgentProvider` base class plus concrete `OpenAIAgentProvider` and `ClaudeAgentProvider`. The adapters pull API keys via `src/config/loadEnv.ts`, so drop them into `.env` (or export them in your shell) before running any workflow.
 
 Because every agent is a tiny class with a single verb (`createChat`, `draft`, `plan`, `render`), you can test or replace them independently without touching the others. The studio stays understandable, friendly, and easy to reconfigure.

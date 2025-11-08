@@ -7,7 +7,7 @@ import { IllustratorAgent } from '../agents/illustratorAgent.js';
 import { type StoryDraft, type StoryBrief, type IllustrationPlan, type RenderedImage } from '../protocols/storyProtocols.js';
 import { ChatCli } from '../interfaces/cli/chatCli.js';
 import type { ImageStore } from '../utils/imageStore.js';
-import { logger as defaultLogger } from '@bookbug/shared';
+import { logger as defaultLogger } from '../shared/logger.js';
 
 export interface MainWorkflowOptions {
   exitToken?: string;

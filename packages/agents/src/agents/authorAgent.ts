@@ -1,7 +1,7 @@
 // AuthorAgent is the novelist node. It receives the story brief and
 // produces a structured draft the rest of the organization can trust.
 import { StoryDraft, StoryDraftSchema, StoryBrief } from '../protocols/storyProtocols.js';
-import { logger as defaultLogger } from '@bookbug/shared';
+import { logger as defaultLogger } from '../shared/logger.js';
 import { run, type AgentProvider } from './providers/agentProvider.js';
 import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 

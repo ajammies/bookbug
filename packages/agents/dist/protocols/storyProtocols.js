@@ -1,8 +1,8 @@
 import { z } from 'zod';
 // All schemas live here so each agent shares literal contract definitions.
 // References:
-// - ConciergeAgent emits StoryIntake
-// - AuthorAgent consumes StoryIntake and emits StoryDraft
+// - ConciergeAgent emits StoryBrief
+// - AuthorAgent consumes StoryBrief and emits StoryDraft
 // - ArtDirectorAgent consumes StoryDraft and emits IllustrationPlan
 // - IllustratorAgent consumes IllustrationPlan and emits RenderedImage
 const PAGE_MIN = 8;
@@ -27,7 +27,7 @@ export const StoryCharacterSchema = z.object({
     traits: z.array(z.string().min(1)).default([]),
 });
 // ConciergeAgent output; AuthorAgent relies on every field here.
-export const StoryIntakeSchema = z.object({
+export const StoryBriefSchema = z.object({
     title: z.string().min(1),
     theme: z.string().min(1),
     tone: z.string().optional(),
@@ -81,14 +81,24 @@ export const IllustrationPlanSchema = z.object({
     globalStyle: z.string().min(1),
     pages: z.array(IllustrationPlanPageSchema).min(1),
 });
+export const ImagePromptSchema = z.object({
+    prompt: z.string().min(1),
+    negativePrompt: z.string().optional(),
+    stylePreset: z.string().optional(),
+});
 // IllustratorAgent output that storage + web layers ingest.
 export const RenderedImageSchema = z.object({
     pageNumber: z.number().int().min(1),
     imagePath: z.string().min(1),
     prompt: z.string().min(1),
     stylePreset: z.string().min(1),
-    provider: z.string().min(1),
     seed: z.number().int().optional(),
     createdAt: z.string().datetime(),
+});
+export const ImageRenderResponseSchema = z.object({
+    status: z.enum(['success', 'failed']),
+    imageUrl: z.string().url().optional(),
+    seed: z.number().int().optional(),
+    errorMessage: z.string().optional(),
 });
 //# sourceMappingURL=storyProtocols.js.map

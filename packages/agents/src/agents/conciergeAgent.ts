@@ -2,7 +2,7 @@
 // collects story specs, and hands over a clean StoryBrief to downstream agents.
 // Think of it as the warm receptionist for the narrative factory.
 import { StoryBrief, StoryBriefSchema } from '../protocols/storyProtocols.js';
-import { logger as defaultLogger } from '@bookbug/shared';
+import { logger as defaultLogger } from '../shared/logger.js';
 import { run, type AgentMessage, type AgentProvider } from './providers/agentProvider.js';
 import { OpenAIAgentProvider } from './providers/openAIAgentProvider.js';
 

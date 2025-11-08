@@ -3,7 +3,7 @@ import { ArtDirectorAgent } from '../agents/artDirectorAgent.js';
 import { IllustratorAgent } from '../agents/illustratorAgent.js';
 import { StoryBriefSchema, type StoryDraft, type IllustrationPlan, type RenderedImage, type StoryBrief } from '../protocols/storyProtocols.js';
 import type { ImageStore } from '../utils/imageStore.js';
-import { logger as defaultLogger } from '@bookbug/shared';
+import { logger as defaultLogger } from '../shared/logger.js';
 
 export interface BriefToBookOptions {
   brief: StoryBrief;

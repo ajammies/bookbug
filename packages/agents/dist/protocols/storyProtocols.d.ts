@@ -9,7 +9,7 @@ export declare const StoryCharacterSchema: z.ZodObject<{
     role: z.ZodOptional<z.ZodString>;
     traits: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
-export declare const StoryIntakeSchema: z.ZodObject<{
+export declare const StoryBriefSchema: z.ZodObject<{
     title: z.ZodString;
     theme: z.ZodString;
     tone: z.ZodOptional<z.ZodString>;
@@ -33,7 +33,7 @@ export declare const StoryIntakeSchema: z.ZodObject<{
     styleReferences: z.ZodDefault<z.ZodArray<z.ZodString>>;
     dedication: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-export type StoryIntake = z.infer<typeof StoryIntakeSchema>;
+export type StoryBrief = z.infer<typeof StoryBriefSchema>;
 export declare const StoryPageSchema: z.ZodObject<{
     pageNumber: z.ZodNumber;
     summary: z.ZodString;
@@ -99,14 +99,29 @@ export declare const IllustrationPlanSchema: z.ZodObject<{
     }, z.core.$strip>>;
 }, z.core.$strip>;
 export type IllustrationPlan = z.infer<typeof IllustrationPlanSchema>;
+export declare const ImagePromptSchema: z.ZodObject<{
+    prompt: z.ZodString;
+    negativePrompt: z.ZodOptional<z.ZodString>;
+    stylePreset: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+export type ImagePrompt = z.infer<typeof ImagePromptSchema>;
 export declare const RenderedImageSchema: z.ZodObject<{
     pageNumber: z.ZodNumber;
     imagePath: z.ZodString;
     prompt: z.ZodString;
     stylePreset: z.ZodString;
-    provider: z.ZodString;
     seed: z.ZodOptional<z.ZodNumber>;
     createdAt: z.ZodString;
 }, z.core.$strip>;
 export type RenderedImage = z.infer<typeof RenderedImageSchema>;
+export declare const ImageRenderResponseSchema: z.ZodObject<{
+    status: z.ZodEnum<{
+        success: "success";
+        failed: "failed";
+    }>;
+    imageUrl: z.ZodOptional<z.ZodString>;
+    seed: z.ZodOptional<z.ZodNumber>;
+    errorMessage: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+export type ImageRenderResult = z.infer<typeof ImageRenderResponseSchema>;
 //# sourceMappingURL=storyProtocols.d.ts.map

@@ -7,7 +7,7 @@ import {
   type ImagePrompt,
   StoryDraft,
 } from '../protocols/storyProtocols.js';
-import { logger as defaultLogger } from '@bookbug/shared';
+import { logger as defaultLogger } from '../shared/logger.js';
 import { run, type AgentProvider } from './providers/agentProvider.js';
 import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 

@@ -8,7 +8,7 @@ import {
   RenderedImageSchema,
 } from '../protocols/storyProtocols.js';
 import { ImageStore } from '../utils/imageStore.js';
-import { logger as defaultLogger } from '@bookbug/shared';
+import { logger as defaultLogger } from '../shared/logger.js';
 import { run, type AgentProvider } from './providers/agentProvider.js';
 import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 
