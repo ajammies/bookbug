@@ -6,8 +6,6 @@ import { logger as defaultLogger } from '../shared/logger.js';
 import { run, type AgentMessage, type AgentProvider } from './providers/agentProvider.js';
 import { OpenAIAgentProvider } from './providers/openAIAgentProvider.js';
 
-export const READY_TO_EXTRACT_TOKEN = '[READY_TO_EXTRACT]';
-
 export interface ConciergeChat {
   send(message: string): Promise<string>;
   extract(): Promise<StoryBrief>;
@@ -90,9 +88,9 @@ WORKFLOW:
    - Make it conversational and non-technical
 5. Then suggest a creative title based on the story and ask if they like it
 6. If they want changes, work with them conversationally to refine the title
-7. Only after the title is confirmed, respond with ONLY the text: ${READY_TO_EXTRACT_TOKEN}
+7. Only after the title is confirmed, respond with ONLY the text: ${ConciergeAgent.EXIT_TOKEN}
 
-Do not include ${READY_TO_EXTRACT_TOKEN} in any other message. It should be the complete response by itself.
+Do not include ${ConciergeAgent.EXIT_TOKEN} in any other message. It should be the complete response by itself.
 
 Start by warmly greeting the user and asking about their story idea in a friendly way.`;
   }
@@ -114,8 +112,12 @@ IMPORTANT EXTRACTION RULES:
   * Set to true if user said you can take creative liberties/freedom
   * Set to true if no plot points exist (default behavior)
 
-- Ignore any assistant messages equal to ${READY_TO_EXTRACT_TOKEN}; they simply indicate the concierge chat is complete.
+- Ignore any assistant messages equal to ${ConciergeAgent.EXIT_TOKEN}; they simply indicate the concierge chat is complete.
 
 Always return VALID JSON that conforms to the schema. Do not continue the conversation or ask follow-up questions.`;
+  }
+
+  static get EXIT_TOKEN(): string {
+    return '[READY_TO_EXTRACT]';
   }
 }

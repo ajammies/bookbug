@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch src/interfaces/cli/cliInterface.ts",
+    "dev": "tsx src/interfaces/cli/cliInterface.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\""

@@ -1,6 +1,6 @@
 import './config/loadEnv.js';
 
-export { ConciergeAgent, READY_TO_EXTRACT_TOKEN } from './agents/conciergeAgent.js';
+export { ConciergeAgent } from './agents/conciergeAgent.js';
 export { AuthorAgent } from './agents/authorAgent.js';
 export { ArtDirectorAgent, DEFAULT_IMAGE_STYLE } from './agents/artDirectorAgent.js';
 export { IllustratorAgent } from './agents/illustratorAgent.js';
