@@ -8,8 +8,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 export async function runCliInterface(): Promise<void> {
-  const workflow = new MainWorkflow(new FileSystemImageStore(), undefined, undefined, undefined, undefined, logger);
-  const result = await workflow.run({ exitToken: '[READY_TO_EXTRACT]' });
+  const result = await MainWorkflow.run({ imageStore: new FileSystemImageStore(), log: logger });
 
   logger.info(
     {

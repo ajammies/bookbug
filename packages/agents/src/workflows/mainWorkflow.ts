@@ -1,14 +1,28 @@
-// MainWorkflow is the org chart in code: it routes work between concierge,
-// author, art director, and illustrator nodes so callers see one simple interface.
+// MainWorkflow orchestrates concierge intake, story drafting, art direction,
+// and illustration so callers get one cohesive pipeline per run.
 import { ConciergeAgent } from '../agents/conciergeAgent.js';
 import { AuthorAgent } from '../agents/authorAgent.js';
 import { ArtDirectorAgent } from '../agents/artDirectorAgent.js';
 import { IllustratorAgent } from '../agents/illustratorAgent.js';
-import { type StoryDraft, type StoryBrief, type IllustrationPlan, type RenderedImage } from '../protocols/storyProtocols.js';
 import { ChatCli } from '../interfaces/cli/chatCli.js';
+import {
+  type IllustrationPlan,
+  type RenderedImage,
+  type StoryBrief,
+  type StoryDraft,
+} from '../protocols/storyProtocols.js';
+import { FileSystemImageStore } from '../utils/imageStore.js';
 import type { ImageStore } from '../utils/imageStore.js';
 import { logger as defaultLogger } from '../shared/logger.js';
 
+export interface MainWorkflowOptions {
+  imageStore?: ImageStore;
+  concierge?: ConciergeAgent;
+  author?: AuthorAgent;
+  artDirector?: ArtDirectorAgent;
+  illustrator?: IllustratorAgent;
+  log?: typeof defaultLogger;
+}
 
 export interface MainWorkflowResult {
   brief: StoryBrief;
@@ -18,38 +32,26 @@ export interface MainWorkflowResult {
 }
 
 export class MainWorkflow {
-  private readonly concierge: ConciergeAgent;
-  private readonly author: AuthorAgent;
-  private readonly artDirector: ArtDirectorAgent;
-  private readonly illustrator: IllustratorAgent;
-  private readonly imageStore: ImageStore;
-  private readonly log: typeof defaultLogger;
+  static async run(options: MainWorkflowOptions = {}): Promise<MainWorkflowResult> {
+    const log = options.log ?? defaultLogger;
+    const imageStore = options.imageStore ?? new FileSystemImageStore();
+    const concierge = options.concierge ?? new ConciergeAgent(log);
+    const author = options.author ?? new AuthorAgent(log);
+    const artDirector = options.artDirector ?? new ArtDirectorAgent(log);
+    const illustrator = options.illustrator ?? new IllustratorAgent(log);
 
-  constructor(log: typeof defaultLogger = defaultLogger) {
-    this.imageStore = imageStore;
-    this.log = log;
-    this.concierge = concierge;
-    this.author = author;
-    this.artDirector = artDirector;
-    this.illustrator = illustrator;
-  }
+    const brief = await MainWorkflow.collectBrief(concierge);
+    const draft = await author.draft(brief);
+    const plan = await artDirector.plan(draft);
+    const renders = await illustrator.render(draft.title, plan, imageStore);
 
-  async run(): Promise<MainWorkflowResult> {
-    const brief = await this.collectBrief();
-    const draft = await this.author.draft(brief);
-    const plan = await this.artDirector.plan(draft);
-    const renders = await this.illustrator.render(draft.title, plan, this.imageStore);
-
-    this.log.info(
-      { title: draft.title, planned: plan.pages.length, rendered: renders.length },
-      'Main workflow completed run'
-    );
+    log.info({ title: draft.title, planned: plan.pages.length, rendered: renders.length }, 'Main workflow completed run');
 
     return { brief, draft, plan, renders };
   }
 
-  private async collectBrief(): Promise<StoryBrief> {
-    const chat = this.concierge.createChat();
+  private static async collectBrief(concierge: ConciergeAgent): Promise<StoryBrief> {
+    const chat = concierge.createChat();
     const cli = new ChatCli(chat, ConciergeAgent.EXIT_TOKEN, 'Concierge');
     return cli.run();
   }
