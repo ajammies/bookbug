@@ -98,6 +98,14 @@ export const IllustrationPlanSchema = z.object({
 
 export type IllustrationPlan = z.infer<typeof IllustrationPlanSchema>;
 
+export const ImagePromptSchema = z.object({
+  prompt: z.string().min(1),
+  negativePrompt: z.string().optional(),
+  stylePreset: z.string().optional(),
+});
+
+export type ImagePrompt = z.infer<typeof ImagePromptSchema>;
+
 // IllustratorAgent output that storage + web layers ingest.
 export const RenderedImageSchema = z.object({
   pageNumber: z.number().int().min(1),
@@ -110,3 +118,12 @@ export const RenderedImageSchema = z.object({
 });
 
 export type RenderedImage = z.infer<typeof RenderedImageSchema>;
+
+export const ImageRenderResponseSchema = z.object({
+  status: z.enum(['success', 'failed']),
+  imageUrl: z.string().url().optional(),
+  seed: z.number().int().optional(),
+  errorMessage: z.string().optional(),
+});
+
+export type ImageRenderResult = z.infer<typeof ImageRenderResponseSchema>;

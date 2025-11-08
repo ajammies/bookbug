@@ -17,7 +17,7 @@ export class AuthorAgent {
   }
 
   async draft(brief: StoryBrief): Promise<StoryDraft> {
-    const prompt = buildAuthorPrompt(brief);
+    const prompt = AuthorAgent.buildPrompt(brief);
     const result = await run(this.agent, prompt);
     const parsed = result.finalOutput as StoryDraft;
     this.log.info({ title: parsed.title, pages: parsed.pages.length }, 'Author agent produced draft');
@@ -25,18 +25,78 @@ export class AuthorAgent {
   }
 
   private createAdapter(): AgentProvider<StoryDraft> {
-    const instructions = buildAuthorSystemInstructions();
     return new ClaudeAgentProvider<StoryDraft>({
       name: 'BookBug Author',
-      instructions,
-      model: CLAUDE_AUTHOR_MODEL,
+      instructions: AuthorAgent.buildSystemInstructions(),
+      model: AuthorAgent.CLAUDE_MODEL,
       outputType: StoryDraftSchema,
       maxOutputTokens: 4096,
     });
   }
-}
 
-const STORY_QUALITY_GUIDELINES = `Children's Story Quality Checklist
+  private static buildSystemInstructions(): string {
+    return `You are the BookBug Author. Follow the quality checklist, honor any plot requirements, and respond with JSON only.
+
+Quality checklist:
+${AuthorAgent.STORY_QUALITY_GUIDELINES}
+
+Return objects that satisfy this schema:
+${JSON.stringify(StoryDraftSchema.shape, null, 2)}`;
+  }
+
+  private static buildPrompt(brief: StoryBrief): string {
+    const briefJson = JSON.stringify(brief, null, 2);
+    const plotGuidance = AuthorAgent.buildPlotGuidance(brief.plotBeats, brief.allowCreativeLiberty);
+    return `Story brief:
+${briefJson}
+
+${plotGuidance}TASK:
+- Produce ${brief.pageCount} pages with "pageNumber", "summary", "text", and "imagePrompt".
+- Keep tone age-appropriate and consistent with theme, moral, and characters.`;
+  }
+
+  private static buildPlotGuidance(plotPoints: string[] | undefined, allowCreativeLiberty: boolean | undefined): string {
+    if (!plotPoints || plotPoints.length === 0) {
+      return '';
+    }
+
+    const list = plotPoints.map((p, i) => `${i + 1}. ${p}`).join('\n');
+
+    if (allowCreativeLiberty) {
+      return `PLOT GUIDANCE (Creative Freedom):
+The user mentioned these plot points:
+${list}
+
+You may use these as inspiration but have full creative freedom to:
+- Modify or enhance these plot points to improve story quality
+- Add additional plot elements that serve the moral and theme
+- Reinterpret character roles to create better emotional resonance
+- Change sequence or implementation if it strengthens the narrative
+
+Prioritize story quality over strict adherence to these points.
+
+`;
+    }
+
+    return `PLOT REQUIREMENTS (Follow Faithfully):
+The user specified these plot points that MUST be included:
+${list}
+
+CRITICAL: You must incorporate these plot points as described.
+- Include all specified events in the story
+- Maintain the spirit and intent of each plot point
+- You may add transitions and details between plot points
+- You may enhance descriptions and dialogue
+- Do NOT contradict or omit these plot points
+
+Balance quality guidelines with faithful adherence to the specified plot.
+
+`;
+  }
+
+  private static readonly CLAUDE_MODEL = 'claude-3-5-sonnet-20241022';
+
+  private static readonly STORY_QUALITY_GUIDELINES = `Children's Story Quality Checklist
 
 1. EMOTIONAL RESONANCE
 - Use conflicts children actually face: sharing, jealousy, new experiences, frustration with rules
@@ -99,66 +159,4 @@ QUICK VERIFY:
 ✓ Character-driven resolution with emotional closure
 
 Final test: Would a parent enjoy rereading this? Does it feel emotionally honest? Could a child see themselves in it?`;
-
-const STORY_DRAFT_SCHEMA_TEXT = JSON.stringify(StoryDraftSchema.shape, null, 2);
-const CLAUDE_AUTHOR_MODEL = 'claude-3-5-sonnet-20241022';
-
-function buildAuthorSystemInstructions(): string {
-  return `You are the BookBug Author. Follow the quality checklist, honor any plot requirements, and respond with JSON only.
-
-Quality checklist:
-${STORY_QUALITY_GUIDELINES}
-
-Return objects that satisfy this schema:
-${STORY_DRAFT_SCHEMA_TEXT}`;
-}
-
-function buildAuthorPrompt(brief: StoryBrief): string {
-  const briefJson = JSON.stringify(brief, null, 2);
-  const plotGuidance = buildPlotGuidance(brief.plotBeats, brief.allowCreativeLiberty);
-  return `Story brief:
-${briefJson}
-
-${plotGuidance}TASK:
-- Produce ${brief.pageCount} pages with "pageNumber", "summary", "text", and "imagePrompt".
-- Keep tone age-appropriate and consistent with theme, moral, and characters.`;
-}
-
-function buildPlotGuidance(plotPoints: string[] | undefined, allowCreativeLiberty: boolean | undefined): string {
-  if (!plotPoints || plotPoints.length === 0) {
-    return '';
-  }
-
-  const list = plotPoints.map((p, i) => `${i + 1}. ${p}`).join('\n');
-
-  if (allowCreativeLiberty) {
-    return `PLOT GUIDANCE (Creative Freedom):
-The user mentioned these plot points:
-${list}
-
-You may use these as inspiration but have full creative freedom to:
-- Modify or enhance these plot points to improve story quality
-- Add additional plot elements that serve the moral and theme
-- Reinterpret character roles to create better emotional resonance
-- Change sequence or implementation if it strengthens the narrative
-
-Prioritize story quality over strict adherence to these points.
-
-`;
-  }
-
-  return `PLOT REQUIREMENTS (Follow Faithfully):
-The user specified these plot points that MUST be included:
-${list}
-
-CRITICAL: You must incorporate these plot points as described.
-- Include all specified events in the story
-- Maintain the spirit and intent of each plot point
-- You may add transitions and details between plot points
-- You may enhance descriptions and dialogue
-- Do NOT contradict or omit these plot points
-
-Balance quality guidelines with faithful adherence to the specified plot.
-
-`;
 }

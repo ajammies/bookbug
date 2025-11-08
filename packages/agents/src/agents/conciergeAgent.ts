@@ -20,18 +20,16 @@ export class ConciergeAgent {
 
   constructor(log: typeof defaultLogger = defaultLogger) {
     this.log = log;
-    const conversationInstructions = buildIntakeConversationInstructions();
-    const extractionInstructions = buildIntakeExtractionInstructions();
 
     this.conversationAgent = new OpenAIAgentProvider<string>({
       name: 'BookBug Concierge Companion',
-      instructions: conversationInstructions,
+      instructions: ConciergeAgent.buildConversationInstructions(),
       model: 'gpt-4.1-mini',
     });
 
     this.extractionAgent = new OpenAIAgentProvider<StoryBrief>({
       name: 'BookBug Concierge Extractor',
-      instructions: extractionInstructions,
+      instructions: ConciergeAgent.buildExtractionInstructions(),
       model: 'gpt-4.1-mini',
       outputType: StoryBriefSchema,
     });
@@ -57,11 +55,9 @@ export class ConciergeAgent {
       },
     } satisfies ConciergeChat;
   }
-}
-
-function buildIntakeConversationInstructions(): string {
-  const schemaDescription = JSON.stringify(StoryBriefSchema.shape, null, 2);
-  return `You are a friendly BookBug helper creating a children's storybook with the user. Have a warm, conversational chat - like talking to a friend.
+  private static buildConversationInstructions(): string {
+    const schemaDescription = JSON.stringify(StoryBriefSchema.shape, null, 2);
+    return `You are a friendly BookBug helper creating a children's storybook with the user. Have a warm, conversational chat - like talking to a friend.
 
 You need to collect information matching this schema:
 
@@ -99,11 +95,11 @@ WORKFLOW:
 Do not include ${READY_TO_EXTRACT_TOKEN} in any other message. It should be the complete response by itself.
 
 Start by warmly greeting the user and asking about their story idea in a friendly way.`;
-}
+  }
 
-function buildIntakeExtractionInstructions(): string {
-  const schemaDescription = JSON.stringify(StoryBriefSchema.shape, null, 2);
-  return `You are the BookBug concierge extractor. You will be given the full transcript of a conversation between the helper agent and the user. Your ONLY responsibility is to convert that conversation into structured JSON that matches the StoryBrief schema below, then respond with that JSON and nothing else.
+  private static buildExtractionInstructions(): string {
+    const schemaDescription = JSON.stringify(StoryBriefSchema.shape, null, 2);
+    return `You are the BookBug concierge extractor. You will be given the full transcript of a conversation between the helper agent and the user. Your ONLY responsibility is to convert that conversation into structured JSON that matches the StoryBrief schema below, then respond with that JSON and nothing else.
 
 ${schemaDescription}
 
@@ -121,4 +117,5 @@ IMPORTANT EXTRACTION RULES:
 - Ignore any assistant messages equal to ${READY_TO_EXTRACT_TOKEN}; they simply indicate the concierge chat is complete.
 
 Always return VALID JSON that conforms to the schema. Do not continue the conversation or ask follow-up questions.`;
+  }
 }
