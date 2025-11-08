@@ -112,7 +112,6 @@ export const RenderedImageSchema = z.object({
   imagePath: z.string().min(1),
   prompt: z.string().min(1),
   stylePreset: z.string().min(1),
-  provider: z.string().min(1),
   seed: z.number().int().optional(),
   createdAt: z.string().datetime(),
 });

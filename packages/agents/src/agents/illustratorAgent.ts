@@ -43,7 +43,6 @@ export class IllustratorAgent {
         imagePath: parsed.imageUrl,
         prompt: page.prompt,
         stylePreset: page.stylePreset,
-        provider: 'openai-image',
         seed: parsed.seed,
         createdAt: new Date().toISOString(),
       });
