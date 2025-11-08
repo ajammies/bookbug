@@ -3,7 +3,7 @@
 // Think of it as the warm receptionist for the narrative factory.
 import { StoryBrief, StoryBriefSchema } from '../protocols/storyProtocols.js';
 import { logger as defaultLogger } from '../shared/logger.js';
-import { run, type AgentMessage, type AgentProvider } from './providers/agentProvider.js';
+import type { AgentProvider } from './providers/agentProvider.js';
 import { OpenAIAgentProvider } from './providers/openAIAgentProvider.js';
 import type { ChatInterface } from '../interfaces/chat/chatInterface.js';
 
@@ -30,36 +30,21 @@ export class ConciergeAgent {
   }
 
   async collectBrief(chat: ChatInterface): Promise<StoryBrief> {
-    let thread: AgentMessage[] = [];
-
-    const send = async (message: string): Promise<string> => {
-      const response = await run(this.conversationAgent, thread.concat({ role: 'user', content: message }));
-      thread = response.history;
-      return typeof response.finalOutput === 'string' ? response.finalOutput.trim() : '';
-    };
-
-    const opening = await send(ConciergeAgent.START_PROMPT);
-    if (opening) {
-      await chat.showAssistantMessage(opening);
-    }
+    await this.sendAndDisplay(chat, ConciergeAgent.START_PROMPT);
 
     while (true) {
-      const userInput = (await chat.promptUser()).trim();
+      const userInput = await chat.promptUser();
       if (!userInput) {
         continue;
       }
 
-      const reply = await send(userInput);
+      const reply = await this.sendAndDisplay(chat, userInput);
       if (reply === ConciergeAgent.EXIT_TOKEN) {
         break;
       }
-
-      if (reply) {
-        await chat.showAssistantMessage(reply);
-      }
     }
 
-    const extractionResult = await run(this.extractionAgent, thread);
+    const extractionResult = await this.extractionAgent.run(chat.history);
     const parsed = extractionResult.finalOutput as StoryBrief;
     this.log.info({ title: parsed.title }, 'Concierge agent produced story intake');
     return parsed;
@@ -133,4 +118,19 @@ Always return VALID JSON that conforms to the schema. Do not continue the conver
   }
 
   private static readonly START_PROMPT = 'Begin the conversation by warmly greeting the user and guiding them toward sharing their story idea.';
+
+  private async sendAndDisplay(chat: ChatInterface, message: string): Promise<string> {
+    chat.history.push({ role: 'user', content: message });
+    const response = await this.conversationAgent.run(chat.history);
+    const reply = typeof response.finalOutput === 'string' ? response.finalOutput : '';
+
+    if (reply) {
+      chat.history.push({ role: 'assistant', content: reply });
+      if (reply !== ConciergeAgent.EXIT_TOKEN) {
+        await chat.showAssistantMessage(reply);
+      }
+    }
+
+    return reply;
+  }
 }

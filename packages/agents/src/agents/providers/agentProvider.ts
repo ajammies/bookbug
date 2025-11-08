@@ -23,11 +23,35 @@ export type AgentProviderConfig<TOutput> = {
 };
 
 export abstract class AgentProvider<TOutput = unknown> {
+  protected history: AgentMessage[] = [];
+
   protected constructor(protected readonly config: AgentProviderConfig<TOutput>) {}
 
-  abstract run(input?: AgentPrompt): Promise<AgentRunResult<TOutput>>;
-}
+  public run(input?: AgentPrompt): Promise<AgentRunResult<TOutput>> ;
 
-export async function run<TOutput>(agent: AgentProvider<TOutput>, input?: AgentPrompt): Promise<AgentRunResult<TOutput>> {
-  return agent.run(input);
+  getHistory(): AgentMessage[] {
+    return this.history;
+  }
+
+  protected setHistory(messages: AgentMessage[]): AgentMessage[] {
+    this.history = messages;
+    return this.history;
+  }
+
+  protected appendUserMessage(content: string): AgentMessage[] {
+    this.history = this.history.concat({ role: 'user', content });
+    return this.history;
+  }
+
+  protected prepareMessages(input?: AgentPrompt): AgentMessage[] {
+    if (Array.isArray(input)) {
+      return this.setHistory(input);
+    }
+
+    if (typeof input === 'string') {
+      return this.appendUserMessage(input);
+    }
+
+    return this.history;
+  }
 }

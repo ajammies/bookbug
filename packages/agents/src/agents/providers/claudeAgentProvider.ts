@@ -37,10 +37,9 @@ export class ClaudeAgentProvider<TOutput> extends AgentProvider<TOutput> {
       throw new Error('ANTHROPIC_API_KEY is required to run Claude agents');
     }
 
-    const agentMessages = this.normalizeAgentMessages(input);
-    const payloadMessages = agentMessages.length > 0
-      ? agentMessages.map(ClaudeAgentProvider.toAnthropicMessage)
-      : [ClaudeAgentProvider.toAnthropicMessage(ClaudeAgentProvider.defaultAgentMessage())];
+    const agentMessages = this.prepareMessages(input);
+    const effectiveMessages = agentMessages.length > 0 ? agentMessages : [ClaudeAgentProvider.defaultAgentMessage()];
+    const payloadMessages = effectiveMessages.map(ClaudeAgentProvider.toAnthropicMessage);
 
     const fetchImpl = globalThis.fetch;
     if (!fetchImpl) {
@@ -78,28 +77,18 @@ export class ClaudeAgentProvider<TOutput> extends AgentProvider<TOutput> {
       .trim();
 
     const finalOutput = this.config.outputType ? this.parseStructured(rawText) : (rawText as TOutput | string);
-    const historyBase = agentMessages.length > 0 ? agentMessages : [ClaudeAgentProvider.defaultAgentMessage()];
+    const assistantMessage: AgentMessage = { role: 'assistant', content: rawText };
+    if (agentMessages.length === 0) {
+      this.history = [ClaudeAgentProvider.defaultAgentMessage(), assistantMessage];
+    } else {
+      this.history.push(assistantMessage);
+    }
+
     return {
       finalOutput,
-      history: [...historyBase, { role: 'assistant', content: rawText }],
+      history: this.history,
       rawText,
     };
-  }
-
-  private normalizeAgentMessages(input?: AgentPrompt): AgentMessage[] {
-    if (!input) {
-      return [];
-    }
-
-    if (typeof input === 'string') {
-      const trimmed = input.trim();
-      if (!trimmed) {
-        return [];
-      }
-      return [{ role: 'user', content: trimmed }];
-    }
-
-    return input;
   }
 
   private parseStructured(text: string): TOutput {

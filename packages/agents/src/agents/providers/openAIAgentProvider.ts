@@ -28,11 +28,9 @@ export class OpenAIAgentProvider<TOutput> extends AgentProvider<TOutput> {
       throw new Error('OPENAI_API_KEY is required to run OpenAI agents');
     }
 
-    const normalizedInput = Array.isArray(input)
-      ? input.map(OpenAIAgentProvider.toAgentInput)
-      : input ?? '';
-
-    const response = await runOpenAI(this.agent, normalizedInput as any);
+    const preparedMessages = this.prepareMessages(input).map(OpenAIAgentProvider.toAgentInput);
+    const response = await runOpenAI(this.agent, preparedMessages as any);
+    this.history = response.history.map(OpenAIAgentProvider.toAgentMessage);
 
     if (this.config.outputType && response.finalOutput === undefined) {
       throw new Error('OpenAI agent did not return structured output');
@@ -40,7 +38,7 @@ export class OpenAIAgentProvider<TOutput> extends AgentProvider<TOutput> {
 
     return {
       finalOutput: response.finalOutput as TOutput,
-      history: response.history.map(OpenAIAgentProvider.toAgentMessage),
+      history: this.history,
       rawText: OpenAIAgentProvider.extractFinalText(response.finalOutput),
     };
   }

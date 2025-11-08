@@ -9,7 +9,7 @@ import {
 } from '../protocols/storyProtocols.js';
 import { ImageStore } from '../utils/imageStore.js';
 import { logger as defaultLogger } from '../shared/logger.js';
-import { run, type AgentProvider } from './providers/agentProvider.js';
+import type { AgentProvider } from './providers/agentProvider.js';
 import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 
 export class IllustratorAgent {
@@ -27,10 +27,7 @@ export class IllustratorAgent {
     const renders: RenderedImage[] = [];
 
     for (const page of plan.pages) {
-      const response = await run(
-        this.agent,
-        IllustratorAgent.buildPrompt(page.prompt, page.stylePreset)
-      );
+      const response = await this.agent.run(IllustratorAgent.buildPrompt(page.prompt, page.stylePreset));
 
       const parsed = response.finalOutput as ImageRenderResult;
       if (parsed.status !== 'success' || !parsed.imageUrl) {

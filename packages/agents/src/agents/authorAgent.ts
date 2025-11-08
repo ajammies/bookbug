@@ -2,7 +2,7 @@
 // produces a structured draft the rest of the organization can trust.
 import { StoryDraft, StoryDraftSchema, StoryBrief } from '../protocols/storyProtocols.js';
 import { logger as defaultLogger } from '../shared/logger.js';
-import { run, type AgentProvider } from './providers/agentProvider.js';
+import type { AgentProvider } from './providers/agentProvider.js';
 import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 
 export class AuthorAgent {
@@ -18,7 +18,7 @@ export class AuthorAgent {
 
   async draft(brief: StoryBrief): Promise<StoryDraft> {
     const prompt = AuthorAgent.buildPrompt(brief);
-    const result = await run(this.agent, prompt);
+    const result = await this.agent.run(prompt);
     const parsed = result.finalOutput as StoryDraft;
     this.log.info({ title: parsed.title, pages: parsed.pages.length }, 'Author agent produced draft');
     return parsed;

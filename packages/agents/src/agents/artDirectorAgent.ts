@@ -8,7 +8,7 @@ import {
   StoryDraft,
 } from '../protocols/storyProtocols.js';
 import { logger as defaultLogger } from '../shared/logger.js';
-import { run, type AgentProvider } from './providers/agentProvider.js';
+import type { AgentProvider } from './providers/agentProvider.js';
 import { ClaudeAgentProvider } from './providers/claudeAgentProvider.js';
 
 export class ArtDirectorAgent {
@@ -26,8 +26,7 @@ export class ArtDirectorAgent {
     const pages = await Promise.all(
       draft.pages.map(async (page) => {
         const stylePreset = draft.styleNotes || draft.characters[0]?.traits.join(', ') || ArtDirectorAgent.defaultImageStyle;
-        const response = await run(
-          this.agent,
+        const response = await this.agent.run(
           ArtDirectorAgent.buildPrompt(draft.title, page.summary, page.imageConcept, stylePreset)
         );
 
