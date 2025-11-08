@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Compiled output
+dist/
+
 # Local caches and logs
 .npm-cache/
 .DS_Store

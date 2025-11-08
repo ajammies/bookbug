@@ -4,7 +4,8 @@ import { ConciergeAgent } from '../agents/conciergeAgent.js';
 import { AuthorAgent } from '../agents/authorAgent.js';
 import { ArtDirectorAgent } from '../agents/artDirectorAgent.js';
 import { IllustratorAgent } from '../agents/illustratorAgent.js';
-import { ChatCli } from '../interfaces/cli/chatCli.js';
+import type { ChatInterface } from '../interfaces/chat/chatInterface.js';
+import { CLIChat } from '../interfaces/chat/cliChat.js';
 import {
   type IllustrationPlan,
   type RenderedImage,
@@ -22,6 +23,7 @@ export interface MainWorkflowOptions {
   artDirector?: ArtDirectorAgent;
   illustrator?: IllustratorAgent;
   log?: typeof defaultLogger;
+  chat?: ChatInterface;
 }
 
 export interface MainWorkflowResult {
@@ -36,11 +38,15 @@ export class MainWorkflow {
     const log = options.log ?? defaultLogger;
     const imageStore = options.imageStore ?? new FileSystemImageStore();
     const concierge = options.concierge ?? new ConciergeAgent(log);
+    const chat = options.chat ?? new CLIChat('Concierge');
     const author = options.author ?? new AuthorAgent(log);
     const artDirector = options.artDirector ?? new ArtDirectorAgent(log);
     const illustrator = options.illustrator ?? new IllustratorAgent(log);
 
-    const brief = await MainWorkflow.collectBrief(concierge);
+    const brief = await concierge.collectBrief(chat);
+    if (chat.close) {
+      await chat.close();
+    }
     const draft = await author.draft(brief);
     const plan = await artDirector.plan(draft);
     const renders = await illustrator.render(draft.title, plan, imageStore);
@@ -48,11 +54,5 @@ export class MainWorkflow {
     log.info({ title: draft.title, planned: plan.pages.length, rendered: renders.length }, 'Main workflow completed run');
 
     return { brief, draft, plan, renders };
-  }
-
-  private static async collectBrief(concierge: ConciergeAgent): Promise<StoryBrief> {
-    const chat = concierge.createChat();
-    const cli = new ChatCli(chat, ConciergeAgent.EXIT_TOKEN, 'Concierge');
-    return cli.run();
   }
 }

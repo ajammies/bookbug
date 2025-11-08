@@ -5,11 +5,7 @@ import { StoryBrief, StoryBriefSchema } from '../protocols/storyProtocols.js';
 import { logger as defaultLogger } from '../shared/logger.js';
 import { run, type AgentMessage, type AgentProvider } from './providers/agentProvider.js';
 import { OpenAIAgentProvider } from './providers/openAIAgentProvider.js';
-
-export interface ConciergeChat {
-  send(message: string): Promise<string>;
-  extract(): Promise<StoryBrief>;
-}
+import type { ChatInterface } from '../interfaces/chat/chatInterface.js';
 
 export class ConciergeAgent {
   private readonly conversationAgent: AgentProvider<string>;
@@ -33,25 +29,40 @@ export class ConciergeAgent {
     });
   }
 
-  // Each chat instance represents an onboarding session with one author.
-  // We keep the thread locally so the extractor can read the full history later.
-  createChat(): ConciergeChat {
+  async collectBrief(chat: ChatInterface): Promise<StoryBrief> {
     let thread: AgentMessage[] = [];
 
-    return {
-      send: async (message: string) => {
-        const response = await run(this.conversationAgent, thread.concat({ role: 'user', content: message }));
-        thread = response.history;
-        const reply = typeof response.finalOutput === 'string' ? response.finalOutput.trim() : '';
-        return reply;
-      },
-      extract: async () => {
-        const extractionResult = await run(this.extractionAgent, thread);
-        const parsed = extractionResult.finalOutput as StoryBrief;
-        this.log.info({ title: parsed.title }, 'Concierge agent produced story intake');
-        return parsed;
-      },
-    } satisfies ConciergeChat;
+    const send = async (message: string): Promise<string> => {
+      const response = await run(this.conversationAgent, thread.concat({ role: 'user', content: message }));
+      thread = response.history;
+      return typeof response.finalOutput === 'string' ? response.finalOutput.trim() : '';
+    };
+
+    const opening = await send(ConciergeAgent.START_PROMPT);
+    if (opening) {
+      await chat.showAssistantMessage(opening);
+    }
+
+    while (true) {
+      const userInput = (await chat.promptUser()).trim();
+      if (!userInput) {
+        continue;
+      }
+
+      const reply = await send(userInput);
+      if (reply === ConciergeAgent.EXIT_TOKEN) {
+        break;
+      }
+
+      if (reply) {
+        await chat.showAssistantMessage(reply);
+      }
+    }
+
+    const extractionResult = await run(this.extractionAgent, thread);
+    const parsed = extractionResult.finalOutput as StoryBrief;
+    this.log.info({ title: parsed.title }, 'Concierge agent produced story intake');
+    return parsed;
   }
   private static buildConversationInstructions(): string {
     const schemaDescription = JSON.stringify(StoryBriefSchema.shape, null, 2);
@@ -120,4 +131,6 @@ Always return VALID JSON that conforms to the schema. Do not continue the conver
   static get EXIT_TOKEN(): string {
     return '[READY_TO_EXTRACT]';
   }
+
+  private static readonly START_PROMPT = 'Begin the conversation by warmly greeting the user and guiding them toward sharing their story idea.';
 }

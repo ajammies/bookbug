@@ -4,11 +4,13 @@ import { MainWorkflow } from '../../workflows/mainWorkflow.js';
 import { FileSystemImageStore } from '../../utils/imageStore.js';
 import '../../config/loadEnv.js';
 import { logger } from '../../shared/logger.js';
+import { CLIChat } from '../chat/cliChat.js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 export async function runCliInterface(): Promise<void> {
-  const result = await MainWorkflow.run({ imageStore: new FileSystemImageStore(), log: logger });
+  const chat = new CLIChat('Concierge');
+  const result = await MainWorkflow.run({ imageStore: new FileSystemImageStore(), log: logger, chat });
 
   logger.info(
     {

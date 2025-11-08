@@ -9,7 +9,8 @@ export type { MainWorkflowOptions, MainWorkflowResult } from './workflows/mainWo
 export { BriefToBookWorkflow } from './workflows/briefToBookWorkflow.js';
 export type { BriefToBookOptions } from './workflows/briefToBookWorkflow.js';
 export { runCliInterface } from './interfaces/cli/cliInterface.js';
-export { ChatCli } from './interfaces/cli/chatCli.js';
+export type { ChatInterface } from './interfaces/chat/chatInterface.js';
+export { CLIChat } from './interfaces/chat/cliChat.js';
 export type {
   StoryBrief,
   StoryDraft,
