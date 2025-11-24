@@ -1,0 +1,30 @@
+{
+  "title": "Otto and the City of Lights",
+  "storyArc": "Finding courage in new places",
+  "setting": "a shimmering nighttime city",
+  "ageRange": {
+    "min": 4,
+    "max": 7
+  },
+  "pageCount": 24,
+  "characters": [
+    {
+      "name": "Otto",
+      "description": "A small, thoughtful kid who's nervous about big cities.",
+      "role": "protagonist",
+      "traits": ["curious", "shy"],
+      "notes": ["Protagonist goal: To feel less scared of the huge city."]
+    },
+    {
+      "name": "Dad",
+      "description": "Otto's gentle, playful father.",
+      "role": "mentor",
+      "traits": ["supportive"],
+      "notes": []
+    }
+  ],
+  "tone": "warm and curious",
+  "moral": "New places feel smaller once you explore them.",
+  "interests": ["cities", "lights", "adventures with dad"],
+  "customInstructions": ["soft watercolor", "nighttime glow", "For all the small explorers."]
+}
