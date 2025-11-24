@@ -351,7 +351,6 @@ export const ShotCompositionSchema = z.object({
     .optional(),
   overrides: z
     .object({
-      setting: SettingPartialSchema.optional(),
       lighting: LightingPartialSchema.optional(),
       color: ColorScriptPartialSchema.optional(),
       mood: MoodPartialSchema.optional(),
@@ -381,7 +380,8 @@ export const StoryBeatSchema = z.object({
     pose_and_props: z.string(),            // pose description and any props
     focus: z.enum(['primary', 'secondary', 'background']) // character's importance in shot
   })).default([]),                         // characters present in this beat
-  shot_composition: ShotCompositionSchema, // complete visual direction for this shot (includes setting override)
+  setting: SettingPartialSchema.optional(), // per-beat setting override (biome, location, time, etc.)
+  shot_composition: ShotCompositionSchema, // complete visual direction for this shot
 });
 
 export type StoryBeat = z.infer<typeof StoryBeatSchema>;
