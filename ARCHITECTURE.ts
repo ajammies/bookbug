@@ -93,24 +93,24 @@ export const exampleStoryBrief: StoryBrief = {
 
 /**
  * ============================================================
- * 3. AUTHOR → StoryDraft (manuscript + page breakdown)
+ * 3. AUTHOR → Manuscript (manuscript + page breakdown)
  * ============================================================
  */
 
-// Individual story pages (author's output).
-export const StoryPageSchema = z.object({
+// Individual manuscript pages (author's text-only output).
+export const ManuscriptPageSchema = z.object({
   pageNumber: z.number().int().min(1),        // page index
   summary: z.string().min(1),                 // what happens on this page (1–2 sentences)
   text: z.string().min(1),                    // actual manuscript text
   imageConcept: z.string().min(1),            // high-level image description
 });
 
-export type StoryPage = z.infer<typeof StoryPageSchema>;
+export type ManuscriptPage = z.infer<typeof ManuscriptPageSchema>;
 
 
 
-// Full StoryDraft: what AuthorAgent emits, ArtDirector consumes.
-export const StoryDraftSchema = z.object({
+// Full Manuscript: what AuthorAgent emits, Director consumes.
+export const ManuscriptSchema = z.object({
   blurb: StoryBlurbSchema,                              // story blurb with brief, plot beats, creative liberty
   title: z.string().min(1),                             // final or near-final title
   logline: z.string().min(1),                           // 1-sentence story hook
@@ -121,26 +121,26 @@ export const StoryDraftSchema = z.object({
   tone: z.string().optional(),                          // narrative tone
   styleNotes: z.string().optional(),                    // author notes about style, voice, rhythm
   characters: z.array(StoryCharacterSchema).min(1),     // enriched cast
-  pages: z.array(StoryPageSchema).min(1),               // per-page content
+  pages: z.array(ManuscriptPageSchema).min(1),          // per-page manuscript content
   pageCount: z.number().int().min(8).max(32),           // must match pages.length in practice
 })
-.refine((draft) => draft.pages.length === draft.pageCount, {
+.refine((manuscript) => manuscript.pages.length === manuscript.pageCount, {
   message: "pages.length must equal pageCount",
   path: ["pages"],
 })
-.refine((draft) => {
-  const pageNums = draft.pages.map(p => p.pageNumber);
-  const expectedNums = Array.from({ length: draft.pageCount }, (_, i) => i + 1);
+.refine((manuscript) => {
+  const pageNums = manuscript.pages.map(p => p.pageNumber);
+  const expectedNums = Array.from({ length: manuscript.pageCount }, (_, i) => i + 1);
   return pageNums.every((num, idx) => num === expectedNums[idx]);
 }, {
   message: "pages must be sequentially numbered starting at 1",
   path: ["pages"],
 });
 
-export type StoryDraft = z.infer<typeof StoryDraftSchema>;
+export type Manuscript = z.infer<typeof ManuscriptSchema>;
 
-// Example StoryDraft.
-export const exampleStoryDraft: StoryDraft = {
+// Example Manuscript.
+export const exampleManuscript: Manuscript = {
   blurb: {
     brief: exampleStoryBrief,
     plotBeats: [
@@ -196,17 +196,18 @@ export const exampleStoryDraft: StoryDraft = {
 
 /**
  * ============================================================
- * 4. ART DIRECTION → StoryBeat & ArtBible
+ * 4. DIRECTOR → Story (visual direction + complete story)
  * ============================================================
  *
  * This section defines the visual direction system including:
- * - Lighting, color, mood, focal_hierarchy, atmosphere, materials, and constraints schemas
+ * - Setting, lighting, color, mood, focal_hierarchy, atmosphere, materials, and constraints schemas
  * - ShotComposition DSL for cinematography and composition
  * - StoryBeat for narrative moments with visual instructions
  * - VisualStyleGuide for global visual style across the book
- * - ArtBible that connects beats to pages & story draft
+ * - StoryPage for individual pages with beats
+ * - Story schema that connects everything together
  *
- * Each style element (lighting, color, mood, etc.) can be defined globally
+ * Each style element (setting, lighting, color, mood, etc.) can be defined globally
  * and overridden per-shot via the ShotComposition.overrides system.
  */
 
@@ -281,6 +282,17 @@ export const ConstraintsSchema = z.object({
   style_caps: z.record(z.string().min(1)).optional(),      // style caps: e.g. {"grain": "max-20%", "noise": "minimal"}
 });
 
+// Setting: shared setting/location/time descriptor used globally and per-beat.
+export const SettingSchema = z.object({
+  biome: z.string().optional(),                             // primary biome: "urban", "forest", "underwater"
+  location: z.string().optional(),                          // specific location: "city_street", "park", "bedroom"
+  detail_description: z.string().optional(),                // detailed setting description
+  season: z.string().optional(),                            // season: "spring", "summer", "autumn", "winter"
+  time_of_day: z.string().optional(),                       // time: "morning", "afternoon", "evening", "night"
+  landmarks: z.array(z.string().min(1)).default([]),        // notable landmarks/features
+  diegetic_lights: z.array(z.string().min(1)).default([]),  // light sources in scene: "streetlamps", "windows", "moon"
+});
+
 // Partial schemas allow per-shot overrides of global style settings.
 export const LightingPartialSchema = LightingSchema.partial();
 export const ColorScriptPartialSchema = ColorScriptSchema.partial();
@@ -289,6 +301,7 @@ export const FocalHierarchyPartialSchema = FocalHierarchySchema.partial();
 export const AtmosphereFxPartialSchema = AtmosphereFxSchema.partial();
 export const MaterialsMicrodetailPartialSchema = MaterialsMicrodetailSchema.partial();
 export const ConstraintsPartialSchema = ConstraintsSchema.partial();
+export const SettingPartialSchema = SettingSchema.partial();
 
 export type Lighting = z.infer<typeof LightingSchema>;
 export type ColorScript = z.infer<typeof ColorScriptSchema>;
@@ -297,6 +310,7 @@ export type FocalHierarchy = z.infer<typeof FocalHierarchySchema>;
 export type AtmosphereFx = z.infer<typeof AtmosphereFxSchema>;
 export type MaterialsMicrodetail = z.infer<typeof MaterialsMicrodetailSchema>;
 export type Constraints = z.infer<typeof ConstraintsSchema>;
+export type Setting = z.infer<typeof SettingSchema>;
 
 // ShotComposition DSL: Defines the visual language for individual shots/illustrations.
 // Includes size, angle, POV, composition, layout, staging, and cinematography.
@@ -337,6 +351,7 @@ export const ShotCompositionSchema = z.object({
     .optional(),
   overrides: z
     .object({
+      setting: SettingPartialSchema.optional(),
       lighting: LightingPartialSchema.optional(),
       color: ColorScriptPartialSchema.optional(),
       mood: MoodPartialSchema.optional(),
@@ -366,9 +381,7 @@ export const StoryBeatSchema = z.object({
     pose_and_props: z.string(),            // pose description and any props
     focus: z.enum(['primary', 'secondary', 'background']) // character's importance in shot
   })).default([]),                         // characters present in this beat
-  location: z.string().optional(),         // location label (e.g. "city_street")
-  time: z.string().optional(),             // time-of-day label (e.g. "night", "sunset")
-  shot_composition: ShotCompositionSchema,             // complete visual direction for this shot
+  shot_composition: ShotCompositionSchema, // complete visual direction for this shot (includes setting override)
 });
 
 export type StoryBeat = z.infer<typeof StoryBeatSchema>;
@@ -382,14 +395,7 @@ export const VisualStyleGuideSchema = z.object({
     technique: z.array(z.string().min(1)).default([]),        // technique: "cel-shaded", "soft-brush", "lineart"
     style_strength: z.number().min(0).max(1).optional(),      // how strongly to push the style (0=subtle, 1=strong)
   }),
-  setting: z.object({
-    biome: z.string().optional(),                             // primary biome: "urban", "forest", "underwater"
-    detail_description: z.string().optional(),                // detailed setting description
-    season: z.string().optional(),                            // season: "spring", "summer", "autumn", "winter"
-    time_of_day: z.string().optional(),                       // default time: "morning", "afternoon", "evening", "night"
-    landmarks: z.array(z.string().min(1)).default([]),        // notable landmarks/features
-    diegetic_lights: z.array(z.string().min(1)).default([]),  // light sources in scene: "streetlamps", "windows", "moon"
-  }),
+  setting: SettingSchema,                                     // global default setting (biome, time, location, etc.)
   lighting: LightingSchema.optional(),                        // global lighting setup
   color_script: ColorScriptSchema.optional(),                 // global color palette
   mood_narrative: MoodSchema.optional(),                      // overall narrative mood
@@ -400,28 +406,28 @@ export const VisualStyleGuideSchema = z.object({
 
 export type VisualStyleGuide = z.infer<typeof VisualStyleGuideSchema>;
 
-// Plan for a *single page* of illustrations.
-export const PageTreatmentSchema = z.object({
+// StoryPage: a single page with visual beats (complete page with text + visual direction).
+export const StoryPageSchema = z.object({
   pageNumber: z.number().int().min(1),                // page index
-  storyPageRef: z.number().int().min(1),              // reference to StoryPage.pageNumber
-  beats: z.array(StoryBeatSchema).min(1),             // beats that happen on this page
+  manuscriptPageRef: z.number().int().min(1),         // reference to ManuscriptPage.pageNumber
+  beats: z.array(StoryBeatSchema).min(1),             // visual beats that happen on this page
 });
 
-export type PageTreatment = z.infer<typeof PageTreatmentSchema>;
+export type StoryPage = z.infer<typeof StoryPageSchema>;
 
-// Full ArtBible: what ArtDirectorAgent emits, Illustrator consumes.
-export const ArtBibleSchema = z.object({
-  storyTitle: z.string().min(1),                      // copy from draft
+// Story: complete story ready for rendering (what DirectorAgent emits, Illustrator consumes).
+export const StorySchema = z.object({
+  storyTitle: z.string().min(1),                      // copy from manuscript
   storyId: z.string().optional(),                     // optional external id
-  ageRange: AgeRangeSchema,                           // copy from draft
+  ageRange: AgeRangeSchema,                           // copy from manuscript
   style: VisualStyleGuideSchema,                      // global visual style guide
-  pages: z.array(PageTreatmentSchema).min(1),         // per-page visual plan
+  pages: z.array(StoryPageSchema).min(1),             // per-page visual plan with beats
 });
 
-export type ArtBible = z.infer<typeof ArtBibleSchema>;
+export type Story = z.infer<typeof StorySchema>;
 
-// Example ArtBible (truncated).
-export const exampleArtBible: ArtBible = {
+// Example Story (truncated).
+export const exampleStory: Story = {
   storyTitle: "Otto and the City of Lights",
   storyId: "otto-city-v1",
   ageRange: { min: 4, max: 7 },
@@ -434,6 +440,7 @@ export const exampleArtBible: ArtBible = {
     },
     setting: {
       biome: "urban",
+      location: undefined,
       detail_description: "A modern city at night with glowing windows and warm street lighting",
       season: "autumn",
       time_of_day: "night",
@@ -476,7 +483,7 @@ export const exampleArtBible: ArtBible = {
   pages: [
     {
       pageNumber: 1,
-      storyPageRef: 1,
+      manuscriptPageRef: 1,
       beats: [
         {
           id: "beat_001_opening",
@@ -500,8 +507,6 @@ export const exampleArtBible: ArtBible = {
               focus: "secondary",
             },
           ],
-          location: "city_street",
-          time: "night",
           shot_composition: {
             size: "extreme_wide",
             angle: "childs_eye",
@@ -509,6 +514,10 @@ export const exampleArtBible: ArtBible = {
             composition: ["negative_space", "deep_space"],
             layout: "full_bleed_spread",
             overrides: {
+              setting: {
+                location: "city_street",
+                time_of_day: "night",
+              },
               atmosphere_fx: {
                 bloom: "strong",
                 fog: {
@@ -522,17 +531,18 @@ export const exampleArtBible: ArtBible = {
         },
       ],
     },
-    // ... other PageTreatment entries
+    // ... other StoryPage entries
   ],
 };
 
 
 /**
  * ============================================================
- * 5. ILLUSTRATOR → RenderedImage
+ * 5. ILLUSTRATOR → Book (final rendered book)
  * ============================================================
  */
 
+// RenderedImage: a single generated image for a beat.
 export const RenderedImageSchema = z.object({
   id: z.string(),                                  // image id
   pageNumber: z.number().int().min(1),             // page this image belongs to
@@ -545,6 +555,26 @@ export const RenderedImageSchema = z.object({
 });
 
 export type RenderedImage = z.infer<typeof RenderedImageSchema>;
+
+// BookPage: a complete page with manuscript text and rendered image(s).
+export const BookPageSchema = z.object({
+  pageNumber: z.number().int().min(1),             // page index
+  text: z.string().min(1),                         // manuscript text for this page
+  images: z.array(RenderedImageSchema).min(1),     // rendered images for this page
+});
+
+export type BookPage = z.infer<typeof BookPageSchema>;
+
+// Book: complete final book with all pages, text, and rendered images.
+export const BookSchema = z.object({
+  storyTitle: z.string().min(1),                   // book title
+  storyId: z.string().optional(),                  // optional external id
+  ageRange: AgeRangeSchema,                        // target age range
+  pages: z.array(BookPageSchema).min(1),           // complete pages with text and images
+  meta: z.record(z.unknown()).optional(),          // book-level metadata (creation date, version, etc.)
+});
+
+export type Book = z.infer<typeof BookSchema>;
 
 // Example RenderedImage.
 export const exampleRenderedImage: RenderedImage = {
@@ -562,6 +592,25 @@ export const exampleRenderedImage: RenderedImage = {
   },
 };
 
+// Example Book.
+export const exampleBook: Book = {
+  storyTitle: "Otto and the City of Lights",
+  storyId: "otto-city-v1",
+  ageRange: { min: 4, max: 7 },
+  pages: [
+    {
+      pageNumber: 1,
+      text: "The city was much, much bigger than Otto had imagined.",
+      images: [exampleRenderedImage],
+    },
+    // ... more pages
+  ],
+  meta: {
+    createdAt: "2025-01-01T00:00:00Z",
+    version: "1.0",
+  },
+};
+
 
 /**
  * ============================================================
@@ -570,26 +619,26 @@ export const exampleRenderedImage: RenderedImage = {
  *
  * Conceptual pipeline for children's book generation:
  *
- *  BookBuilderAgent  →  AuthorAgent  →  ArtDirectorAgent  →  IllustratorAgent
- *  (user prompt)        (StoryDraft)    (ArtBible)          (RenderedImage[])
+ *  BookBuilderAgent  →  AuthorAgent  →  DirectorAgent  →  IllustratorAgent
+ *  (user prompt)        (Manuscript)    (Story)         (Book)
  *
  * Flow breakdown:
  * 1. BookBuilderAgent: Takes raw user prompt → StoryBrief
  *    - Extracts title, theme, characters, age range, custom instructions from natural language
  *
- * 2. AuthorAgent: Writes the story → StoryDraft
+ * 2. AuthorAgent: Writes the manuscript → Manuscript
  *    - Expands brief into full manuscript with per-page text
  *    - Enriches characters with arc/development notes
  *
- * 3. ArtDirectorAgent: Creates visual plan → ArtBible
- *    - Breaks pages into StoryBeats (narrative moments)
+ * 3. DirectorAgent: Creates complete story → Story
+ *    - Breaks manuscript pages into StoryBeats (visual narrative moments)
  *    - Defines global VisualStyleGuide
- *    - Specifies ShotComposition for each beat (composition, lighting, etc.)
+ *    - Specifies ShotComposition for each beat (composition, lighting, setting, etc.)
  *    - Characters in beats include expression, pose, and props
  *
- * 4. IllustratorAgent: Generates images → RenderedImage[]
+ * 4. IllustratorAgent: Generates final book → Book
  *    - Renders each beat using the visual specifications
- *    - Returns image metadata (URL, dimensions, generation params)
+ *    - Returns complete book with images and metadata
  */
 
 // Generic agent shape: a function from Input to Output (async).
@@ -597,9 +646,9 @@ export type Agent<Input, Output> = (input: Input) => Promise<Output>;
 
 // Each agent defined in terms of its concrete input/output types.
 export type BookBuilderAgent = Agent<string, StoryBrief>; // Takes raw user prompt, produces StoryBrief
-export type AuthorAgent = Agent<StoryBrief, StoryDraft>;
-export type ArtDirectorAgent = Agent<StoryDraft, ArtBible>;
-export type IllustratorAgent = Agent<ArtBible, RenderedImage[]>;
+export type AuthorAgent = Agent<StoryBrief, Manuscript>;
+export type DirectorAgent = Agent<Manuscript, Story>;
+export type IllustratorAgent = Agent<Story, Book>;
 
 // Example instance signatures (implementations would be your actual logic).
 export const bookBuilderAgent: BookBuilderAgent = async (userPrompt) => {
@@ -608,33 +657,33 @@ export const bookBuilderAgent: BookBuilderAgent = async (userPrompt) => {
 };
 
 export const authorAgent: AuthorAgent = async (brief) => {
-  // ... expand brief into full StoryDraft ...
-  return exampleStoryDraft;
+  // ... expand brief into full Manuscript ...
+  return exampleManuscript;
 };
 
-export const artDirectorAgent: ArtDirectorAgent = async (draft) => {
-  // ... map draft.pages to beats and shot compositions ...
-  return exampleArtBible;
+export const directorAgent: DirectorAgent = async (manuscript) => {
+  // ... map manuscript.pages to beats and shot compositions ...
+  return exampleStory;
 };
 
-export const illustratorAgent: IllustratorAgent = async (artBible) => {
-  // ... generate images for each page/beat ...
-  return [exampleRenderedImage];
+export const illustratorAgent: IllustratorAgent = async (story) => {
+  // ... generate images for each page/beat and return complete book ...
+  return exampleBook;
 };
 
 // End-to-end pipeline executor example (fully typed).
 export async function executePipeline(userPrompt: string): Promise<{
   brief: StoryBrief;
-  draft: StoryDraft;
-  artBible: ArtBible;
-  images: RenderedImage[];
+  manuscript: Manuscript;
+  story: Story;
+  book: Book;
 }> {
   const brief = await bookBuilderAgent(userPrompt);     // string -> StoryBrief
-  const draft = await authorAgent(brief);               // StoryBrief -> StoryDraft
-  const artBible = await artDirectorAgent(draft);       // StoryDraft -> ArtBible
-  const images = await illustratorAgent(artBible);      // ArtBible -> RenderedImage[]
+  const manuscript = await authorAgent(brief);          // StoryBrief -> Manuscript
+  const story = await directorAgent(manuscript);        // Manuscript -> Story
+  const book = await illustratorAgent(story);           // Story -> Book
 
-  return { brief, draft, artBible, images };
+  return { brief, manuscript, story, book };
 }
 
 /**
@@ -646,7 +695,7 @@ export async function executePipeline(userPrompt: string): Promise<{
  *
  * StoryCharacter (domain model)
  *   - name, description, role, traits, notes[]
- *   - Used in: StoryBrief, StoryDraft, VisualStyleGuide
+ *   - Used in: StoryBrief, Manuscript
  *
  * StoryBrief (user requirements)
  *   - title, storyArc, setting, tone, moral
@@ -654,17 +703,22 @@ export async function executePipeline(userPrompt: string): Promise<{
  *   - characters: StoryCharacter[]
  *   - customInstructions[], interests[]
  *
- * StoryDraft (manuscript)
+ * Manuscript (text-only story)
  *   - title, logline, theme, setting, moral, tone
  *   - ageRange: AgeRange
  *   - characters: StoryCharacter[] (enriched with notes)
- *   - pages: StoryPage[]
- *   - Each StoryPage contains: pageNumber, summary, text, imageConcept, blurb
+ *   - pages: ManuscriptPage[]
+ *   - Each ManuscriptPage contains: pageNumber, summary, text, imageConcept
+ *
+ * Setting (shared setting descriptor)
+ *   - biome, location, detail_description
+ *   - season, time_of_day
+ *   - landmarks, diegetic_lights
+ *   - Used globally in VisualStyleGuide and per-shot in ShotComposition.overrides
  *
  * VisualStyleGuide (global visual style)
  *   - art_direction: genre, medium, technique, style_strength
- *   - characters: StoryCharacter[]
- *   - setting: biome, season, time_of_day, landmarks
+ *   - setting: Setting (global default)
  *   - lighting, color_script, mood_narrative
  *   - atmosphere_fx, materials_microdetail, constraints
  *
@@ -672,34 +726,45 @@ export async function executePipeline(userPrompt: string): Promise<{
  *   - size, angle, pov, composition, layout
  *   - staging: anchors, depth layers, negative_space
  *   - cinematography: focal_length, aperture, dof
- *   - overrides: lighting, color, mood, focal_hierarchy, atmosphere_fx, materials_microdetail, constraints
+ *   - overrides: setting, lighting, color, mood, focal_hierarchy, atmosphere_fx, materials_microdetail, constraints
  *
  * StoryBeat (narrative moment + visual specification)
  *   - id, order, page, purpose (setup/build/twist/climax/payoff/button)
  *   - summary, emotion, text_snippet
  *   - characters[]: {id, expression, pose_and_props, focus}
- *   - location, time
- *   - shot_composition: ShotComposition
+ *   - shot_composition: ShotComposition (includes setting override)
  *
- * PageTreatment (single page plan)
- *   - pageNumber, storyPageRef
+ * StoryPage (complete page with visual beats)
+ *   - pageNumber, manuscriptPageRef
  *   - beats: StoryBeat[]
  *
- * ArtBible (complete visual plan)
+ * Story (complete story ready for rendering)
  *   - storyTitle, storyId, ageRange
- *   - pages: PageTreatment[]
+ *   - style: VisualStyleGuide
+ *   - pages: StoryPage[]
  *
- * RenderedImage (final output)
+ * RenderedImage (single generated image)
  *   - id, pageNumber, beatId
  *   - url, width, height, mimeType
  *   - meta: {model, seed, promptVersion, ...}
  *
+ * BookPage (complete page with text and images)
+ *   - pageNumber, text
+ *   - images: RenderedImage[]
+ *
+ * Book (final rendered book)
+ *   - storyTitle, storyId, ageRange
+ *   - pages: BookPage[]
+ *   - meta: {createdAt, version, ...}
+ *
  * Data flow:
- *   StoryBrief → StoryDraft → ArtBible → RenderedImage[]
+ *   StoryBrief → Manuscript → Story → Book
  *
  * Key relationships:
- *   - StoryPage.blurb contains StoryBlurb (which contains StoryBrief)
+ *   - Manuscript.blurb contains StoryBlurb (which contains StoryBrief)
+ *   - StoryPage.manuscriptPageRef links to ManuscriptPage.pageNumber
  *   - StoryBeat.characters[].id references StoryCharacter.name
  *   - ShotComposition.overrides partially override VisualStyleGuide globals
  *   - RenderedImage.beatId links back to StoryBeat.id
+ *   - BookPage combines manuscript text with rendered images
  */
