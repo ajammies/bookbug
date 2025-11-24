@@ -25,7 +25,7 @@ export const StoryCharacterSchema = z.object({
   description: z.string().min(1),        // short description
   role: z.string().optional(),           // e.g. "protagonist", "mentor"
   traits: z.array(z.string().min(1)).default([]), // tags like "brave", "shy"
-  arc: z.string().optional(),            // character change or journey (optional everywhere)
+  notes: z.array(z.string().min(1)).default([]), // any custom user note to include
 });
 
 export type StoryCharacter = z.infer<typeof StoryCharacterSchema>;
@@ -40,27 +40,31 @@ export type StoryCharacter = z.infer<typeof StoryCharacterSchema>;
 // High-level requirements that ConciergeAgent collects from user.
 export const StoryBriefSchema = z.object({
   title: z.string().min(1),                             // working title
-  theme: z.string().min(1),                             // core theme
-  tone: z.string().optional(),                          // e.g. "whimsical", "gentle"
+  storyArc: z.string().min(1),                          // core theme
   setting: z.string().min(1),                           // e.g. "underwater city"
-  moral: z.string().optional(),                         // optional explicit moral
   ageRange: AgeRangeSchema,                             // target reader age
-  characters: z.array(StoryCharacterSchema).min(1),     // cast at intake
-  protagonistGoal: z.string().optional(),               // main goal if known
-  interests: z.array(z.string().min(1)).default([]),    // kid interests: "dinosaurs", "space"
   pageCount: z.number().int().min(8).max(32).default(24), // total pages
-  plotBeats: z.array(z.string().min(1)).default([]),    // optional user-specified beats
-  allowCreativeLiberty: z.boolean().default(true),      // how strictly to follow input
-  writingStyleReferences: z.array(z.string().min(1)).default([]), // style refs / comps
-  dedication: z.string().optional(),                    // optional dedication text
+  characters: z.array(StoryCharacterSchema).min(1),     // cast at intake
+  tone: z.string().optional(),                          // e.g. "whimsical", "gentle"
+  moral: z.string().optional(),                         // optional explicit moral
+  interests: z.array(z.string().min(1)).default([]),    // kid interests: "dinosaurs", "space"
+  customInstructions: z.array(z.string().min(1)).default([]), // all custom instructions specified from the user, this could include things like style references, etc.
 });
 
 export type StoryBrief = z.infer<typeof StoryBriefSchema>;
 
+export const StoryBlurbSchema = z.object({
+  brief: StoryBriefSchema,
+  plotBeats: z.array(z.string().min(1)).default([]),    // optional user-specified beats
+  allowCreativeLiberty: z.boolean().default(true),      // how strictly to follow input
+})
+
+export type StoryBlurb = z.infer<typeof StoryBlurbSchema>;
+
 // Example StoryBrief (what ConciergeAgent would output).
 export const exampleStoryBrief: StoryBrief = {
   title: "Otto and the City of Lights",
-  theme: "Finding courage in new places",
+  storyArc: "Finding courage in new places",
   tone: "warm and curious",
   setting: "a shimmering nighttime city",
   moral: "New places feel smaller once you explore them.",
@@ -68,29 +72,22 @@ export const exampleStoryBrief: StoryBrief = {
   characters: [
     {
       name: "Otto",
-      description: "A small, thoughtful kid who’s nervous about big cities.",
+      description: "A small, thoughtful kid who's nervous about big cities.",
       role: "protagonist",
       traits: ["curious", "shy"],
+      notes: ["Protagonist goal: To feel less scared of the huge city."],
     },
     {
       name: "Dad",
-      description: "Otto’s gentle, playful father.",
+      description: "Otto's gentle, playful father.",
       role: "mentor",
       traits: ["supportive"],
+      notes: [],
     },
   ],
-  protagonistGoal: "To feel less scared of the huge city.",
   interests: ["cities", "lights", "adventures with dad"],
   pageCount: 24,
-  plotBeats: [
-    "Otto arrives in the big city.",
-    "The city feels overwhelming.",
-    "Dad shows Otto small, cozy corners.",
-    "Otto feels brave enough to explore.",
-  ],
-  allowCreativeLiberty: true,
-  writingStyleReferences: ["soft watercolor", "nighttime glow"],
-  dedication: "For all the small explorers.",
+  customInstructions: ["soft watercolor", "nighttime glow", "For all the small explorers."],
 };
 
 
@@ -100,18 +97,11 @@ export const exampleStoryBrief: StoryBrief = {
  * ============================================================
  */
 
-// Narrative fragment reused by pages and beats.
-const NarrativeBeatSchema = z.object({
-  summary: z.string().min(1),                 // what happens (1–2 sentences)
-  emotion: z.string().optional(),             // emotional tone
-  time: z.string().optional(),                // time-of-day label
-  location: z.string().optional(),            // location label
-  text_snippet: z.string().optional(),        // link to manuscript text
-});
-
 // Individual story pages (author’s output).
-export const StoryPageSchema = NarrativeBeatSchema.extend({
+export const StoryPageSchema = z.object({
+  blurb: StoryBlurbSchema,
   pageNumber: z.number().int().min(1),        // page index
+  summary: z.string().min(1),                 // what happens on this page (1–2 sentences)
   text: z.string().min(1),                    // actual manuscript text
   imageConcept: z.string().min(1),            // high-level image description
   imagePrompt: z.string().min(1),             // model-facing prompt for image
@@ -119,7 +109,8 @@ export const StoryPageSchema = NarrativeBeatSchema.extend({
 
 export type StoryPage = z.infer<typeof StoryPageSchema>;
 
-// Author enriches characters with arcs.
+
+
 // Full StoryDraft: what AuthorAgent emits, ArtDirector consumes.
 export const StoryDraftSchema = z.object({
   title: z.string().min(1),                             // final or near-final title
@@ -130,7 +121,7 @@ export const StoryDraftSchema = z.object({
   ageRange: AgeRangeSchema,                             // target age (copied/adjusted from brief)
   tone: z.string().optional(),                          // narrative tone
   styleNotes: z.string().optional(),                    // author notes about style, voice, rhythm
-  characters: z.array(StoryCharacterSchema).min(1),     // enriched cast (arc optional within)
+  characters: z.array(StoryCharacterSchema).min(1), // enriched cast
   pages: z.array(StoryPageSchema).min(1),               // per-page content
   pageCount: z.number().int().min(8).max(32),           // must match pages.length in practice
 });
@@ -150,21 +141,31 @@ export const exampleStoryDraft: StoryDraft = {
   characters: [
     {
       name: "Otto",
-      description: "A small, thoughtful kid who’s nervous about big cities.",
+      description: "A small, thoughtful kid who's nervous about big cities.",
       role: "protagonist",
       traits: ["curious", "shy"],
-      arc: "Otto goes from feeling tiny and overwhelmed to feeling brave and curious about the city.",
+      notes: ["Character arc: Otto goes from feeling tiny and overwhelmed to feeling brave and curious about the city."],
     },
     {
       name: "Dad",
-      description: "Otto’s gentle, playful father.",
+      description: "Otto's gentle, playful father.",
       role: "mentor",
       traits: ["supportive"],
-      arc: "Dad learns to let Otto lead the exploration by the end.",
+      notes: ["Character arc: Dad learns to let Otto lead the exploration by the end."],
     },
   ],
   pages: [
     {
+      blurb: {
+        brief: exampleStoryBrief,
+        plotBeats: [
+          "Otto arrives in the big city.",
+          "The city feels overwhelming.",
+          "Dad shows Otto small, cozy corners.",
+          "Otto feels brave enough to explore.",
+        ],
+        allowCreativeLiberty: true,
+      },
       pageNumber: 1,
       summary: "Otto and Dad arrive in the big city at night.",
       text: "The city was much, much bigger than Otto had imagined.",
@@ -172,6 +173,16 @@ export const exampleStoryDraft: StoryDraft = {
       imagePrompt: "Nighttime city, small child and father stepping out of a taxi, glowing skyscrapers, warm colors.",
     },
     {
+      blurb: {
+        brief: exampleStoryBrief,
+        plotBeats: [
+          "Otto arrives in the big city.",
+          "The city feels overwhelming.",
+          "Dad shows Otto small, cozy corners.",
+          "Otto feels brave enough to explore.",
+        ],
+        allowCreativeLiberty: true,
+      },
       pageNumber: 2,
       summary: "Otto feels small as the buildings loom overhead.",
       text: "Buildings leaned over him like giants, and lights blinked like a thousand curious eyes.",
@@ -189,20 +200,18 @@ export const exampleStoryDraft: StoryDraft = {
  * 4. ART DIRECTION → StoryBeat & IllustrationPlan
  * ============================================================
  *
- * We reuse the StoryBeat & ShotStyle DSL from the previous file.
- * Here, we plug it into a higher-level IllustrationPlan that
- * connects beats to pages & story draft content.
+ * This section defines the visual direction system including:
+ * - Lighting, color, mood, focus, atmosphere, materials, and constraints schemas
+ * - ShotStyle DSL for cinematography and composition
+ * - StoryBeat for narrative moments with visual instructions
+ * - IllustrationStyle for global visual style across the book
+ * - IllustrationPlan that connects beats to pages & story draft
+ *
+ * Each style element (lighting, color, mood, etc.) can be defined globally
+ * and overridden per-shot via the ShotStyle.overrides system.
  */
 
-// --- Assume these are imported from your visual DSL module ---
-// import { storyBeatSchema, StoryBeat } from "./visual-storybeat";
-
-// For clarity, repeat minimal types here (could be imported instead).
-export const storyRoleEnum = z.enum(["setup", "build", "twist", "climax", "payoff", "button"]);
-
-export type StoryRole = z.infer<typeof storyRoleEnum>;
-
-// Shared style building blocks (full) + partials for overrides.
+// Shared style building blocks (full schemas + partial schemas for per-shot overrides).
 export const LightingSchema = z.object({
   scheme: z.array(z.string().min(1)),               // "sunrise-soft", "rimlight"
   direction: z.array(z.string().min(1)),            // "back-left-sun"
@@ -232,53 +241,92 @@ export const MoodSchema = z.object({
 });
 
 export const FocusMapSchema = z.object({
-  priority: z.array(z.string().min(1)).default([]),               // ordered focus list
-  min_visibility: z.record(z.array(z.string().min(1))).optional(), // required visible parts
+  priority: z.array(z.string().min(1)).default([]),               // ordered focus list (most to least important)
+  min_visibility: z.record(z.array(z.string().min(1))).optional(), // required visible parts per subject
   no_crop: z.array(z.string().min(1)).default([]),                // elements that must not be cropped
   focus_plane: z.string().optional(),                             // focal plane subject id
 });
 
+export const AtmosphereFxSchema = z.object({
+  fog: z
+    .object({
+      style_reference: z.string().optional(), // fog style: "smoke", "mist", "cloud", "haze"
+      hue: z.string().optional(),             // fog color tint
+      density: z.string().optional(),         // "light", "medium", "heavy"
+      height: z.string().optional(),          // "ground-level", "mid-height", "high"
+    })
+    .optional(),
+  bloom: z.string().optional(),               // bloom intensity: "subtle", "medium", "strong"
+  lens_flare: z.string().optional(),          // lens flare style/intensity
+  particles: z
+    .object({
+      type: z.string().optional(),            // "dust", "snow", "sparkles", "fireflies"
+      density: z.string().optional(),         // "sparse", "moderate", "dense"
+    })
+    .optional(),
+  dew: z.string().optional(),                 // dew/moisture effects
+});
+
+export const MaterialsMicrodetailSchema = z.object({
+  microdetail_level: z.string().optional(),   // overall microdetail level: "low", "medium", "high"
+  detail_budget: z
+    .object({
+      priority: z.array(z.string().min(1)).default([]),      // subjects/areas to prioritize detail
+      deprioritize: z.array(z.string().min(1)).default([]),  // subjects/areas to simplify
+    })
+    .optional(),
+});
+
+export const ConstraintsSchema = z.object({
+  negative: z.array(z.string().min(1)).default([]),        // negative prompts: things to avoid
+  style_caps: z.record(z.string().min(1)).optional(),      // style caps: e.g. {"grain": "max-20%", "noise": "minimal"}
+});
+
+// Partial schemas allow per-shot overrides of global style settings.
 export const LightingPartialSchema = LightingSchema.partial();
 export const ColorScriptPartialSchema = ColorScriptSchema.partial();
 export const MoodPartialSchema = MoodSchema.partial();
 export const FocusPartialSchema = FocusMapSchema.partial();
+export const AtmosphereFxPartialSchema = AtmosphereFxSchema.partial();
+export const MaterialsMicrodetailPartialSchema = MaterialsMicrodetailSchema.partial();
+export const ConstraintsPartialSchema = ConstraintsSchema.partial();
 
 export type Lighting = z.infer<typeof LightingSchema>;
 export type ColorScript = z.infer<typeof ColorScriptSchema>;
 export type Mood = z.infer<typeof MoodSchema>;
 export type FocusMap = z.infer<typeof FocusMapSchema>;
+export type AtmosphereFx = z.infer<typeof AtmosphereFxSchema>;
+export type MaterialsMicrodetail = z.infer<typeof MaterialsMicrodetailSchema>;
+export type Constraints = z.infer<typeof ConstraintsSchema>;
 
-// In real code, import shotStyleSchema from visual DSL file.
-const StagingSchema = z.object({
-  anchors: z
-    .array(
-      z.object({
-        subject_id: z.string().min(1),
-        grid: z.string().min(1), // rule-of-thirds grid location or shorthand
-      })
-    )
-    .optional(),
-  depth: z
-    .object({
-      fg: z.array(z.string().min(1)).optional(),
-      mg: z.array(z.string().min(1)).optional(),
-      bg: z.array(z.string().min(1)).optional(),
-    })
-    .optional(),
-  negative_space: z.string().optional(), // low/medium/high; allows overrides
-  leading_lines: z.string().optional(),  // description of guiding lines
-});
-
-export type Staging = z.infer<typeof StagingSchema>;
-
+// ShotStyle DSL: Defines the visual language for individual shots/illustrations.
+// Includes size, angle, POV, composition, layout, staging, and cinematography.
+// Overrides allow per-shot tweaks to global style settings.
 export const shotStyleSchema = z.object({
   size: z.enum(["extreme_wide", "wide", "medium_wide", "medium", "medium_close", "close_up", "extreme_close_up", "macro_detail", "insert_object"]),
   angle: z.enum(["eye_level", "childs_eye", "high_angle", "birds_eye", "worms_eye", "low_angle_hero", "three_quarter_view", "profile_side", "dutch_tilt", "isometric_view"]),
   pov: z.enum(["objective_view", "character_pov", "over_shoulder", "follow_from_behind", "reaction_close", "crowd_pov", "threat_pov", "reflection_pov"]).optional(),
   composition: z.array(z.enum(["centered_hero", "thirds_composition", "symmetrical", "foreground_frame", "deep_space", "diagonal_composition", "negative_space", "silhouette", "shadow_play", "reflection_focus", "crowd_search"])).optional(),
   layout: z.enum(["full_bleed_single", "full_bleed_spread", "framed_illustration", "spot_illustration", "clustered_vignettes", "multi_panel", "progression_strip", "side_scroller_spread", "cutaway_cross_section", "dollhouse_view", "map_spread", "split_screen", "before_after", "zoom_sequence"]).optional(),
-  presets: z.array(z.string().min(1)).optional(), // references to predefined partial shot templates
-  staging: StagingSchema.optional(),
+  staging: z
+    .object({
+      anchors: z.array(
+          z.object({
+            subject_id: z.string().min(1),
+            grid: z.string().min(1), // rule-of-thirds grid location or shorthand
+          })
+        )
+        .optional(),
+      depth: z.object({
+          fg: z.array(z.string().min(1)).optional(),
+          mg: z.array(z.string().min(1)).optional(),
+          bg: z.array(z.string().min(1)).optional(),
+        })
+        .optional(),
+      negative_space: z.string().optional(), // low/medium/high; allows overrides
+      leading_lines: z.string().optional(),  // description of guiding lines
+    })
+    .optional(),
   cinematography: z
     .object({
       focal_length_mm: z.number().optional(),
@@ -294,6 +342,9 @@ export const shotStyleSchema = z.object({
       color: ColorScriptPartialSchema.optional(),
       mood: MoodPartialSchema.optional(),
       focus: FocusPartialSchema.optional(),
+      atmosphere_fx: AtmosphereFxPartialSchema.optional(),
+      materials_microdetail: MaterialsMicrodetailPartialSchema.optional(),
+      constraints: ConstraintsPartialSchema.optional(),
     })
     .optional(), // per-shot tweaks to global art style
 });
@@ -301,92 +352,52 @@ export const shotStyleSchema = z.object({
 export type ShotStyle = z.infer<typeof shotStyleSchema>;
 
 // StoryBeat: one narrative moment + visual shot description.
-export const storyBeatSchema = NarrativeBeatSchema.extend({
-  id: z.string(),                          // beat id
-  page: z.number().int().min(1),           // which page it belongs to
-  order: z.number().int().min(1),          // global beat order
-  role: storyRoleEnum,                     // setup / build / etc.
-  focus_character: z.string().optional().nullable(), // POV/primary character
-  shot_style: shotStyleSchema,             // visual DSL
+// Each beat represents a single illustration with narrative context and visual direction.
+export const storyBeatSchema = z.object({
+  id: z.string(),                          // unique beat identifier
+  order: z.number().int().min(1),          // global beat order across entire book
+  page: z.number().int().min(1),           // which page this beat belongs to
+  purpose: z.enum(["setup", "build", "twist", "climax", "payoff", "button"]), // narrative purpose
+  summary: z.string(),                     // what happens in this beat (1-2 sentences)
+  emotion: z.string(),                     // emotional tone of the moment
+  text_snippet: z.string().optional(),     // corresponding manuscript text (if any)
+  characters: z.array(z.object({
+    id: z.string(),                        // character identifier (matches StoryCharacter.name)
+    expression: z.string(),                // facial expression/emotion
+    pose_and_props: z.string(),            // pose description and any props
+    focus: z.enum(['primary', 'secondary', 'background']) // character's importance in shot
+  })).default([]),                         // characters present in this beat
+  location: z.string().optional(),         // location label (e.g. "city_street")
+  time: z.string().optional(),             // time-of-day label (e.g. "night", "sunset")
+  shot_style: shotStyleSchema,             // complete visual direction for this shot
 });
 
 export type StoryBeat = z.infer<typeof storyBeatSchema>;
 
-export const CharacterStyleSchema = z.object({
-  id: z.string().min(1),                                // subject/character handle
-  role: z.enum(["primary", "secondary", "background"]).optional(),
-  archetype: z.string().optional(),                     // e.g. "wise-fatherly"
-  species: z.string().optional(),                       // taxonomy or shorthand
-  traits: z.array(z.string().min(1)).default([]),       // descriptors: "friendly", "elderly"
-  pose: z.string().optional(),                          // canonical/default pose
-  gaze: z.string().optional(),                          // gaze direction/quality
-  props: z.array(z.string().min(1)).default([]),        // required props
-  count: z.string().optional(),                         // numeric or qualitative count
-  scale_vs_frame: z.string().optional(),                // "dominant", "small", etc.
-  layer: z.string().optional(),                         // foreground/midground/background
-  must_show: z.array(z.string().min(1)).default([]),    // required visible parts
-  material_profile: z.array(z.string().min(1)).optional(), // materials shorthand
-});
-
-export type CharacterStyle = z.infer<typeof CharacterStyleSchema>;
-
+// IllustrationStyle: Global visual style applied across the entire book.
+// Individual shots can override these settings via ShotStyle.overrides.
 export const IllustrationStyleSchema = z.object({
   art_direction: z.object({
-    genre: z.array(z.string().min(1)).default([]),            // e.g. "anime", "lofi"
-    medium: z.array(z.string().min(1)).default([]),           // e.g. "digital-illustration"
-    technique: z.array(z.string().min(1)).default([]),        // e.g. "cel-shaded"
-    influences: z.array(z.string().min(1)).default([]),       // e.g. "cozy-slice-of-life"
-    style_strength: z.number().min(0).max(1).optional(),      // how strongly to push the style
+    genre: z.array(z.string().min(1)).default([]),            // art genre: "anime", "lofi", "storybook"
+    medium: z.array(z.string().min(1)).default([]),           // medium: "digital-illustration", "watercolor", "gouache"
+    technique: z.array(z.string().min(1)).default([]),        // technique: "cel-shaded", "soft-brush", "lineart"
+    style_strength: z.number().min(0).max(1).optional(),      // how strongly to push the style (0=subtle, 1=strong)
   }),
-  characters: z.array(CharacterStyleSchema).default([]),
+  characters: z.array(StoryCharacterSchema).default([]),      // character roster for the story
   setting: z.object({
-    biome: z.string().optional(),                             // e.g. "enchanted-forest"
-    micro_habitat: z.string().optional(),                     // e.g. "mossy-clearing"
-    season: z.string().optional(),
-    time_of_day: z.string().optional(),
-    landmarks: z.array(z.string().min(1)).default([]),        // notable features
-    diegetic_lights: z.array(z.string().min(1)).default([]),  // light sources in scene
+    biome: z.string().optional(),                             // primary biome: "urban", "forest", "underwater"
+    detail_description: z.string().optional(),                // detailed setting description
+    season: z.string().optional(),                            // season: "spring", "summer", "autumn", "winter"
+    time_of_day: z.string().optional(),                       // default time: "morning", "afternoon", "evening", "night"
+    landmarks: z.array(z.string().min(1)).default([]),        // notable landmarks/features
+    diegetic_lights: z.array(z.string().min(1)).default([]),  // light sources in scene: "streetlamps", "windows", "moon"
   }),
-  lighting: LightingSchema.optional(),
-  color_script: ColorScriptSchema.optional(),
-  mood_narrative: MoodSchema.optional(),
-  atmosphere_fx: z
-    .object({
-      fog: z
-        .object({
-          hue: z.string().optional(),
-          density: z.string().optional(),
-          height: z.string().optional(),
-        })
-        .optional(),
-      bloom: z.string().optional(),
-      lens_flare: z.string().optional(),
-      particles: z
-        .object({
-          type: z.string().optional(),
-          density: z.string().optional(),
-        })
-        .optional(),
-      dew: z.string().optional(),
-    })
-    .optional(),
-  materials_microdetail: z
-    .object({
-      microdetail_level: z.string().optional(),
-      detail_budget: z
-        .object({
-          priority: z.array(z.string().min(1)).default([]),
-          deprioritize: z.array(z.string().min(1)).default([]),
-        })
-        .optional(),
-    })
-    .optional(),
-  constraints: z
-    .object({
-      negative: z.array(z.string().min(1)).default([]),        // avoid list
-      style_caps: z.record(z.string().min(1)).optional(),      // caps like grain/noise
-    })
-    .optional(),
+  lighting: LightingSchema.optional(),                        // global lighting setup
+  color_script: ColorScriptSchema.optional(),                 // global color palette
+  mood_narrative: MoodSchema.optional(),                      // overall narrative mood
+  atmosphere_fx: AtmosphereFxSchema.optional(),               // atmospheric effects (fog, bloom, particles)
+  materials_microdetail: MaterialsMicrodetailSchema.optional(), // material detail level
+  constraints: ConstraintsSchema.optional(),                  // global constraints (negative prompts, style caps)
 });
 
 export type IllustrationStyle = z.infer<typeof IllustrationStyleSchema>;
@@ -405,8 +416,6 @@ export const IllustrationPlanSchema = z.object({
   storyTitle: z.string().min(1),                      // copy from draft
   storyId: z.string().optional(),                     // optional external id
   ageRange: AgeRangeSchema,                           // copy from draft
-  pageCount: z.number().int().min(8).max(32),         // must match draft.pageCount
-  style: IllustrationStyleSchema,                     // required global style
   pages: z.array(IllustrationPagePlanSchema).min(1),  // per-page visual plan
 });
 
@@ -417,7 +426,6 @@ export const exampleIllustrationPlan: IllustrationPlan = {
   storyTitle: "Otto and the City of Lights",
   storyId: "otto-city-v1",
   ageRange: { min: 4, max: 7 },
-  pageCount: 24,
   pages: [
     {
       pageNumber: 1,
@@ -425,29 +433,50 @@ export const exampleIllustrationPlan: IllustrationPlan = {
       beats: [
         {
           id: "beat_001_opening",
-          page: 1,
           order: 1,
-          role: "setup",
-          focus_character: "Otto",
-          location: "city_street",
-          time: "night",
+          page: 1,
+          purpose: "setup",
           summary: "Otto and Dad arrive in the huge glowing city.",
           emotion: "small_but_curious",
           text_snippet: "The city was much, much bigger than Otto had imagined.",
+          characters: [
+            {
+              id: "Otto",
+              expression: "wide-eyed and nervous",
+              pose_and_props: "standing close to Dad, small backpack",
+              focus: "primary",
+            },
+            {
+              id: "Dad",
+              expression: "calm and reassuring smile",
+              pose_and_props: "hand on Otto's shoulder, carrying suitcase",
+              focus: "secondary",
+            },
+          ],
+          location: "city_street",
+          time: "night",
           shot_style: {
             size: "extreme_wide",
             angle: "childs_eye",
             pov: "objective_view",
             composition: ["negative_space", "deep_space"],
             layout: "full_bleed_spread",
-            archetype: ["tiny_in_big_world"],
+            overrides: {
+              atmosphere_fx: {
+                bloom: "strong",
+                fog: {
+                  style_reference: "urban haze",
+                  density: "light",
+                  hue: "warm amber",
+                },
+              },
+            },
           },
         },
       ],
     },
     // ... other IllustrationPagePlan entries
   ],
-  globalStyleNotes: "Soft edges, painterly light bloom, nighttime palette with warm windows.",
 };
 
 
@@ -492,10 +521,28 @@ export const exampleRenderedImage: RenderedImage = {
  * 6. EXECUTION FLOW DIAGRAM (typed agents)
  * ============================================================
  *
- * Conceptual pipeline:
+ * Conceptual pipeline for children's book generation:
  *
- *  ConciergeAgent  ->  AuthorAgent  ->  ArtDirectorAgent  ->  IllustratorAgent
- *  (user intent)       (StoryDraft)     (IllustrationPlan)   (RenderedImage[])
+ *  ConciergeAgent  →  AuthorAgent  →  ArtDirectorAgent  →  IllustratorAgent
+ *  (user intent)      (StoryDraft)    (IllustrationPlan)   (RenderedImage[])
+ *
+ * Flow breakdown:
+ * 1. ConciergeAgent: Collects user requirements → StoryBrief
+ *    - Gathers title, theme, characters, age range, custom instructions
+ *
+ * 2. AuthorAgent: Writes the story → StoryDraft
+ *    - Expands brief into full manuscript with per-page text
+ *    - Enriches characters with arc/development notes
+ *
+ * 3. ArtDirectorAgent: Creates visual plan → IllustrationPlan
+ *    - Breaks pages into StoryBeats (narrative moments)
+ *    - Defines global IllustrationStyle
+ *    - Specifies ShotStyle for each beat (composition, lighting, etc.)
+ *    - Characters in beats include expression, pose, and props
+ *
+ * 4. IllustratorAgent: Generates images → RenderedImage[]
+ *    - Renders each beat using the visual specifications
+ *    - Returns image metadata (URL, dimensions, generation params)
  */
 
 // Generic agent shape: a function from Input to Output (async).
@@ -552,24 +599,68 @@ export async function executePipeline(request: ConciergeRequest): Promise<{
 }
 
 /**
- * In “class diagram” terms (expressed in TS):
+ * ============================================================
+ * ARCHITECTURE SUMMARY (class diagram view)
+ * ============================================================
  *
- * StoryBrief
+ * Data structures and their relationships:
+ *
+ * StoryCharacter (domain model)
+ *   - name, description, role, traits, notes[]
+ *   - Used in: StoryBrief, StoryDraft, IllustrationStyle
+ *
+ * StoryBrief (user requirements)
+ *   - title, storyArc, setting, tone, moral
  *   - ageRange: AgeRange
  *   - characters: StoryCharacter[]
+ *   - customInstructions[], interests[]
  *
- * StoryDraft
+ * StoryDraft (manuscript)
+ *   - title, logline, theme, setting, moral, tone
  *   - ageRange: AgeRange
- *   - characters: StoryCharacterWithArc[]
+ *   - characters: StoryCharacter[] (enriched with notes)
  *   - pages: StoryPage[]
+ *   - Each StoryPage contains: pageNumber, summary, text, imageConcept, blurb
  *
- * IllustrationPlan
+ * IllustrationStyle (global visual style)
+ *   - art_direction: genre, medium, technique, style_strength
+ *   - characters: StoryCharacter[]
+ *   - setting: biome, season, time_of_day, landmarks
+ *   - lighting, color_script, mood_narrative
+ *   - atmosphere_fx, materials_microdetail, constraints
+ *
+ * ShotStyle (per-shot visual direction)
+ *   - size, angle, pov, composition, layout
+ *   - staging: anchors, depth layers, negative_space
+ *   - cinematography: focal_length, aperture, dof
+ *   - overrides: lighting, color, mood, focus, atmosphere_fx, materials_microdetail, constraints
+ *
+ * StoryBeat (narrative moment + visual specification)
+ *   - id, order, page, purpose (setup/build/twist/climax/payoff/button)
+ *   - summary, emotion, text_snippet
+ *   - characters[]: {id, expression, pose_and_props, focus}
+ *   - location, time
+ *   - shot_style: ShotStyle
+ *
+ * IllustrationPagePlan
+ *   - pageNumber, storyPageRef
+ *   - beats: StoryBeat[]
+ *
+ * IllustrationPlan (complete visual plan)
+ *   - storyTitle, storyId, ageRange
  *   - pages: IllustrationPagePlan[]
- *       - beats: StoryBeat[]
  *
- * RenderedImage
- *   - pageNumber, beatId (link back to IllustrationPlan / StoryBeat)
+ * RenderedImage (final output)
+ *   - id, pageNumber, beatId
+ *   - url, width, height, mimeType
+ *   - meta: {model, seed, promptVersion, ...}
  *
- * And the flow of objects is:
- *   ConciergeRequest -> StoryBrief -> StoryDraft -> IllustrationPlan -> RenderedImage[]
+ * Data flow:
+ *   ConciergeRequest → StoryBrief → StoryDraft → IllustrationPlan → RenderedImage[]
+ *
+ * Key relationships:
+ *   - StoryPage.blurb contains StoryBlurb (which contains StoryBrief)
+ *   - StoryBeat.characters[].id references StoryCharacter.name
+ *   - ShotStyle.overrides partially override IllustrationStyle globals
+ *   - RenderedImage.beatId links back to StoryBeat.id
  */
