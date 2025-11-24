@@ -97,9 +97,8 @@ export const exampleStoryBrief: StoryBrief = {
  * ============================================================
  */
 
-// Individual story pages (author’s output).
+// Individual story pages (author's output).
 export const StoryPageSchema = z.object({
-  blurb: StoryBlurbSchema,
   pageNumber: z.number().int().min(1),        // page index
   summary: z.string().min(1),                 // what happens on this page (1–2 sentences)
   text: z.string().min(1),                    // actual manuscript text
@@ -112,6 +111,7 @@ export type StoryPage = z.infer<typeof StoryPageSchema>;
 
 // Full StoryDraft: what AuthorAgent emits, ArtDirector consumes.
 export const StoryDraftSchema = z.object({
+  blurb: StoryBlurbSchema,                              // story blurb with brief, plot beats, creative liberty
   title: z.string().min(1),                             // final or near-final title
   logline: z.string().min(1),                           // 1-sentence story hook
   theme: z.string().min(1),                             // theme (should echo brief)
@@ -120,15 +120,37 @@ export const StoryDraftSchema = z.object({
   ageRange: AgeRangeSchema,                             // target age (copied/adjusted from brief)
   tone: z.string().optional(),                          // narrative tone
   styleNotes: z.string().optional(),                    // author notes about style, voice, rhythm
-  characters: z.array(StoryCharacterSchema).min(1), // enriched cast
+  characters: z.array(StoryCharacterSchema).min(1),     // enriched cast
   pages: z.array(StoryPageSchema).min(1),               // per-page content
   pageCount: z.number().int().min(8).max(32),           // must match pages.length in practice
+})
+.refine((draft) => draft.pages.length === draft.pageCount, {
+  message: "pages.length must equal pageCount",
+  path: ["pages"],
+})
+.refine((draft) => {
+  const pageNums = draft.pages.map(p => p.pageNumber);
+  const expectedNums = Array.from({ length: draft.pageCount }, (_, i) => i + 1);
+  return pageNums.every((num, idx) => num === expectedNums[idx]);
+}, {
+  message: "pages must be sequentially numbered starting at 1",
+  path: ["pages"],
 });
 
 export type StoryDraft = z.infer<typeof StoryDraftSchema>;
 
 // Example StoryDraft.
 export const exampleStoryDraft: StoryDraft = {
+  blurb: {
+    brief: exampleStoryBrief,
+    plotBeats: [
+      "Otto arrives in the big city.",
+      "The city feels overwhelming.",
+      "Dad shows Otto small, cozy corners.",
+      "Otto feels brave enough to explore.",
+    ],
+    allowCreativeLiberty: true,
+  },
   title: "Otto and the City of Lights",
   logline: "A small boy explores a giant city with his dad and discovers it feels smaller with each shared adventure.",
   theme: "Finding courage in new places",
@@ -155,38 +177,16 @@ export const exampleStoryDraft: StoryDraft = {
   ],
   pages: [
     {
-      blurb: {
-        brief: exampleStoryBrief,
-        plotBeats: [
-          "Otto arrives in the big city.",
-          "The city feels overwhelming.",
-          "Dad shows Otto small, cozy corners.",
-          "Otto feels brave enough to explore.",
-        ],
-        allowCreativeLiberty: true,
-      },
       pageNumber: 1,
       summary: "Otto and Dad arrive in the big city at night.",
       text: "The city was much, much bigger than Otto had imagined.",
       imageConcept: "A tiny Otto and Dad stepping out of a taxi into a sea of lights.",
-      imagePrompt: "Nighttime city, small child and father stepping out of a taxi, glowing skyscrapers, warm colors.",
     },
     {
-      blurb: {
-        brief: exampleStoryBrief,
-        plotBeats: [
-          "Otto arrives in the big city.",
-          "The city feels overwhelming.",
-          "Dad shows Otto small, cozy corners.",
-          "Otto feels brave enough to explore.",
-        ],
-        allowCreativeLiberty: true,
-      },
       pageNumber: 2,
       summary: "Otto feels small as the buildings loom overhead.",
       text: "Buildings leaned over him like giants, and lights blinked like a thousand curious eyes.",
       imageConcept: "Otto looking up at towering buildings, eyes wide.",
-      imagePrompt: "Child in city street, worm's eye view of tall lit buildings, atmospheric, gentle not scary.",
     },
     // ... more pages up to pageCount
   ],
@@ -382,7 +382,6 @@ export const VisualStyleGuideSchema = z.object({
     technique: z.array(z.string().min(1)).default([]),        // technique: "cel-shaded", "soft-brush", "lineart"
     style_strength: z.number().min(0).max(1).optional(),      // how strongly to push the style (0=subtle, 1=strong)
   }),
-  characters: z.array(StoryCharacterSchema).default([]),      // character roster for the story
   setting: z.object({
     biome: z.string().optional(),                             // primary biome: "urban", "forest", "underwater"
     detail_description: z.string().optional(),                // detailed setting description
@@ -415,6 +414,7 @@ export const ArtBibleSchema = z.object({
   storyTitle: z.string().min(1),                      // copy from draft
   storyId: z.string().optional(),                     // optional external id
   ageRange: AgeRangeSchema,                           // copy from draft
+  style: VisualStyleGuideSchema,                      // global visual style guide
   pages: z.array(PageTreatmentSchema).min(1),         // per-page visual plan
 });
 
@@ -425,6 +425,54 @@ export const exampleArtBible: ArtBible = {
   storyTitle: "Otto and the City of Lights",
   storyId: "otto-city-v1",
   ageRange: { min: 4, max: 7 },
+  style: {
+    art_direction: {
+      genre: ["storybook", "contemporary"],
+      medium: ["digital-illustration", "soft-brush"],
+      technique: ["painterly", "atmospheric"],
+      style_strength: 0.8,
+    },
+    setting: {
+      biome: "urban",
+      detail_description: "A modern city at night with glowing windows and warm street lighting",
+      season: "autumn",
+      time_of_day: "night",
+      landmarks: ["tall buildings", "cozy cafes", "lit street corners"],
+      diegetic_lights: ["window lights", "streetlamps", "neon signs", "headlights"],
+    },
+    lighting: {
+      scheme: ["nighttime-warm", "urban-glow"],
+      direction: ["ambient-multi-source", "soft-top"],
+      quality: "soft",
+      temperature_K: 3200,
+      contrast_ratio: "gentle",
+    },
+    color_script: {
+      harmony: "analogous-warm",
+      palette: ["#1a1f3a", "#ffd89b", "#f4a460", "#2c3e6b"],
+      accent_colors: ["#ffcc66", "#ff9a4d"],
+      saturation_level: "medium",
+      value_key: "low-key",
+    },
+    mood_narrative: {
+      tone: ["cozy", "curious", "gently-adventurous"],
+    },
+    atmosphere_fx: {
+      bloom: "medium",
+      fog: {
+        style_reference: "urban haze",
+        hue: "warm amber",
+        density: "light",
+        height: "mid-height",
+      },
+    },
+    materials_microdetail: {
+      microdetail_level: "medium",
+    },
+    constraints: {
+      negative: ["scary", "harsh shadows", "cold colors", "threatening"],
+    },
+  },
   pages: [
     {
       pageNumber: 1,
@@ -523,11 +571,11 @@ export const exampleRenderedImage: RenderedImage = {
  * Conceptual pipeline for children's book generation:
  *
  *  BookBuilderAgent  →  AuthorAgent  →  ArtDirectorAgent  →  IllustratorAgent
- *  (user intent)        (StoryDraft)    (ArtBible)          (RenderedImage[])
+ *  (user prompt)        (StoryDraft)    (ArtBible)          (RenderedImage[])
  *
  * Flow breakdown:
- * 1. BookBuilderAgent: Collects user requirements → StoryBrief
- *    - Gathers title, theme, characters, age range, custom instructions
+ * 1. BookBuilderAgent: Takes raw user prompt → StoryBrief
+ *    - Extracts title, theme, characters, age range, custom instructions from natural language
  *
  * 2. AuthorAgent: Writes the story → StoryDraft
  *    - Expands brief into full manuscript with per-page text
@@ -548,14 +596,14 @@ export const exampleRenderedImage: RenderedImage = {
 export type Agent<Input, Output> = (input: Input) => Promise<Output>;
 
 // Each agent defined in terms of its concrete input/output types.
-export type BookBuilderAgent = Agent<StoryBrief, StoryBrief>;
+export type BookBuilderAgent = Agent<string, StoryBrief>; // Takes raw user prompt, produces StoryBrief
 export type AuthorAgent = Agent<StoryBrief, StoryDraft>;
 export type ArtDirectorAgent = Agent<StoryDraft, ArtBible>;
 export type IllustratorAgent = Agent<ArtBible, RenderedImage[]>;
 
 // Example instance signatures (implementations would be your actual logic).
-export const bookBuilderAgent: BookBuilderAgent = async (input) => {
-  // ... enrich and validate StoryBrief from user input ...
+export const bookBuilderAgent: BookBuilderAgent = async (userPrompt) => {
+  // ... build StoryBrief from raw user prompt ...
   return exampleStoryBrief;
 };
 
@@ -575,18 +623,18 @@ export const illustratorAgent: IllustratorAgent = async (artBible) => {
 };
 
 // End-to-end pipeline executor example (fully typed).
-export async function executePipeline(brief: StoryBrief): Promise<{
+export async function executePipeline(userPrompt: string): Promise<{
   brief: StoryBrief;
   draft: StoryDraft;
   artBible: ArtBible;
   images: RenderedImage[];
 }> {
-  const enrichedBrief = await bookBuilderAgent(brief);  // StoryBrief -> StoryBrief (validated/enriched)
-  const draft = await authorAgent(enrichedBrief);       // StoryBrief -> StoryDraft
+  const brief = await bookBuilderAgent(userPrompt);     // string -> StoryBrief
+  const draft = await authorAgent(brief);               // StoryBrief -> StoryDraft
   const artBible = await artDirectorAgent(draft);       // StoryDraft -> ArtBible
   const images = await illustratorAgent(artBible);      // ArtBible -> RenderedImage[]
 
-  return { brief: enrichedBrief, draft, artBible, images };
+  return { brief, draft, artBible, images };
 }
 
 /**
