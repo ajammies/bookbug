@@ -12,6 +12,7 @@ A CLI tool that guides users through creating personalized children's picture bo
 4. [Pipeline Phases](#pipeline-phases)
 5. [Technical Implementation](#technical-implementation)
 6. [Version Scope](#version-scope)
+7. [Future Considerations](#future-considerations)
 
 ---
 
@@ -271,3 +272,42 @@ npm run dev render <story.json>         # Generate images
 - Save and resume sessions
 - Web interface
 - User accounts and book history
+- Durable pipeline orchestration (Inngest)
+
+---
+
+## Future Considerations
+
+### Durable Step Functions (Inngest)
+
+For V2, the pipeline will benefit from **durable orchestration** using [Inngest](https://www.inngest.com/). Each pipeline step becomes independently retryable and memoized:
+
+```typescript
+inngest.createFunction(
+  { id: "book-pipeline" },
+  { event: "book/create" },
+  async ({ event, step }) => {
+    const brief = await step.run("build-brief", () =>
+      bookBuilderAgent(event.data.prompt)
+    );
+    const manuscript = await step.run("write-manuscript", () =>
+      authorAgent(brief)
+    );
+    const story = await step.run("direct-story", () =>
+      directorAgent(manuscript)
+    );
+    const book = await step.run("illustrate", () =>
+      illustratorAgent(story)
+    );
+    return book;
+  }
+);
+```
+
+**Benefits:**
+- **Automatic retries**: If image generation fails, only that step retries (not the whole pipeline)
+- **Memoization**: Completed steps are skipped on re-runs, preserving progress
+- **Observability**: Built-in dashboard for monitoring pipeline runs
+- **Resume from failure**: Users don't lose work if the pipeline crashes mid-way
+
+This is especially valuable for long-running image generation where API timeouts and rate limits are common.
