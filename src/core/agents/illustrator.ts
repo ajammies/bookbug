@@ -1,5 +1,4 @@
 import type { Story, Book, BookPage, RenderedImage } from '../schemas';
-import { resolveManuscriptPage } from '../schemas';
 import type { IllustratorAgent } from './index';
 
 /**
@@ -43,8 +42,7 @@ export const illustratorAgent: IllustratorAgent = async (story: Story): Promise<
     }
 
     // Get text from the manuscript using the page number
-    const manuscriptPage = resolveManuscriptPage(story, storyPage.pageNumber);
-    const text = manuscriptPage.text;
+    const text = story.manuscript.pages[String(storyPage.pageNumber)]?.text ?? '';
 
     pages.push({
       pageNumber: storyPage.pageNumber,
