@@ -359,35 +359,3 @@ export const BookSchema = z.object({
 
 export type Book = z.infer<typeof BookSchema>;
 
-// ============================================================
-// HELPER FUNCTIONS (for resolving references)
-// ============================================================
-
-/**
- * Resolve a beat character reference to full character data.
- */
-export function resolveCharacter(story: Story, beatChar: BeatCharacter): StoryCharacter & BeatCharacter {
-  const character = story.characters[beatChar.id];
-  if (!character) {
-    throw new Error(`Character not found: ${beatChar.id}`);
-  }
-  return { ...character, ...beatChar };
-}
-
-/**
- * Resolve a page number to its manuscript content.
- */
-export function resolveManuscriptPage(story: Story, pageNumber: number): ManuscriptPage {
-  const page = story.manuscript.pages[String(pageNumber)];
-  if (!page) {
-    throw new Error(`Manuscript page not found: ${pageNumber}`);
-  }
-  return page;
-}
-
-/**
- * Get the manuscript text for a story page.
- */
-export function getPageText(story: Story, pageNumber: number): string {
-  return resolveManuscriptPage(story, pageNumber).text;
-}
