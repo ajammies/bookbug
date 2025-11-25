@@ -1,19 +1,14 @@
 import { Command } from 'commander';
-import { runBrief } from '../../core/pipeline';
-import { createSpinner } from '../output/progress';
+import { runStoryIntake } from '../prompts/story-intake';
 import { displayBrief } from '../output/display';
 
 export const briefCommand = new Command('brief')
-  .description('Extract a StoryBrief from a prompt')
-  .argument('<prompt>', 'Story idea or description')
+  .description('Create a StoryBrief through conversational chat')
+  .argument('[prompt]', 'Optional initial story idea (can also provide interactively)')
   .option('-o, --output <path>', 'Output file path for JSON')
-  .action(async (prompt: string, options: { output?: string }) => {
-    const spinner = createSpinner();
-    spinner.start('Extracting story brief...');
-
+  .action(async (prompt: string | undefined, options: { output?: string }) => {
     try {
-      const brief = await runBrief(prompt);
-      spinner.succeed('Brief extracted');
+      const brief = await runStoryIntake(prompt);
 
       displayBrief(brief);
 
@@ -23,8 +18,7 @@ export const briefCommand = new Command('brief')
         console.log(`\nBrief saved to: ${options.output}`);
       }
     } catch (error) {
-      spinner.fail('Failed to extract brief');
-      console.error(error);
+      console.error('Failed to create brief:', error);
       process.exit(1);
     }
   });
