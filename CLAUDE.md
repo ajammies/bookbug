@@ -15,6 +15,7 @@ Always use context7 when I need code generation, setup or configuration steps, o
 
 # Code style
 - Follow functional principles: pure functions, immutability, no side effects
-- Use classes/types to organize code - don't export random standalone functions
-- Prefer static methods on classes over module-level functions (Haxe-style)
+- Use standalone exported functions (modern TypeScript idiom, better tree-shaking)
+- Organize related functions by file/module, not by class
 - Data flows through function parameters, not global state
+- Avoid unnecessary helper functions - prefer direct property access on data structures
