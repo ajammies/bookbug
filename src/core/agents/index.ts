@@ -23,3 +23,7 @@ export { bookBuilderAgent } from './book-builder';
 export { authorAgent } from './author';
 export { directorAgent } from './director';
 export { illustratorAgent } from './illustrator';
+
+// Chat intake agents
+export { interpreterAgent } from './interpreter';
+export { conversationAgent, type Message, type MessageRole } from './conversation';
