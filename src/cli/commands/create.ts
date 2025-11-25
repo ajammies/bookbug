@@ -1,17 +1,22 @@
 import { Command } from 'commander';
 import { executePipeline } from '../../core/pipeline';
+import { runStoryIntake } from '../prompts/story-intake';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 
 export const createCommand = new Command('create')
-  .description('Create a complete children\'s book from a prompt')
-  .argument('<prompt>', 'Story idea or description')
+  .description('Create a complete children\'s book')
+  .argument('[prompt]', 'Optional initial story idea (can also provide interactively)')
   .option('-o, --output <path>', 'Output directory for generated files')
-  .action(async (prompt: string, options: { output?: string }) => {
+  .action(async (prompt: string | undefined, options: { output?: string }) => {
     const spinner = createSpinner();
 
     try {
-      const result = await executePipeline(prompt, {
+      // Step 1: Get StoryBrief via chat intake
+      const brief = await runStoryIntake(prompt);
+
+      // Step 2: Run pipeline from brief to book
+      const result = await executePipeline(brief, {
         onProgress: (step, status) => {
           if (status === 'start') {
             spinner.start(formatStep(step));

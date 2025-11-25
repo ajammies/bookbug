@@ -1,6 +1,5 @@
 import type { StoryBrief, Manuscript, Story, Book } from './schemas';
 import {
-  bookBuilderAgent,
   authorAgent,
   directorAgent,
   illustratorAgent,
@@ -24,34 +23,26 @@ export interface PipelineOptions {
   /** Callback for progress updates */
   onProgress?: OnStepProgress;
   /** Stop after a specific step (for partial runs) */
-  stopAfter?: 'brief' | 'manuscript' | 'story' | 'book';
+  stopAfter?: 'manuscript' | 'story' | 'book';
 }
 
 /**
- * Execute the full pipeline from user prompt to rendered book
+ * Execute the pipeline from StoryBrief to rendered book
  *
  * Pipeline flow:
- *   userPrompt → BookBuilder → StoryBrief
  *   StoryBrief → Author → Manuscript
  *   Manuscript → Director → Story
  *   Story → Illustrator → Book
+ *
+ * Note: StoryBrief is created via chat intake (runStoryIntake) before calling this
  */
 export async function executePipeline(
-  userPrompt: string,
+  brief: StoryBrief,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
   const { onProgress, stopAfter } = options;
 
-  // Step 1: Build brief from prompt
-  onProgress?.('book-builder', 'start');
-  const brief = await bookBuilderAgent(userPrompt);
-  onProgress?.('book-builder', 'complete', brief);
-
-  if (stopAfter === 'brief') {
-    return { brief, manuscript: null as any, story: null as any, book: null as any };
-  }
-
-  // Step 2: Write manuscript from brief
+  // Step 1: Write manuscript from brief
   onProgress?.('author', 'start');
   const manuscript = await authorAgent(brief);
   onProgress?.('author', 'complete', manuscript);
@@ -60,7 +51,7 @@ export async function executePipeline(
     return { brief, manuscript, story: null as any, book: null as any };
   }
 
-  // Step 3: Direct visual story from manuscript
+  // Step 2: Direct visual story from manuscript
   onProgress?.('director', 'start');
   const story = await directorAgent(manuscript);
   onProgress?.('director', 'complete', story);
@@ -69,7 +60,7 @@ export async function executePipeline(
     return { brief, manuscript, story, book: null as any };
   }
 
-  // Step 4: Illustrate book from story
+  // Step 3: Illustrate book from story
   onProgress?.('illustrator', 'start');
   const book = await illustratorAgent(story);
   onProgress?.('illustrator', 'complete', book);
@@ -80,10 +71,6 @@ export async function executePipeline(
 /**
  * Run individual pipeline steps (for CLI commands)
  */
-export async function runBrief(userPrompt: string): Promise<StoryBrief> {
-  return bookBuilderAgent(userPrompt);
-}
-
 export async function runManuscript(brief: StoryBrief): Promise<Manuscript> {
   return authorAgent(brief);
 }

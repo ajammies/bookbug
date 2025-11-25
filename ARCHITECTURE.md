@@ -36,7 +36,8 @@ bookbug/
 │   │   │   └── index.ts          # All Zod schemas and TypeScript types
 │   │   ├── agents/
 │   │   │   ├── index.ts          # Agent type definitions and exports
-│   │   │   ├── book-builder.ts   # StoryBrief generation from user prompt
+│   │   │   ├── interpreter.ts    # Extracts StoryBrief from user input
+│   │   │   ├── conversation.ts   # Generates follow-up questions for chat
 │   │   │   ├── author.ts         # Manuscript generation from brief
 │   │   │   ├── director.ts       # Visual story direction from manuscript
 │   │   │   └── illustrator.ts    # Image generation from story
@@ -213,15 +214,14 @@ export const authorAgent = async (brief: StoryBrief): Promise<Manuscript> => {
 
 ### Pipeline Orchestration
 
-The pipeline executes agents sequentially with progress callbacks:
+The pipeline executes agents sequentially with progress callbacks. StoryBrief is created via chat intake before the pipeline runs:
 
 ```typescript
 // src/core/pipeline.ts
 export async function executePipeline(
-  userPrompt: string,
+  brief: StoryBrief,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
-  const brief = await bookBuilderAgent(userPrompt);
   const manuscript = await authorAgent(brief);
   const story = await directorAgent(manuscript);
   const book = await illustratorAgent(story);
@@ -287,9 +287,8 @@ inngest.createFunction(
   { id: "book-pipeline" },
   { event: "book/create" },
   async ({ event, step }) => {
-    const brief = await step.run("build-brief", () =>
-      bookBuilderAgent(event.data.prompt)
-    );
+    // StoryBrief is created via chat intake before triggering this event
+    const brief = event.data.brief;
     const manuscript = await step.run("write-manuscript", () =>
       authorAgent(brief)
     );
