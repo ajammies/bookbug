@@ -1,0 +1,38 @@
+import { Command } from 'commander';
+import { runStory } from '../../core/pipeline';
+import { ManuscriptSchema } from '../../core/schemas';
+import { createSpinner } from '../output/progress';
+import { displayStory } from '../output/display';
+
+export const directCommand = new Command('direct')
+  .description('Create visual direction (Story) from a Manuscript')
+  .argument('<manuscript-file>', 'Path to Manuscript JSON file')
+  .option('-o, --output <path>', 'Output file path for JSON')
+  .action(async (manuscriptFile: string, options: { output?: string }) => {
+    const spinner = createSpinner();
+
+    try {
+      // Load and validate manuscript
+      spinner.start('Loading manuscript...');
+      const fs = await import('fs/promises');
+      const manuscriptJson = await fs.readFile(manuscriptFile, 'utf-8');
+      const manuscript = ManuscriptSchema.parse(JSON.parse(manuscriptJson));
+      spinner.succeed('Manuscript loaded');
+
+      // Generate story
+      spinner.start('Creating visual direction...');
+      const story = await runStory(manuscript);
+      spinner.succeed('Visual direction complete');
+
+      displayStory(story);
+
+      if (options.output) {
+        await fs.writeFile(options.output, JSON.stringify(story, null, 2));
+        console.log(`\nStory saved to: ${options.output}`);
+      }
+    } catch (error) {
+      spinner.fail('Failed to create visual direction');
+      console.error(error);
+      process.exit(1);
+    }
+  });

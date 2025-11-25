@@ -99,7 +99,6 @@ export const exampleStoryBrief: StoryBrief = {
 
 // Individual manuscript pages (author's text-only output).
 export const ManuscriptPageSchema = z.object({
-  pageNumber: z.number().int().min(1),        // page index
   summary: z.string().min(1),                 // what happens on this page (1–2 sentences)
   text: z.string().min(1),                    // actual manuscript text
   imageConcept: z.string().min(1),            // high-level image description
@@ -107,9 +106,21 @@ export const ManuscriptPageSchema = z.object({
 
 export type ManuscriptPage = z.infer<typeof ManuscriptPageSchema>;
 
+// Manuscript metadata (without pages, for embedding in Story).
+export const ManuscriptMetaSchema = z.object({
+  title: z.string().min(1),                             // final or near-final title
+  logline: z.string().min(1),                           // 1-sentence story hook
+  theme: z.string().min(1),                             // theme (should echo brief)
+  setting: z.string().min(1),                           // major setting descriptor
+  moral: z.string().optional(),                         // moral (if explicit)
+  tone: z.string().optional(),                          // narrative tone
+  styleNotes: z.string().optional(),                    // author notes about style, voice, rhythm
+});
 
+export type ManuscriptMeta = z.infer<typeof ManuscriptMetaSchema>;
 
 // Full Manuscript: what AuthorAgent emits, Director consumes.
+// Note: This is the intermediate format; Story uses a normalized version.
 export const ManuscriptSchema = z.object({
   blurb: StoryBlurbSchema,                              // story blurb with brief, plot beats, creative liberty
   title: z.string().min(1),                             // final or near-final title
@@ -126,14 +137,6 @@ export const ManuscriptSchema = z.object({
 })
 .refine((manuscript) => manuscript.pages.length === manuscript.pageCount, {
   message: "pages.length must equal pageCount",
-  path: ["pages"],
-})
-.refine((manuscript) => {
-  const pageNums = manuscript.pages.map(p => p.pageNumber);
-  const expectedNums = Array.from({ length: manuscript.pageCount }, (_, i) => i + 1);
-  return pageNums.every((num, idx) => num === expectedNums[idx]);
-}, {
-  message: "pages must be sequentially numbered starting at 1",
   path: ["pages"],
 });
 
@@ -177,13 +180,11 @@ export const exampleManuscript: Manuscript = {
   ],
   pages: [
     {
-      pageNumber: 1,
       summary: "Otto and Dad arrive in the big city at night.",
       text: "The city was much, much bigger than Otto had imagined.",
       imageConcept: "A tiny Otto and Dad stepping out of a taxi into a sea of lights.",
     },
     {
-      pageNumber: 2,
       summary: "Otto feels small as the buildings loom overhead.",
       text: "Buildings leaned over him like giants, and lights blinked like a thousand curious eyes.",
       imageConcept: "Otto looking up at towering buildings, eyes wide.",
@@ -206,6 +207,10 @@ export const exampleManuscript: Manuscript = {
  * - VisualStyleGuide for global visual style across the book
  * - StoryPage for individual pages with beats
  * - Story schema that connects everything together
+ *
+ * NORMALIZED STRUCTURE:
+ * Story contains lookup tables for characters and manuscript pages.
+ * Beats reference these by ID for conciseness while keeping the blob self-contained.
  *
  * Each style element (setting, lighting, color, mood, etc.) can be defined globally
  * and overridden per-shot via the ShotComposition.overrides system.
@@ -325,15 +330,15 @@ export const ShotCompositionSchema = z.object({
     .object({
       anchors: z.array(
           z.object({
-            subject_id: z.string().min(1),
-            grid: z.string().min(1), // rule-of-thirds grid location or shorthand
+            subject: z.string().min(1),   // subject identifier or description
+            grid: z.string().min(1),      // rule-of-thirds grid location or shorthand
           })
         )
         .optional(),
       depth: z.object({
-          fg: z.array(z.string().min(1)).optional(),
-          mg: z.array(z.string().min(1)).optional(),
-          bg: z.array(z.string().min(1)).optional(),
+          fg: z.array(z.string().min(1)).optional(),  // foreground elements
+          mg: z.array(z.string().min(1)).optional(),  // midground elements
+          bg: z.array(z.string().min(1)).optional(),  // background elements
         })
         .optional(),
       negative_space: z.string().optional(), // low/medium/high; allows overrides
@@ -364,24 +369,27 @@ export const ShotCompositionSchema = z.object({
 
 export type ShotComposition = z.infer<typeof ShotCompositionSchema>;
 
+// BeatCharacter: concise character reference within a beat.
+// References characters by id (key in Story.characters lookup table).
+export const BeatCharacterSchema = z.object({
+  id: z.string().min(1),                        // character id (key in Story.characters)
+  expression: z.string().min(1),                // facial expression/emotion
+  pose: z.string().min(1),                      // pose description and any props
+  focus: z.enum(['primary', 'secondary', 'background']), // character's importance in shot
+});
+
+export type BeatCharacter = z.infer<typeof BeatCharacterSchema>;
+
 // StoryBeat: one narrative moment + visual shot description.
 // Each beat represents a single illustration with narrative context and visual direction.
 export const StoryBeatSchema = z.object({
-  id: z.string(),                          // unique beat identifier
   order: z.number().int().min(1),          // global beat order across entire book
-  page: z.number().int().min(1),           // which page this beat belongs to
   purpose: z.enum(["setup", "build", "twist", "climax", "payoff", "button"]), // narrative purpose
-  summary: z.string(),                     // what happens in this beat (1-2 sentences)
-  emotion: z.string(),                     // emotional tone of the moment
-  text_snippet: z.string().optional(),     // corresponding manuscript text (if any)
-  characters: z.array(z.object({
-    id: z.string(),                        // character identifier (matches StoryCharacter.name)
-    expression: z.string(),                // facial expression/emotion
-    pose_and_props: z.string(),            // pose description and any props
-    focus: z.enum(['primary', 'secondary', 'background']) // character's importance in shot
-  })).default([]),                         // characters present in this beat
+  summary: z.string().min(1),              // what happens in this beat (1-2 sentences)
+  emotion: z.string().min(1),              // emotional tone of the moment
+  characters: z.array(BeatCharacterSchema).default([]), // characters present (refs to Story.characters)
   setting: SettingPartialSchema.optional(), // per-beat setting override (biome, location, time, etc.)
-  shot_composition: ShotCompositionSchema, // complete visual direction for this shot
+  shot: ShotCompositionSchema,             // complete visual direction for this shot
 });
 
 export type StoryBeat = z.infer<typeof StoryBeatSchema>;
@@ -406,31 +414,96 @@ export const VisualStyleGuideSchema = z.object({
 
 export type VisualStyleGuide = z.infer<typeof VisualStyleGuideSchema>;
 
-// StoryPage: a single page with visual beats (complete page with text + visual direction).
+// StoryPage: a single page with visual beats.
+// Page number serves as the key for manuscript.pages lookup.
 export const StoryPageSchema = z.object({
-  pageNumber: z.number().int().min(1),                // page index
-  manuscriptPageRef: z.number().int().min(1),         // reference to ManuscriptPage.pageNumber
+  pageNumber: z.number().int().min(1),                // page index (also key for manuscript.pages)
   beats: z.array(StoryBeatSchema).min(1),             // visual beats that happen on this page
 });
 
 export type StoryPage = z.infer<typeof StoryPageSchema>;
 
-// Story: complete story ready for rendering (what DirectorAgent emits, Illustrator consumes).
+/**
+ * Story: complete story ready for rendering (what DirectorAgent emits, Illustrator consumes).
+ *
+ * NORMALIZED STRUCTURE:
+ * - characters: Record<id, StoryCharacter> - lookup table for all characters
+ * - manuscript: { meta, pages: Record<pageNum, ManuscriptPage> } - lookup table for text
+ * - pages: StoryPage[] - visual beats that reference the above by ID
+ *
+ * This structure is:
+ * 1. Self-contained: all referenced data is in the blob
+ * 2. Concise: no duplication of character/manuscript data
+ * 3. Functional: immutable, serializable, no external lookups needed
+ */
 export const StorySchema = z.object({
-  storyTitle: z.string().min(1),                      // copy from manuscript
-  storyId: z.string().optional(),                     // optional external id
-  ageRange: AgeRangeSchema,                           // copy from manuscript
-  style: VisualStyleGuideSchema,                      // global visual style guide
-  pages: z.array(StoryPageSchema).min(1),             // per-page visual plan with beats
+  storyTitle: z.string().min(1),                                    // copy from manuscript
+  ageRange: AgeRangeSchema,                                         // copy from manuscript
+  characters: z.record(z.string(), StoryCharacterSchema),           // lookup table: id -> character
+  manuscript: z.object({
+    meta: ManuscriptMetaSchema,                                     // manuscript metadata
+    pages: z.record(z.string(), ManuscriptPageSchema),              // lookup table: pageNum -> page content
+  }),
+  style: VisualStyleGuideSchema,                                    // global visual style guide
+  pages: z.array(StoryPageSchema).min(1),                           // per-page visual plan with beats
 });
 
 export type Story = z.infer<typeof StorySchema>;
 
-// Example Story (truncated).
+// Example Story (normalized structure).
 export const exampleStory: Story = {
   storyTitle: "Otto and the City of Lights",
-  storyId: "otto-city-v1",
   ageRange: { min: 4, max: 7 },
+
+  // Character lookup table (keyed by id)
+  characters: {
+    "otto": {
+      name: "Otto",
+      description: "A small, thoughtful kid who's nervous about big cities.",
+      role: "protagonist",
+      traits: ["curious", "shy"],
+      notes: ["Character arc: Otto goes from feeling tiny and overwhelmed to feeling brave and curious about the city."],
+    },
+    "dad": {
+      name: "Dad",
+      description: "Otto's gentle, playful father.",
+      role: "mentor",
+      traits: ["supportive"],
+      notes: ["Character arc: Dad learns to let Otto lead the exploration by the end."],
+    },
+  },
+
+  // Manuscript lookup table (keyed by page number as string)
+  manuscript: {
+    meta: {
+      title: "Otto and the City of Lights",
+      logline: "A small boy explores a giant city with his dad and discovers it feels smaller with each shared adventure.",
+      theme: "Finding courage in new places",
+      setting: "a glowing, nighttime city full of tall buildings and cozy corners",
+      moral: "New places feel smaller once you explore them together.",
+      tone: "warm, gently humorous",
+      styleNotes: "Short, rhythmic sentences with repeated phrases like 'much, much bigger'.",
+    },
+    pages: {
+      "1": {
+        summary: "Otto and Dad arrive in the big city at night.",
+        text: "The city was much, much bigger than Otto had imagined.",
+        imageConcept: "A tiny Otto and Dad stepping out of a taxi into a sea of lights.",
+      },
+      "2": {
+        summary: "Otto feels small as the buildings loom overhead.",
+        text: "Buildings leaned over him like giants, and lights blinked like a thousand curious eyes.",
+        imageConcept: "Otto looking up at towering buildings, eyes wide.",
+      },
+      "3": {
+        summary: "Dad points to a cozy corner café with warm light spilling onto the sidewalk.",
+        text: "\"Let's start small,\" said Dad, pointing to a glowing café tucked between two buildings.",
+        imageConcept: "Dad and Otto walking toward a warm, inviting café entrance.",
+      },
+    },
+  },
+
+  // Global visual style
   style: {
     art_direction: {
       genre: ["storybook", "contemporary"],
@@ -440,7 +513,6 @@ export const exampleStory: Story = {
     },
     setting: {
       biome: "urban",
-      location: undefined,
       detail_description: "A modern city at night with glowing windows and warm street lighting",
       season: "autumn",
       time_of_day: "night",
@@ -480,58 +552,94 @@ export const exampleStory: Story = {
       negative: ["scary", "harsh shadows", "cold colors", "threatening"],
     },
   },
+
+  // Pages with beats (reference characters and manuscript by ID)
   pages: [
     {
       pageNumber: 1,
-      manuscriptPageRef: 1,
       beats: [
         {
-          id: "beat_001_opening",
           order: 1,
-          page: 1,
           purpose: "setup",
           summary: "Otto and Dad arrive in the huge glowing city.",
           emotion: "small_but_curious",
-          text_snippet: "The city was much, much bigger than Otto had imagined.",
           characters: [
-            {
-              id: "Otto",
-              expression: "wide-eyed and nervous",
-              pose_and_props: "standing close to Dad, small backpack",
-              focus: "primary",
-            },
-            {
-              id: "Dad",
-              expression: "calm and reassuring smile",
-              pose_and_props: "hand on Otto's shoulder, carrying suitcase",
-              focus: "secondary",
-            },
+            { id: "otto", expression: "wide-eyed and nervous", pose: "standing close to Dad, small backpack", focus: "primary" },
+            { id: "dad", expression: "calm and reassuring smile", pose: "hand on Otto's shoulder, carrying suitcase", focus: "secondary" },
           ],
-          shot_composition: {
+          setting: { location: "city_street" },
+          shot: {
             size: "extreme_wide",
             angle: "childs_eye",
             pov: "objective_view",
             composition: ["negative_space", "deep_space"],
             layout: "full_bleed_spread",
+            staging: {
+              anchors: [{ subject: "otto", grid: "lower-center-third" }],
+              depth: { fg: ["otto", "dad", "taxi"], mg: ["street", "pedestrians"], bg: ["buildings", "sky"] },
+            },
             overrides: {
-              setting: {
-                location: "city_street",
-                time_of_day: "night",
-              },
-              atmosphere_fx: {
-                bloom: "strong",
-                fog: {
-                  style_reference: "urban haze",
-                  density: "light",
-                  hue: "warm amber",
-                },
-              },
+              atmosphere_fx: { bloom: "strong" },
             },
           },
         },
       ],
     },
-    // ... other StoryPage entries
+    {
+      pageNumber: 2,
+      beats: [
+        {
+          order: 2,
+          purpose: "build",
+          summary: "Otto tilts his head back to see the tops of the towering buildings.",
+          emotion: "overwhelmed_wonder",
+          characters: [
+            { id: "otto", expression: "awestruck, mouth slightly open", pose: "head tilted back, looking up", focus: "primary" },
+          ],
+          shot: {
+            size: "medium",
+            angle: "worms_eye",
+            pov: "character_pov",
+            layout: "full_bleed_single",
+            staging: {
+              depth: { fg: ["otto"], mg: ["lower building floors"], bg: ["upper floors", "glowing windows"] },
+            },
+          },
+        },
+      ],
+    },
+    {
+      pageNumber: 3,
+      beats: [
+        {
+          order: 3,
+          purpose: "build",
+          summary: "Dad guides Otto toward a small, welcoming café.",
+          emotion: "comfort_emerging",
+          characters: [
+            { id: "otto", expression: "tentative hope", pose: "walking, holding Dad's hand", focus: "primary" },
+            { id: "dad", expression: "encouraging smile", pose: "pointing toward café", focus: "secondary" },
+          ],
+          setting: { location: "city_street_near_cafe", landmarks: ["cozy corner café"] },
+          shot: {
+            size: "medium_wide",
+            angle: "eye_level",
+            layout: "full_bleed_single",
+            staging: {
+              anchors: [
+                { subject: "otto", grid: "left-third" },
+                { subject: "café", grid: "right-third" },
+              ],
+              depth: { fg: ["otto", "dad"], mg: ["café entrance"], bg: ["dark buildings"] },
+            },
+            overrides: {
+              lighting: { scheme: ["café-warm-glow"] },
+              atmosphere_fx: { bloom: "strong" },
+            },
+          },
+        },
+      ],
+    },
   ],
 };
 
@@ -544,14 +652,14 @@ export const exampleStory: Story = {
 
 // RenderedImage: a single generated image for a beat.
 export const RenderedImageSchema = z.object({
-  id: z.string(),                                  // image id
-  pageNumber: z.number().int().min(1),             // page this image belongs to
-  beatId: z.string().optional(),                   // which beat this image came from (if 1:1)
-  url: z.string().url(),                           // storage URL
-  width: z.number().int().positive(),              // px width
-  height: z.number().int().positive(),             // px height
-  mimeType: z.string().min(1),                     // e.g. "image/png"
-  meta: z.record(z.unknown()).optional(),          // extra metadata (model, seed, etc.)
+  id: z.string().min(1),                             // image id
+  pageNumber: z.number().int().min(1),               // page this image belongs to
+  beatOrder: z.number().int().min(1).optional(),     // which beat this image came from (by order)
+  url: z.string().url(),                             // storage URL
+  width: z.number().int().positive(),                // px width
+  height: z.number().int().positive(),               // px height
+  mimeType: z.string().min(1),                       // e.g. "image/png"
+  meta: z.record(z.unknown()).optional(),            // extra metadata (model, seed, etc.)
 });
 
 export type RenderedImage = z.infer<typeof RenderedImageSchema>;
@@ -568,7 +676,6 @@ export type BookPage = z.infer<typeof BookPageSchema>;
 // Book: complete final book with all pages, text, and rendered images.
 export const BookSchema = z.object({
   storyTitle: z.string().min(1),                   // book title
-  storyId: z.string().optional(),                  // optional external id
   ageRange: AgeRangeSchema,                        // target age range
   pages: z.array(BookPageSchema).min(1),           // complete pages with text and images
   meta: z.record(z.unknown()).optional(),          // book-level metadata (creation date, version, etc.)
@@ -580,7 +687,7 @@ export type Book = z.infer<typeof BookSchema>;
 export const exampleRenderedImage: RenderedImage = {
   id: "img_otto_city_page1_v1",
   pageNumber: 1,
-  beatId: "beat_001_opening",
+  beatOrder: 1,
   url: "https://example.com/images/otto-city-page1.png",
   width: 2048,
   height: 1536,
@@ -595,7 +702,6 @@ export const exampleRenderedImage: RenderedImage = {
 // Example Book.
 export const exampleBook: Book = {
   storyTitle: "Otto and the City of Lights",
-  storyId: "otto-city-v1",
   ageRange: { min: 4, max: 7 },
   pages: [
     {
@@ -631,12 +737,15 @@ export const exampleBook: Book = {
  *    - Enriches characters with arc/development notes
  *
  * 3. DirectorAgent: Creates complete story → Story
+ *    - Normalizes characters into lookup table (Story.characters)
+ *    - Normalizes manuscript pages into lookup table (Story.manuscript.pages)
  *    - Breaks manuscript pages into StoryBeats (visual narrative moments)
  *    - Defines global VisualStyleGuide
  *    - Specifies ShotComposition for each beat (composition, lighting, setting, etc.)
- *    - Characters in beats include expression, pose, and props
+ *    - Characters in beats reference the lookup table by id
  *
  * 4. IllustratorAgent: Generates final book → Book
+ *    - Resolves character/manuscript references from lookup tables
  *    - Renders each beat using the visual specifications
  *    - Returns complete book with images and metadata
  */
@@ -662,12 +771,12 @@ export const authorAgent: AuthorAgent = async (brief) => {
 };
 
 export const directorAgent: DirectorAgent = async (manuscript) => {
-  // ... map manuscript.pages to beats and shot compositions ...
+  // ... normalize characters and pages, create beats with shot compositions ...
   return exampleStory;
 };
 
 export const illustratorAgent: IllustratorAgent = async (story) => {
-  // ... generate images for each page/beat and return complete book ...
+  // ... resolve references from lookup tables, generate images, return complete book ...
   return exampleBook;
 };
 
@@ -688,6 +797,41 @@ export async function executePipeline(userPrompt: string): Promise<{
 
 /**
  * ============================================================
+ * HELPER FUNCTIONS (for resolving references)
+ * ============================================================
+ */
+
+/**
+ * Resolve a beat character reference to full character data.
+ */
+export function resolveCharacter(story: Story, beatChar: BeatCharacter): StoryCharacter & BeatCharacter {
+  const character = story.characters[beatChar.id];
+  if (!character) {
+    throw new Error(`Character not found: ${beatChar.id}`);
+  }
+  return { ...character, ...beatChar };
+}
+
+/**
+ * Resolve a page number to its manuscript content.
+ */
+export function resolveManuscriptPage(story: Story, pageNumber: number): ManuscriptPage {
+  const page = story.manuscript.pages[String(pageNumber)];
+  if (!page) {
+    throw new Error(`Manuscript page not found: ${pageNumber}`);
+  }
+  return page;
+}
+
+/**
+ * Get the manuscript text for a story page.
+ */
+export function getPageText(story: Story, pageNumber: number): string {
+  return resolveManuscriptPage(story, pageNumber).text;
+}
+
+/**
+ * ============================================================
  * ARCHITECTURE SUMMARY (class diagram view)
  * ============================================================
  *
@@ -695,7 +839,7 @@ export async function executePipeline(userPrompt: string): Promise<{
  *
  * StoryCharacter (domain model)
  *   - name, description, role, traits, notes[]
- *   - Used in: StoryBrief, Manuscript
+ *   - Used in: StoryBrief, Manuscript, Story.characters lookup
  *
  * StoryBrief (user requirements)
  *   - title, storyArc, setting, tone, moral
@@ -703,18 +847,40 @@ export async function executePipeline(userPrompt: string): Promise<{
  *   - characters: StoryCharacter[]
  *   - customInstructions[], interests[]
  *
- * Manuscript (text-only story)
+ * Manuscript (text-only story - intermediate format)
  *   - title, logline, theme, setting, moral, tone
  *   - ageRange: AgeRange
  *   - characters: StoryCharacter[] (enriched with notes)
  *   - pages: ManuscriptPage[]
- *   - Each ManuscriptPage contains: pageNumber, summary, text, imageConcept
+ *   - Each ManuscriptPage contains: summary, text, imageConcept
+ *
+ * Story (normalized, self-contained blob for rendering)
+ *   - storyTitle, ageRange
+ *   - characters: Record<id, StoryCharacter>  ← LOOKUP TABLE
+ *   - manuscript: { meta, pages: Record<pageNum, ManuscriptPage> }  ← LOOKUP TABLE
+ *   - style: VisualStyleGuide
+ *   - pages: StoryPage[]
+ *
+ * StoryPage (complete page with visual beats)
+ *   - pageNumber (also key for manuscript.pages lookup)
+ *   - beats: StoryBeat[]
+ *
+ * StoryBeat (narrative moment + visual specification)
+ *   - order, purpose (setup/build/twist/climax/payoff/button)
+ *   - summary, emotion
+ *   - characters[]: { id, expression, pose, focus }  ← References Story.characters
+ *   - setting: partial override
+ *   - shot: ShotComposition
+ *
+ * BeatCharacter (concise reference)
+ *   - id (key in Story.characters)
+ *   - expression, pose, focus
  *
  * Setting (shared setting descriptor)
  *   - biome, location, detail_description
  *   - season, time_of_day
  *   - landmarks, diegetic_lights
- *   - Used globally in VisualStyleGuide and per-shot in ShotComposition.overrides
+ *   - Used globally in VisualStyleGuide and per-shot in overrides
  *
  * VisualStyleGuide (global visual style)
  *   - art_direction: genre, medium, technique, style_strength
@@ -726,45 +892,30 @@ export async function executePipeline(userPrompt: string): Promise<{
  *   - size, angle, pov, composition, layout
  *   - staging: anchors, depth layers, negative_space
  *   - cinematography: focal_length, aperture, dof
- *   - overrides: setting, lighting, color, mood, focal_hierarchy, atmosphere_fx, materials_microdetail, constraints
+ *   - overrides: lighting, color, mood, focal_hierarchy, atmosphere_fx, materials_microdetail, constraints
  *
- * StoryBeat (narrative moment + visual specification)
- *   - id, order, page, purpose (setup/build/twist/climax/payoff/button)
- *   - summary, emotion, text_snippet
- *   - characters[]: {id, expression, pose_and_props, focus}
- *   - shot_composition: ShotComposition (includes setting override)
- *
- * StoryPage (complete page with visual beats)
- *   - pageNumber, manuscriptPageRef
- *   - beats: StoryBeat[]
- *
- * Story (complete story ready for rendering)
- *   - storyTitle, storyId, ageRange
- *   - style: VisualStyleGuide
- *   - pages: StoryPage[]
- *
- * RenderedImage (single generated image)
- *   - id, pageNumber, beatId
- *   - url, width, height, mimeType
- *   - meta: {model, seed, promptVersion, ...}
+ * Book (final rendered book)
+ *   - storyTitle, ageRange
+ *   - pages: BookPage[]
+ *   - meta: {createdAt, version, ...}
  *
  * BookPage (complete page with text and images)
  *   - pageNumber, text
  *   - images: RenderedImage[]
  *
- * Book (final rendered book)
- *   - storyTitle, storyId, ageRange
- *   - pages: BookPage[]
- *   - meta: {createdAt, version, ...}
+ * RenderedImage (single generated image)
+ *   - id, pageNumber, beatOrder
+ *   - url, width, height, mimeType
+ *   - meta: {model, seed, promptVersion, ...}
  *
  * Data flow:
- *   StoryBrief → Manuscript → Story → Book
+ *   StoryBrief → Manuscript → Story (normalized) → Book
  *
  * Key relationships:
- *   - Manuscript.blurb contains StoryBlurb (which contains StoryBrief)
- *   - StoryPage.manuscriptPageRef links to ManuscriptPage.pageNumber
- *   - StoryBeat.characters[].id references StoryCharacter.name
+ *   - Story.characters[id] contains full StoryCharacter definitions
+ *   - Story.manuscript.pages[pageNum] contains manuscript text
+ *   - StoryBeat.characters[].id references Story.characters
+ *   - StoryPage.pageNumber is key for Story.manuscript.pages
  *   - ShotComposition.overrides partially override VisualStyleGuide globals
- *   - RenderedImage.beatId links back to StoryBeat.id
  *   - BookPage combines manuscript text with rendered images
  */
