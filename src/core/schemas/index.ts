@@ -55,6 +55,18 @@ export const StoryBriefSchema = z.object({
 
 export type StoryBrief = z.infer<typeof StoryBriefSchema>;
 
+// ============================================================
+// 2a. CHAT INTAKE → ConversationResponse (LLM chat flow)
+// ============================================================
+
+export const ConversationResponseSchema = z.object({
+  question: z.string().min(1),
+  chips: z.array(z.string().min(1)),
+  isComplete: z.boolean(),
+});
+
+export type ConversationResponse = z.infer<typeof ConversationResponseSchema>;
+
 export const StoryBlurbSchema = z.object({
   brief: StoryBriefSchema,
   plotBeats: z.array(z.string().min(1)).default([]),
