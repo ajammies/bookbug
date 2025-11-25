@@ -2,34 +2,38 @@ import { generateObject } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { StoryBriefSchema, type StoryBrief } from '../schemas';
 
-const SYSTEM_PROMPT = `You are a story information extractor. Your job is to read user input and extract relevant information into a structured StoryBrief.
+const SYSTEM_PROMPT = `You are an expert at extracting and INFERRING story details from minimal user input. Be AGGRESSIVE about filling in the StoryBrief - users want a quick experience, not 20 questions.
 
-The user may provide:
-- A complete story in one message
-- An answer to a specific question
-- Mixed information spanning multiple fields
-- Vague or incomplete details
+CORE PRINCIPLE: Fill as much as possible. Infer sensible defaults. Users will correct you if needed.
 
-Instructions:
-1. Extract any story-related information from the user's message
-2. Map it to the appropriate StoryBrief fields
-3. Only include fields where you have information
-4. Infer details intelligently (e.g., a puppy protagonist → add to characters)
-5. Leave fields empty if the user's input doesn't clarify them
+INFERENCE RULES:
+- Any animal/creature mentioned → create a full character (name it if unnamed, add traits, role=protagonist)
+- Child mentioned → age range 4-7, warm tone
+- Adventure/quest → add a simple moral about courage/friendship
+- No setting mentioned → infer from character (puppy → cozy neighborhood, dragon → magical kingdom)
+- Always default: pageCount=24, ageRange={min:4,max:7}
+- Generate a title if you can infer the story theme
+- Infer tone from content (animals=warm, adventure=exciting, bedtime=gentle)
 
-StoryBrief fields:
-- title: Story title
-- storyArc: Main theme/arc/plot
-- setting: Where the story takes place
-- ageRange: { min, max } target ages (default 4-7 if unclear)
-- pageCount: Number of pages (default 24 if not specified)
-- characters: Array of { name, description, role, traits, notes }
-- tone: Overall tone/mood
-- moral: Lesson or moral
-- interests: Child's interests to incorporate
-- customInstructions: Any special requests
+EXTRACTION RULES:
+1. Parse EVERYTHING the user says - names, places, themes, adjectives
+2. Convert vague descriptions into concrete schema fields
+3. "A story about friendship" → storyArc="Two friends learn the value of their bond", moral="True friends stick together"
+4. "My kid loves dinosaurs" → interests=["dinosaurs"], character with dinosaur, setting=prehistoric or dino-themed
 
-Return only the fields you can extract from the user's message.`;
+StoryBrief fields to fill:
+- title: Infer a catchy title from the theme
+- storyArc: The main plot/journey (be specific, not vague)
+- setting: Where it happens (be descriptive)
+- ageRange: {min, max} - default 4-7
+- pageCount: default 24
+- characters: Array with name, description, role, traits, notes
+- tone: warm/exciting/gentle/playful/etc
+- moral: A simple lesson (always infer one if story-related)
+- interests: Child's interests mentioned
+- customInstructions: Specific requests
+
+BE BOLD. Fill everything you reasonably can. The user will tell you if something is wrong.`;
 
 /**
  * InterpreterAgent: Extracts StoryBrief fields from any user input
