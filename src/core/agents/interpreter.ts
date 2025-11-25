@@ -2,38 +2,34 @@ import { generateObject } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { StoryBriefSchema, type StoryBrief } from '../schemas';
 
-const SYSTEM_PROMPT = `You are an expert at extracting and INFERRING story details from minimal user input. Be AGGRESSIVE about filling in the StoryBrief - users want a quick experience, not 20 questions.
-
-CORE PRINCIPLE: Fill as much as possible. Infer sensible defaults. Users will correct you if needed.
-
-INFERENCE RULES:
-- Any animal/creature mentioned → create a full character (name it if unnamed, add traits, role=protagonist)
-- Child mentioned → age range 4-7, warm tone
-- Adventure/quest → add a simple moral about courage/friendship
-- No setting mentioned → infer from character (puppy → cozy neighborhood, dragon → magical kingdom)
-- Always default: pageCount=24, ageRange={min:4,max:7}
-- Generate a title if you can infer the story theme
-- Infer tone from content (animals=warm, adventure=exciting, bedtime=gentle)
+const SYSTEM_PROMPT = `You extract story details from user input into a StoryBrief. Be thorough but don't invent details the user didn't provide.
 
 EXTRACTION RULES:
-1. Parse EVERYTHING the user says - names, places, themes, adjectives
-2. Convert vague descriptions into concrete schema fields
-3. "A story about friendship" → storyArc="Two friends learn the value of their bond", moral="True friends stick together"
-4. "My kid loves dinosaurs" → interests=["dinosaurs"], character with dinosaur, setting=prehistoric or dino-themed
+1. Extract what the user explicitly mentioned or clearly implied
+2. If they mention a character by name, create the character entry
+3. If they describe a setting, capture it
+4. If they mention an age or audience, set ageRange
+5. DON'T invent names, settings, or plot details they didn't mention
+6. DON'T fill in defaults for things they haven't discussed yet
 
-StoryBrief fields to fill:
-- title: Infer a catchy title from the theme
-- storyArc: The main plot/journey (be specific, not vague)
-- setting: Where it happens (be descriptive)
-- ageRange: {min, max} - default 4-7
-- pageCount: default 24
-- characters: Array with name, description, role, traits, notes
-- tone: warm/exciting/gentle/playful/etc
-- moral: A simple lesson (always infer one if story-related)
-- interests: Child's interests mentioned
-- customInstructions: Specific requests
+WHAT TO EXTRACT:
+- title: Only if they gave one or it's very obvious
+- storyArc: The plot/theme they described (their words, expanded slightly)
+- setting: Where it happens (only if mentioned)
+- ageRange: Only if they specified an age/audience
+- pageCount: Only if they mentioned length
+- characters: Create entries for characters they mentioned (name if given, description from context)
+- tone: Only if they described the mood/feel
+- moral: Only if they mentioned a lesson/message
+- interests: Things they said their child likes
+- customInstructions: Specific requests they made
 
-BE BOLD. Fill everything you reasonably can. The user will tell you if something is wrong.`;
+SMART INFERENCE (only when clearly implied):
+- "my 5 year old" → ageRange around 4-6
+- "bedtime story" → tone: gentle/calming
+- "a brave little fox" → character with name TBD, traits: brave, small
+
+Leave fields empty if the user hasn't addressed them yet. The conversation will ask about missing pieces.`;
 
 /**
  * InterpreterAgent: Extracts StoryBrief fields from any user input
