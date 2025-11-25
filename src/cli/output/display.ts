@@ -34,8 +34,9 @@ export function displayManuscript(manuscript: Manuscript): void {
   console.log(chalk.bold('Pages:'), manuscript.pageCount);
 
   console.log(chalk.bold('\nPage Summaries:'));
-  for (const page of manuscript.pages.slice(0, 5)) {
-    console.log(`  ${chalk.yellow(`Page ${page.pageNumber}:`)} ${page.summary}`);
+  for (let i = 0; i < Math.min(5, manuscript.pages.length); i++) {
+    const page = manuscript.pages[i]!;
+    console.log(`  ${chalk.yellow(`Page ${i + 1}:`)} ${page.summary}`);
   }
   if (manuscript.pages.length > 5) {
     console.log(chalk.gray(`  ... and ${manuscript.pages.length - 5} more pages`));
@@ -63,8 +64,8 @@ export function displayStory(story: Story): void {
   const firstPage = story.pages[0];
   if (firstPage) {
     for (const beat of firstPage.beats) {
-      console.log(`  • ${chalk.cyan(beat.id)}: ${beat.summary}`);
-      console.log(`    Shot: ${beat.shot_composition.size} / ${beat.shot_composition.angle}`);
+      console.log(`  • ${chalk.cyan(`Beat ${beat.order}`)}: ${beat.summary}`);
+      console.log(`    Shot: ${beat.shot.size} / ${beat.shot.angle}`);
     }
   }
 }

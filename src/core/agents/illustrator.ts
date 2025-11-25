@@ -1,4 +1,5 @@
 import type { Story, Book, BookPage, RenderedImage } from '../schemas';
+import { resolveManuscriptPage } from '../schemas';
 import type { IllustratorAgent } from './index';
 
 /**
@@ -25,10 +26,10 @@ export const illustratorAgent: IllustratorAgent = async (story: Story): Promise<
       // const imageUrl = await generateImage(prompt);
 
       const image: RenderedImage = {
-        id: `img_${beat.id}`,
+        id: `img_page${storyPage.pageNumber}_beat${beat.order}`,
         pageNumber: storyPage.pageNumber,
-        beatId: beat.id,
-        url: `https://placeholder.com/images/${beat.id}.png`, // placeholder
+        beatOrder: beat.order,
+        url: `https://placeholder.com/images/page${storyPage.pageNumber}_beat${beat.order}.png`, // placeholder
         width: 2048,
         height: 1536,
         mimeType: 'image/png',
@@ -41,9 +42,9 @@ export const illustratorAgent: IllustratorAgent = async (story: Story): Promise<
       images.push(image);
     }
 
-    // Get text from the first beat's text_snippet or use summary
-    const text = storyPage.beats[0]?.text_snippet
-      || storyPage.beats.map(b => b.summary).join(' ');
+    // Get text from the manuscript using the page number
+    const manuscriptPage = resolveManuscriptPage(story, storyPage.pageNumber);
+    const text = manuscriptPage.text;
 
     pages.push({
       pageNumber: storyPage.pageNumber,
@@ -54,7 +55,6 @@ export const illustratorAgent: IllustratorAgent = async (story: Story): Promise<
 
   return {
     storyTitle: story.storyTitle,
-    storyId: story.storyId,
     ageRange: story.ageRange,
     pages,
     meta: {

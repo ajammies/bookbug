@@ -3,7 +3,11 @@ import { z } from "zod";
 /**
  * Domain Schemas for Bookbug Children's Book Generator
  *
- * Data flow: StoryBrief → Manuscript → Story → Book
+ * Data flow: StoryBrief → Manuscript → Story (normalized) → Book
+ *
+ * NORMALIZED STRUCTURE:
+ * Story contains lookup tables for characters and manuscript pages.
+ * Beats reference these by ID for conciseness while keeping the blob self-contained.
  */
 
 // ============================================================
@@ -64,7 +68,6 @@ export type StoryBlurb = z.infer<typeof StoryBlurbSchema>;
 // ============================================================
 
 export const ManuscriptPageSchema = z.object({
-  pageNumber: z.number().int().min(1),
   summary: z.string().min(1),
   text: z.string().min(1),
   imageConcept: z.string().min(1),
@@ -72,6 +75,21 @@ export const ManuscriptPageSchema = z.object({
 
 export type ManuscriptPage = z.infer<typeof ManuscriptPageSchema>;
 
+// Manuscript metadata (without pages, for embedding in Story)
+export const ManuscriptMetaSchema = z.object({
+  title: z.string().min(1),
+  logline: z.string().min(1),
+  theme: z.string().min(1),
+  setting: z.string().min(1),
+  moral: z.string().optional(),
+  tone: z.string().optional(),
+  styleNotes: z.string().optional(),
+});
+
+export type ManuscriptMeta = z.infer<typeof ManuscriptMetaSchema>;
+
+// Full Manuscript: what AuthorAgent emits, Director consumes.
+// Note: This is the intermediate format; Story uses a normalized version.
 export const ManuscriptSchema = z.object({
   blurb: StoryBlurbSchema,
   title: z.string().min(1),
@@ -88,14 +106,6 @@ export const ManuscriptSchema = z.object({
 })
 .refine((manuscript) => manuscript.pages.length === manuscript.pageCount, {
   message: "pages.length must equal pageCount",
-  path: ["pages"],
-})
-.refine((manuscript) => {
-  const pageNums = manuscript.pages.map(p => p.pageNumber);
-  const expectedNums = Array.from({ length: manuscript.pageCount }, (_, i) => i + 1);
-  return pageNums.every((num, idx) => num === expectedNums[idx]);
-}, {
-  message: "pages must be sequentially numbered starting at 1",
   path: ["pages"],
 });
 
@@ -206,7 +216,7 @@ export const ShotCompositionSchema = z.object({
   layout: z.enum(["full_bleed_single", "full_bleed_spread", "framed_illustration", "spot_illustration", "clustered_vignettes", "multi_panel", "progression_strip", "side_scroller_spread", "cutaway_cross_section", "dollhouse_view", "map_spread", "split_screen", "before_after", "zoom_sequence"]).optional(),
   staging: z.object({
     anchors: z.array(z.object({
-      subject_id: z.string().min(1),
+      subject: z.string().min(1),
       grid: z.string().min(1),
     })).optional(),
     depth: z.object({
@@ -237,23 +247,26 @@ export const ShotCompositionSchema = z.object({
 
 export type ShotComposition = z.infer<typeof ShotCompositionSchema>;
 
+// BeatCharacter: concise character reference within a beat.
+// References characters by id (key in Story.characters lookup table).
+export const BeatCharacterSchema = z.object({
+  id: z.string().min(1),
+  expression: z.string().min(1),
+  pose: z.string().min(1),
+  focus: z.enum(['primary', 'secondary', 'background']),
+});
+
+export type BeatCharacter = z.infer<typeof BeatCharacterSchema>;
+
 // StoryBeat: one narrative moment + visual shot description
 export const StoryBeatSchema = z.object({
-  id: z.string(),
   order: z.number().int().min(1),
-  page: z.number().int().min(1),
   purpose: z.enum(["setup", "build", "twist", "climax", "payoff", "button"]),
-  summary: z.string(),
-  emotion: z.string(),
-  text_snippet: z.string().optional(),
-  characters: z.array(z.object({
-    id: z.string(),
-    expression: z.string(),
-    pose_and_props: z.string(),
-    focus: z.enum(['primary', 'secondary', 'background']),
-  })).default([]),
+  summary: z.string().min(1),
+  emotion: z.string().min(1),
+  characters: z.array(BeatCharacterSchema).default([]),
   setting: SettingPartialSchema.optional(),
-  shot_composition: ShotCompositionSchema,
+  shot: ShotCompositionSchema,
 });
 
 export type StoryBeat = z.infer<typeof StoryBeatSchema>;
@@ -280,17 +293,32 @@ export type VisualStyleGuide = z.infer<typeof VisualStyleGuideSchema>;
 // StoryPage: a single page with visual beats
 export const StoryPageSchema = z.object({
   pageNumber: z.number().int().min(1),
-  manuscriptPageRef: z.number().int().min(1),
   beats: z.array(StoryBeatSchema).min(1),
 });
 
 export type StoryPage = z.infer<typeof StoryPageSchema>;
 
-// Story: complete story ready for rendering
+/**
+ * Story: complete story ready for rendering
+ *
+ * NORMALIZED STRUCTURE:
+ * - characters: Record<id, StoryCharacter> - lookup table for all characters
+ * - manuscript: { meta, pages: Record<pageNum, ManuscriptPage> } - lookup table for text
+ * - pages: StoryPage[] - visual beats that reference the above by ID
+ *
+ * This structure is:
+ * 1. Self-contained: all referenced data is in the blob
+ * 2. Concise: no duplication of character/manuscript data
+ * 3. Functional: immutable, serializable, no external lookups needed
+ */
 export const StorySchema = z.object({
   storyTitle: z.string().min(1),
-  storyId: z.string().optional(),
   ageRange: AgeRangeSchema,
+  characters: z.record(z.string(), StoryCharacterSchema),
+  manuscript: z.object({
+    meta: ManuscriptMetaSchema,
+    pages: z.record(z.string(), ManuscriptPageSchema),
+  }),
   style: VisualStyleGuideSchema,
   pages: z.array(StoryPageSchema).min(1),
 });
@@ -302,9 +330,9 @@ export type Story = z.infer<typeof StorySchema>;
 // ============================================================
 
 export const RenderedImageSchema = z.object({
-  id: z.string(),
+  id: z.string().min(1),
   pageNumber: z.number().int().min(1),
-  beatId: z.string().optional(),
+  beatOrder: z.number().int().min(1).optional(),
   url: z.string().url(),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
@@ -324,10 +352,42 @@ export type BookPage = z.infer<typeof BookPageSchema>;
 
 export const BookSchema = z.object({
   storyTitle: z.string().min(1),
-  storyId: z.string().optional(),
   ageRange: AgeRangeSchema,
   pages: z.array(BookPageSchema).min(1),
   meta: z.record(z.unknown()).optional(),
 });
 
 export type Book = z.infer<typeof BookSchema>;
+
+// ============================================================
+// HELPER FUNCTIONS (for resolving references)
+// ============================================================
+
+/**
+ * Resolve a beat character reference to full character data.
+ */
+export function resolveCharacter(story: Story, beatChar: BeatCharacter): StoryCharacter & BeatCharacter {
+  const character = story.characters[beatChar.id];
+  if (!character) {
+    throw new Error(`Character not found: ${beatChar.id}`);
+  }
+  return { ...character, ...beatChar };
+}
+
+/**
+ * Resolve a page number to its manuscript content.
+ */
+export function resolveManuscriptPage(story: Story, pageNumber: number): ManuscriptPage {
+  const page = story.manuscript.pages[String(pageNumber)];
+  if (!page) {
+    throw new Error(`Manuscript page not found: ${pageNumber}`);
+  }
+  return page;
+}
+
+/**
+ * Get the manuscript text for a story page.
+ */
+export function getPageText(story: Story, pageNumber: number): string {
+  return resolveManuscriptPage(story, pageNumber).text;
+}
