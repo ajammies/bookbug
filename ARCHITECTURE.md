@@ -11,8 +11,9 @@ A CLI tool that guides users through creating personalized children's picture bo
 3. [Schema Reference](#schema-reference)
 4. [Pipeline Phases](#pipeline-phases)
 5. [Technical Implementation](#technical-implementation)
-6. [Version Scope](#version-scope)
-7. [Future Considerations](#future-considerations)
+6. [Testing](#testing)
+7. [Version Scope](#version-scope)
+8. [Future Considerations](#future-considerations)
 
 ---
 
@@ -256,6 +257,56 @@ npm run dev write <brief.json>          # Generate manuscript
 npm run dev direct <manuscript.json>    # Generate visual story
 npm run dev render <story.json>         # Generate images
 ```
+
+---
+
+## Testing
+
+Bookbug uses [Vitest](https://vitest.dev/) for testing, with co-located test files alongside source code.
+
+### Running Tests
+
+```bash
+npm test              # Run tests in watch mode
+npm run test:run      # Run tests once
+npm run test:coverage # Run tests with coverage report
+```
+
+### Test Structure
+
+Tests are co-located with source files (`file.ts` → `file.test.ts`):
+
+```
+src/
+├── cli/
+│   ├── utils/
+│   │   ├── naming.ts
+│   │   ├── naming.test.ts        # Unit tests for naming utilities
+│   │   ├── output.ts
+│   │   └── output.test.ts        # Integration tests with fs mocking
+│   └── output/
+│       ├── progress.ts
+│       └── progress.test.ts      # Unit tests for progress formatting
+└── core/
+    └── schemas/
+        ├── index.ts
+        └── index.test.ts         # Schema validation tests
+```
+
+### Test Categories
+
+| Category | Description | Mocking |
+|----------|-------------|---------|
+| **Unit Tests** | Pure functions with no side effects | None |
+| **Integration Tests** | Functions with I/O (file system, network) | `vi.mock()` for fs/promises |
+| **Agent Tests** | LLM calls via AI SDK | Mock `generateObject` responses |
+
+### Future: Agent Eval Tests (V2)
+
+Planned evaluation framework for LLM output quality:
+- Test cases with expected outputs
+- Scoring metrics (creativity, consistency, age-appropriateness)
+- Regression testing for prompt changes
 
 ---
 

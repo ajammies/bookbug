@@ -31,12 +31,14 @@ export interface StoryOutputManager {
 
 /**
  * Create a new output manager with a generated folder name
+ * @param title - Story title used to generate folder name
+ * @param customPath - Optional custom folder path (overrides auto-generation)
  */
 export const createOutputManager = async (
-  title: string
+  title: string,
+  customPath?: string
 ): Promise<StoryOutputManager> => {
-  const folderName = generateStoryFolder(title);
-  const folder = path.join(OUTPUT_DIR, folderName);
+  const folder = customPath ?? path.join(OUTPUT_DIR, generateStoryFolder(title));
   await fs.mkdir(folder, { recursive: true });
   await fs.mkdir(path.join(folder, 'assets'), { recursive: true });
   return createManager(folder);
