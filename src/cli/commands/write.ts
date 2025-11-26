@@ -1,27 +1,27 @@
 import { Command } from 'commander';
 import { runManuscript } from '../../core/pipeline';
-import { StoryBriefSchema } from '../../core/schemas';
+import { StoryBlurbSchema } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayManuscript } from '../output/display';
 
 export const writeCommand = new Command('write')
-  .description('Write a manuscript from a StoryBrief')
-  .argument('<brief-file>', 'Path to StoryBrief JSON file')
+  .description('Write a manuscript from a StoryBlurb')
+  .argument('<blurb-file>', 'Path to StoryBlurb JSON file')
   .option('-o, --output <path>', 'Output file path for JSON')
-  .action(async (briefFile: string, options: { output?: string }) => {
+  .action(async (blurbFile: string, options: { output?: string }) => {
     const spinner = createSpinner();
 
     try {
-      // Load and validate brief
-      spinner.start('Loading brief...');
+      // Load and validate blurb
+      spinner.start('Loading blurb...');
       const fs = await import('fs/promises');
-      const briefJson = await fs.readFile(briefFile, 'utf-8');
-      const brief = StoryBriefSchema.parse(JSON.parse(briefJson));
-      spinner.succeed('Brief loaded');
+      const blurbJson = await fs.readFile(blurbFile, 'utf-8');
+      const blurb = StoryBlurbSchema.parse(JSON.parse(blurbJson));
+      spinner.succeed('Blurb loaded');
 
       // Generate manuscript
       spinner.start('Writing manuscript...');
-      const manuscript = await runManuscript(brief);
+      const manuscript = await runManuscript(blurb);
       spinner.succeed('Manuscript written');
 
       displayManuscript(manuscript);

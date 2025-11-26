@@ -1,4 +1,4 @@
-import type { StoryBrief, Manuscript, Story, Book } from './schemas';
+import type { StoryBlurb, Manuscript, Story, Book } from './schemas';
 import {
   authorAgent,
   directorAgent,
@@ -10,7 +10,7 @@ import {
  * Pipeline result containing all intermediate outputs
  */
 export interface PipelineResult {
-  brief: StoryBrief;
+  blurb: StoryBlurb;
   manuscript: Manuscript;
   story: Story;
   book: Book;
@@ -27,28 +27,30 @@ export interface PipelineOptions {
 }
 
 /**
- * Execute the pipeline from StoryBrief to rendered book
+ * Execute the pipeline from StoryBlurb to rendered book
  *
  * Pipeline flow:
- *   StoryBrief → Author → Manuscript
+ *   StoryBlurb → Author → Manuscript
  *   Manuscript → Director → Story
  *   Story → Illustrator → Book
  *
- * Note: StoryBrief is created via chat intake (runStoryIntake) before calling this
+ * Note: StoryBlurb is created via:
+ *   1. runStoryIntake (chat) → StoryBrief
+ *   2. runBlurbIntake (iterate plot) → StoryBlurb
  */
 export async function executePipeline(
-  brief: StoryBrief,
+  blurb: StoryBlurb,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
   const { onProgress, stopAfter } = options;
 
-  // Step 1: Write manuscript from brief
+  // Step 1: Write manuscript from blurb
   onProgress?.('author', 'start');
-  const manuscript = await authorAgent(brief);
+  const manuscript = await authorAgent(blurb);
   onProgress?.('author', 'complete', manuscript);
 
   if (stopAfter === 'manuscript') {
-    return { brief, manuscript, story: null as any, book: null as any };
+    return { blurb, manuscript, story: null as any, book: null as any };
   }
 
   // Step 2: Direct visual story from manuscript
@@ -57,7 +59,7 @@ export async function executePipeline(
   onProgress?.('director', 'complete', story);
 
   if (stopAfter === 'story') {
-    return { brief, manuscript, story, book: null as any };
+    return { blurb, manuscript, story, book: null as any };
   }
 
   // Step 3: Illustrate book from story
@@ -65,14 +67,14 @@ export async function executePipeline(
   const book = await illustratorAgent(story);
   onProgress?.('illustrator', 'complete', book);
 
-  return { brief, manuscript, story, book };
+  return { blurb, manuscript, story, book };
 }
 
 /**
  * Run individual pipeline steps (for CLI commands)
  */
-export async function runManuscript(brief: StoryBrief): Promise<Manuscript> {
-  return authorAgent(brief);
+export async function runManuscript(blurb: StoryBlurb): Promise<Manuscript> {
+  return authorAgent(blurb);
 }
 
 export async function runStory(manuscript: Manuscript): Promise<Story> {

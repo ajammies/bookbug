@@ -1,30 +1,40 @@
 import { generateObject } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
-import { ManuscriptSchema, type StoryBrief, type Manuscript } from '../schemas';
+import { ManuscriptSchema, type StoryBlurb, type Manuscript } from '../schemas';
 import type { AuthorAgent } from './index';
 
-const SYSTEM_PROMPT = `You are a children's book author. Given a StoryBrief, write a complete manuscript with text for each page.
+const SYSTEM_PROMPT = `You are a children's book author. Given a StoryBlurb (with brief and plot beats), write a complete manuscript with text for each page.
 
-Guidelines:
-1. Write age-appropriate text matching the ageRange
-2. Use rhythmic, engaging language for younger readers (ages 2-5)
-3. Use slightly more complex sentences for older readers (ages 6-12)
-4. Each page should have 1-3 sentences for picture books
-5. Include a clear narrative arc: beginning, middle, end
-6. Enrich character descriptions with arc/development notes
-7. Write an imageConcept for each page describing the illustration
+YOUR INPUT:
+- brief: Character details, setting, age range, tone, moral
+- plotBeats: The approved story outline (one beat per page typically)
+- allowCreativeLiberty: Whether you can embellish or should stick closely to beats
 
-Keep the tone consistent with the brief. Make it engaging and memorable.`;
+WRITING GUIDELINES:
+1. Each plot beat becomes one page (or spread) of text
+2. Write age-appropriate language for the ageRange
+3. For ages 2-5: Simple words, rhythmic patterns, repetition
+4. For ages 6-9: Slightly longer sentences, more vocabulary
+5. Each page: 1-3 sentences for picture books, up to a short paragraph for older readers
+6. Follow the plot beats closely - they've been approved by the user
+7. Make dialogue natural and character voices distinct
+
+PAGE STRUCTURE:
+- summary: Brief description of what happens (for reference)
+- text: The actual prose that will appear on the page
+- imageConcept: Description of the illustration for this page
+
+Keep the tone consistent. Honor the plot beats. Make it magical.`;
 
 /**
- * AuthorAgent: Takes a StoryBrief and produces a complete Manuscript
+ * AuthorAgent: Takes a StoryBlurb and produces a complete Manuscript
  */
-export const authorAgent: AuthorAgent = async (brief: StoryBrief): Promise<Manuscript> => {
+export const authorAgent: AuthorAgent = async (blurb: StoryBlurb): Promise<Manuscript> => {
   const { object } = await generateObject({
     model: anthropic('claude-sonnet-4-5-20250929'),
     schema: ManuscriptSchema,
     system: SYSTEM_PROMPT,
-    prompt: JSON.stringify(brief, null, 2),
+    prompt: JSON.stringify(blurb, null, 2),
   });
 
   return object;

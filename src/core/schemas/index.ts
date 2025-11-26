@@ -76,6 +76,18 @@ export const StoryBlurbSchema = z.object({
 export type StoryBlurb = z.infer<typeof StoryBlurbSchema>;
 
 // ============================================================
+// 2b. BLURB ITERATION → BlurbConversationResponse (plot refinement)
+// ============================================================
+
+export const BlurbConversationResponseSchema = z.object({
+  message: z.string().min(1),
+  chips: z.array(z.string().min(1)),
+  isApproved: z.boolean(),
+});
+
+export type BlurbConversationResponse = z.infer<typeof BlurbConversationResponseSchema>;
+
+// ============================================================
 // 3. AUTHOR → Manuscript (manuscript + page breakdown)
 // ============================================================
 

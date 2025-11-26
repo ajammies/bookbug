@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { executePipeline } from '../../core/pipeline';
 import { runStoryIntake } from '../prompts/story-intake';
+import { runBlurbIntake } from '../prompts/blurb-intake';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 
@@ -15,8 +16,11 @@ export const createCommand = new Command('create')
       // Step 1: Get StoryBrief via chat intake
       const brief = await runStoryIntake(prompt);
 
-      // Step 2: Run pipeline from brief to book
-      const result = await executePipeline(brief, {
+      // Step 2: Get StoryBlurb via plot iteration
+      const blurb = await runBlurbIntake(brief);
+
+      // Step 3: Run pipeline from blurb to book
+      const result = await executePipeline(blurb, {
         onProgress: (step, status) => {
           if (status === 'start') {
             spinner.start(formatStep(step));
