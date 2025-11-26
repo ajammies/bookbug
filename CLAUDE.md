@@ -11,14 +11,18 @@ Always use context7 when I need code generation, setup or configuration steps, o
 - Make changes extremely small, contained, and atomic
 - Tackle one thing at a time
 - Prefer editing existing files over creating new ones
-- Commit regularly after completing each small change
+- For any new feature or change request:
+  1. Create a new branch from main
+  2. Implement the changes with atomic commits
+  3. Create a PR when finished using `gh pr create`
+  4. Share the PR link with the user for review before merging
 
-# Git workflow
-For any new feature or change request:
-1. Create a new branch from main (e.g., `feat/feature-name` or `fix/bug-name`)
-2. Implement the changes with atomic commits
-3. Create a PR when finished using `gh pr create`
-4. Share the PR link with the user for review before merging
+# Branch naming
+- `feat/` - New features (e.g., `feat/output-folders`)
+- `fix/` - Bug fixes (e.g., `fix/empty-string-validation`)
+- `refactor/` - Code refactoring without behavior change
+- `docs/` - Documentation updates
+- `chore/` - Maintenance tasks (deps, configs, etc.)
 
 # Code style
 - Follow functional principles: pure functions, immutability, no side effects
