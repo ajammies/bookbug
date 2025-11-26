@@ -68,7 +68,7 @@ export type AspectRatio = typeof ASPECT_RATIOS[number];
  * Image generation models typically only support standard ratios.
  * This maps our exact print dimensions to the nearest supported ratio.
  */
-export const getAspectRatio = (format: BookFormat): AspectRatio => {
+export const getAspectRatio = (format: { bleedWidth: number; bleedHeight: number }): AspectRatio => {
   const ratio = format.bleedWidth / format.bleedHeight;
 
   // Check against standard ratios with tolerance

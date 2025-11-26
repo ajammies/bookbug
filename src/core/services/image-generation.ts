@@ -14,30 +14,18 @@ export interface GeneratedPage {
   url: string;
 }
 
-let replicateClient: Replicate | null = null;
-
-const getClient = (): Replicate => {
-  if (!replicateClient) {
-    const apiToken = process.env.REPLICATE_API_TOKEN;
-    if (!apiToken) {
-      throw new Error(
-        'REPLICATE_API_TOKEN environment variable is required. ' +
-        'Get your token at https://replicate.com/account/api-tokens'
-      );
-    }
-    replicateClient = new Replicate({ auth: apiToken });
+/**
+ * Create a Replicate client from environment variable
+ */
+export const createReplicateClient = (): Replicate => {
+  const apiToken = process.env.REPLICATE_API_TOKEN;
+  if (!apiToken) {
+    throw new Error(
+      'REPLICATE_API_TOKEN environment variable is required. ' +
+      'Get your token at https://replicate.com/account/api-tokens'
+    );
   }
-  return replicateClient;
-};
-
-/** Reset the client (for testing) */
-export const _resetClient = (): void => {
-  replicateClient = null;
-};
-
-/** Set a custom client (for testing) */
-export const _setClient = (client: Replicate): void => {
-  replicateClient = client;
+  return new Replicate({ auth: apiToken });
 };
 
 /**
@@ -63,21 +51,32 @@ const extractImageUrl = (output: unknown): string => {
  * Generate a page image using Nano Banana Pro via Replicate
  *
  * Passes the filtered Story JSON directly as the prompt.
+ * Accepts optional client for dependency injection (useful for testing).
  */
 export const generatePageImage = async (
   storySlice: StorySlice,
-  format: BookFormat
+  format: BookFormat,
+  client: Replicate = createReplicateClient()
 ): Promise<GeneratedPage> => {
-  const client = getClient();
+  try {
+    const output = await client.run('google/imagen-3', {
+      input: {
+        prompt: JSON.stringify(storySlice),
+        aspect_ratio: getAspectRatio(format),
+      },
+    });
 
-  const output = await client.run('google/imagen-3', {
-    input: {
-      prompt: JSON.stringify(storySlice),
-      aspect_ratio: getAspectRatio(format),
-    },
-  });
-
-  return { url: extractImageUrl(output) };
+    return { url: extractImageUrl(output) };
+  } catch (error) {
+    // Enhance error message for Replicate API errors
+    if (error && typeof error === 'object' && 'response' in error) {
+      const apiError = error as { response: { status: number }; message: string };
+      throw new Error(
+        `Image generation failed (${apiError.response.status}): ${apiError.message}`
+      );
+    }
+    throw error;
+  }
 };
 
 /**
