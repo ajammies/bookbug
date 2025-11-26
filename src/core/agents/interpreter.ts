@@ -4,6 +4,8 @@ import { StoryBriefSchema, type StoryBrief } from '../schemas';
 
 const SYSTEM_PROMPT = `You extract story details from user input into a StoryBrief. Be thorough but don't invent details the user didn't provide.
 
+CRITICAL: Only include fields you have actual information for. OMIT fields entirely if the user didn't mention them - do NOT include empty strings or placeholder values.
+
 EXTRACTION RULES:
 1. Extract what the user explicitly mentioned or clearly implied
 2. If they mention a character by name, create the character entry
@@ -11,9 +13,10 @@ EXTRACTION RULES:
 4. If they mention an age or audience, set ageRange
 5. DON'T invent names, settings, or plot details they didn't mention
 6. DON'T fill in defaults for things they haven't discussed yet
+7. DON'T include a field with an empty string - just omit it
 
-WHAT TO EXTRACT:
-- title: Only if they gave one or it's very obvious
+WHAT TO EXTRACT (only if user provided info):
+- title: Only if they explicitly named their story
 - storyArc: The plot/theme they described (their words, expanded slightly)
 - setting: Where it happens (only if mentioned)
 - ageRange: Only if they specified an age/audience
@@ -29,7 +32,7 @@ SMART INFERENCE (only when clearly implied):
 - "bedtime story" → tone: gentle/calming
 - "a brave little fox" → character with name TBD, traits: brave, small
 
-Leave fields empty if the user hasn't addressed them yet. The conversation will ask about missing pieces.`;
+OMIT fields the user hasn't addressed. The conversation will ask about missing pieces.`;
 
 /**
  * InterpreterAgent: Extracts StoryBrief fields from any user input
