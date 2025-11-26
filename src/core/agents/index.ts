@@ -1,4 +1,5 @@
 import type { StoryBrief, StoryBlurb, Manuscript, Story, Book } from '../schemas';
+import type { IllustratorConfig } from './illustrator';
 
 /**
  * Generic agent type: async function from Input to Output
@@ -10,7 +11,7 @@ export type Agent<Input, Output> = (input: Input) => Promise<Output>;
  */
 export type AuthorAgent = Agent<StoryBlurb, Manuscript>;
 export type DirectorAgent = Agent<Manuscript, Story>;
-export type IllustratorAgent = Agent<Story, Book>;
+export type IllustratorAgent = (story: Story, config?: IllustratorConfig) => Promise<Book>;
 
 /**
  * Progress callback for pipeline steps
@@ -20,7 +21,7 @@ export type OnStepProgress = (step: string, status: 'start' | 'complete' | 'erro
 // Re-export agents
 export { authorAgent } from './author';
 export { directorAgent } from './director';
-export { illustratorAgent } from './illustrator';
+export { illustratorAgent, createIllustratorAgent, type IllustratorConfig } from './illustrator';
 
 // Chat intake agents (StoryBrief)
 export { interpreterAgent } from './interpreter';
