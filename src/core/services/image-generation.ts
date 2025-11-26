@@ -4,8 +4,8 @@ import type { BOOK_FORMATS } from '../schemas';
 /**
  * Image generation service using Replicate API with Nano Banana Pro
  *
- * Generates images by passing filtered Story JSON as the prompt.
- * The model receives context about the story, style, characters, and specific page.
+ * Generates images by passing filtered Story JSON directly as the prompt.
+ * The model receives the full context about the story, style, characters, and specific page.
  */
 
 type BookFormat = typeof BOOK_FORMATS[keyof typeof BOOK_FORMATS];
@@ -18,6 +18,7 @@ export interface GeneratePageOptions {
 }
 
 export interface GeneratedPage {
+  /** Temporary URL from Replicate (expires after ~24h) */
   url: string;
 }
 
@@ -50,6 +51,7 @@ export const _setClient = (client: Replicate): void => {
 /**
  * Generate a page image using Nano Banana Pro via Replicate
  *
+ * Passes the filtered Story JSON directly as the prompt.
  * The storySlice should contain:
  * - storyTitle
  * - style (VisualStyleGuide)
@@ -63,17 +65,15 @@ export const generatePageImage = async (
 
   const client = getClient();
 
-  // Build the prompt from the story slice
-  const prompt = buildPromptFromStorySlice(storySlice, format);
-
+  // Pass the Story JSON directly as the prompt
   const input = {
-    prompt,
+    prompt: JSON.stringify(storySlice),
     aspect_ratio: getAspectRatio(format),
   };
 
   const output = await client.run('google/imagen-3', { input });
 
-  // Handle output format
+  // Handle output format - Replicate returns temporary URLs
   let imageUrl: string;
 
   if (Array.isArray(output) && output.length > 0) {
@@ -95,47 +95,15 @@ export const generatePageImage = async (
 };
 
 /**
- * Build a prompt string from the filtered Story JSON
+ * Download an image from a URL and return as Buffer
  */
-const buildPromptFromStorySlice = (storySlice: object, format: BookFormat): string => {
-  // The story slice contains all the context needed
-  // We format it as a clear instruction for the image model
-  const slice = storySlice as {
-    storyTitle?: string;
-    style?: { art_direction?: { genre?: string[]; medium?: string[]; technique?: string[] } };
-    page?: { text?: string; beats?: Array<{ summary?: string }> };
-  };
-
-  const parts: string[] = [];
-
-  // Add style direction if available
-  const artDirection = slice.style?.art_direction;
-  if (artDirection) {
-    if (artDirection.genre?.length) parts.push(artDirection.genre.join(', '));
-    if (artDirection.medium?.length) parts.push(artDirection.medium.join(', '));
-    if (artDirection.technique?.length) parts.push(artDirection.technique.join(', '));
+export const downloadImage = async (url: string): Promise<Buffer> => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download image: ${response.statusText}`);
   }
-
-  // Add the page content
-  if (slice.page?.text) {
-    parts.push(`Scene: ${slice.page.text}`);
-  }
-
-  // Add beat summaries for visual details
-  if (slice.page?.beats?.length) {
-    const beatSummaries = slice.page.beats.map(b => b.summary).filter(Boolean);
-    if (beatSummaries.length) {
-      parts.push(`Visual: ${beatSummaries.join('. ')}`);
-    }
-  }
-
-  // Add picture book qualifier
-  parts.push("children's picture book illustration, high quality");
-
-  // Add format info
-  parts.push(`${format.name} format, ${format.bleedWidth}x${format.bleedHeight}px`);
-
-  return parts.join('. ');
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 };
 
 /**

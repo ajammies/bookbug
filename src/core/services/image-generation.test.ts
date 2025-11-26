@@ -119,7 +119,7 @@ describe('generatePageImage', () => {
     ).rejects.toThrow('Unexpected output format from model');
   });
 
-  it('includes story slice content in prompt', async () => {
+  it('passes story slice as JSON string prompt', async () => {
     const mockRun = vi.fn().mockResolvedValue(['https://example.com/image.png']);
     const mockClient = { run: mockRun } as unknown as Replicate;
     _setClient(mockClient);
@@ -132,10 +132,10 @@ describe('generatePageImage', () => {
     const callArgs = mockRun.mock.calls[0]?.[1] as { input: { prompt: string } };
     const prompt = callArgs.input.prompt;
 
-    expect(prompt).toContain('whimsical');
-    expect(prompt).toContain('watercolor');
-    expect(prompt).toContain('Luna found an old garden gate');
-    expect(prompt).toContain("children's picture book");
+    // Should be valid JSON containing the story slice
+    const parsed = JSON.parse(prompt);
+    expect(parsed.storyTitle).toBe('The Magic Garden');
+    expect(parsed.page.text).toBe('Luna found an old garden gate.');
   });
 
   it('uses correct aspect ratio for square format', async () => {

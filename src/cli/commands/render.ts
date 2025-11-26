@@ -1,9 +1,12 @@
 import { Command } from 'commander';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { runBook } from '../../core/pipeline';
-import { StorySchema, type BookFormatKey } from '../../core/schemas';
+import { StorySchema, type BookFormatKey, type Book } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager, isStoryFolder, createOutputManager } from '../utils/output';
+import { downloadImage } from '../../core/services/image-generation';
 
 interface RenderOptions {
   output?: string;
@@ -23,12 +26,22 @@ export const renderCommand = new Command('render')
     try {
       // Load and validate story
       spinner.start('Loading story...');
-      const fs = await import('fs/promises');
       const storyJson = await fs.readFile(storyFile, 'utf-8');
       const story = StorySchema.parse(JSON.parse(storyJson));
       spinner.succeed('Story loaded');
 
-      // Generate book
+      // Set up output manager first (need folder path for saving images)
+      const outputManager = options.output
+        ? await createOutputManager(story.storyTitle, options.output)
+        : await isStoryFolder(storyFile)
+          ? await loadOutputManager(storyFile)
+          : await createOutputManager(story.storyTitle);
+
+      // Ensure assets folder exists
+      const assetsFolder = path.join(outputManager.folder, 'assets');
+      await fs.mkdir(assetsFolder, { recursive: true });
+
+      // Generate book (images have temporary URLs from Replicate)
       const totalPages = story.pages.length;
       spinner.start(`Rendering ${totalPages} pages${options.mock ? ' (mock mode)' : ''}...`);
 
@@ -38,20 +51,70 @@ export const renderCommand = new Command('render')
       });
       spinner.succeed(`Rendered ${totalPages} pages`);
 
-      displayBook(book);
+      // Download images and save locally (skip in mock mode)
+      let finalBook: Book;
+      if (options.mock) {
+        finalBook = book;
+      } else {
+        spinner.start('Downloading images...');
+        finalBook = await downloadAndSaveImages(book, assetsFolder, (completed, total) => {
+          spinner.text = `Downloading images... (${completed}/${total})`;
+        });
+        spinner.succeed('Images downloaded');
+      }
 
-      // Save to story folder (detect existing or create new)
-      const outputManager = options.output
-        ? await createOutputManager(book.storyTitle, options.output)
-        : await isStoryFolder(storyFile)
-          ? await loadOutputManager(storyFile)
-          : await createOutputManager(book.storyTitle);
+      displayBook(finalBook);
 
-      await outputManager.saveBook(book);
+      // Save book with local paths
+      await outputManager.saveBook(finalBook);
       console.log(`\nBook saved to: ${outputManager.folder}/book.json`);
+      if (!options.mock) {
+        console.log(`Images saved to: ${assetsFolder}/`);
+      }
     } catch (error) {
       spinner.fail('Failed to render book');
       console.error(error);
       process.exit(1);
     }
   });
+
+/**
+ * Download images from temporary URLs and save to local disk.
+ * Returns a new Book with updated local paths.
+ */
+async function downloadAndSaveImages(
+  book: Book,
+  assetsFolder: string,
+  onProgress?: (completed: number, total: number) => void
+): Promise<Book> {
+  const updatedPages = [];
+  const total = book.pages.length;
+
+  for (const page of book.pages) {
+    const filename = `page-${page.pageNumber}.png`;
+    const localPath = path.join(assetsFolder, filename);
+
+    try {
+      // Download from temporary URL
+      const imageBuffer = await downloadImage(page.url);
+      await fs.writeFile(localPath, imageBuffer);
+
+      // Update page with relative path
+      updatedPages.push({
+        pageNumber: page.pageNumber,
+        url: `assets/${filename}`,
+      });
+    } catch (err) {
+      console.warn(`\nWarning: Failed to download page ${page.pageNumber}: ${err}`);
+      // Keep original URL if download fails
+      updatedPages.push(page);
+    }
+
+    onProgress?.(updatedPages.length, total);
+  }
+
+  return {
+    ...book,
+    pages: updatedPages,
+  };
+}
