@@ -20,7 +20,7 @@ export type OnStepProgress = (step: string, status: 'start' | 'complete' | 'erro
 // Re-export agents
 export { authorAgent } from './author';
 export { directorAgent } from './director';
-export { illustratorAgent } from './illustrator';
+export { illustratorAgent, type IllustratorConfig } from './illustrator';
 
 // Chat intake agents (StoryBrief)
 export { interpreterAgent } from './interpreter';

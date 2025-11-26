@@ -260,64 +260,14 @@ describe('displayBook', () => {
   const minimalBook: Book = {
     storyTitle: 'The Magic Garden',
     ageRange: { min: 4, max: 8 },
+    format: 'square-large',
     pages: [
-      {
-        pageNumber: 1,
-        text: 'Luna found an old garden gate covered in vines.',
-        images: [
-          {
-            id: 'img-1',
-            pageNumber: 1,
-            url: 'https://example.com/img1.png',
-            width: 1024,
-            height: 768,
-            mimeType: 'image/png',
-          },
-        ],
-      },
-      {
-        pageNumber: 2,
-        text: 'She pushed it open and stepped inside.',
-        images: [
-          {
-            id: 'img-2',
-            pageNumber: 2,
-            url: 'https://example.com/img2.png',
-            width: 1024,
-            height: 768,
-            mimeType: 'image/png',
-          },
-        ],
-      },
-      {
-        pageNumber: 3,
-        text: 'The garden was full of colorful flowers.',
-        images: [
-          {
-            id: 'img-3',
-            pageNumber: 3,
-            url: 'https://example.com/img3.png',
-            width: 1024,
-            height: 768,
-            mimeType: 'image/png',
-          },
-        ],
-      },
-      {
-        pageNumber: 4,
-        text: 'A butterfly landed on her nose.',
-        images: [
-          {
-            id: 'img-4',
-            pageNumber: 4,
-            url: 'https://example.com/img4.png',
-            width: 1024,
-            height: 768,
-            mimeType: 'image/png',
-          },
-        ],
-      },
+      { pageNumber: 1, url: 'https://example.com/page1.png' },
+      { pageNumber: 2, url: 'https://example.com/page2.png' },
+      { pageNumber: 3, url: 'https://example.com/page3.png' },
+      { pageNumber: 4, url: 'https://example.com/page4.png' },
     ],
+    createdAt: '2024-01-01T00:00:00.000Z',
   };
 
   it('displays book title', () => {
@@ -334,11 +284,11 @@ describe('displayBook', () => {
     expect(output).toContain('4-8 years');
   });
 
-  it('displays total images', () => {
+  it('displays format', () => {
     displayBook(minimalBook);
 
     const output = consoleSpy.mock.calls.flat().join(' ');
-    expect(output).toContain('Total Images:');
+    expect(output).toContain('square-large');
   });
 
   it('displays first 3 page previews', () => {
@@ -348,7 +298,6 @@ describe('displayBook', () => {
     expect(output).toContain('Page 1');
     expect(output).toContain('Page 2');
     expect(output).toContain('Page 3');
-    expect(output).toContain('Luna found an old garden gate');
   });
 
   it('shows remaining page count when more than 3 pages', () => {
@@ -358,21 +307,11 @@ describe('displayBook', () => {
     expect(output).toContain('1 more pages');
   });
 
-  it('truncates long text in preview', () => {
-    const bookWithLongText: Book = {
-      ...minimalBook,
-      pages: [
-        {
-          pageNumber: 1,
-          text: 'A'.repeat(100),
-          images: minimalBook.pages[0]!.images,
-        },
-      ],
-    };
-    displayBook(bookWithLongText);
+  it('displays page URLs', () => {
+    displayBook(minimalBook);
 
     const output = consoleSpy.mock.calls.flat().join(' ');
-    expect(output).toContain('...');
+    expect(output).toContain('https://example.com/page1.png');
   });
 
   it('displays completion message', () => {

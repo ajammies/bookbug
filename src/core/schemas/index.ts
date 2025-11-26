@@ -353,32 +353,69 @@ export type Story = z.infer<typeof StorySchema>;
 // 5. ILLUSTRATOR → Book (final rendered book)
 // ============================================================
 
-export const RenderedImageSchema = z.object({
-  id: z.string().min(1),
+// Lulu-compatible book format presets (all at 300dpi)
+export const BOOK_FORMATS = {
+  'square-small': {
+    name: 'Small Square',
+    trimWidth: 2250,    // 7.5" at 300dpi
+    trimHeight: 2250,
+    bleedWidth: 2325,   // 7.75" with 0.125" bleed
+    bleedHeight: 2325,
+  },
+  'square-large': {
+    name: 'Large Square',
+    trimWidth: 2550,    // 8.5" at 300dpi
+    trimHeight: 2550,
+    bleedWidth: 2625,   // 8.75" with bleed
+    bleedHeight: 2625,
+  },
+  'landscape': {
+    name: 'Landscape',
+    trimWidth: 2700,    // 9" at 300dpi
+    trimHeight: 2100,   // 7" at 300dpi
+    bleedWidth: 2775,   // 9.25" with bleed
+    bleedHeight: 2175,  // 7.25" with bleed
+  },
+  'portrait-small': {
+    name: 'US Trade',
+    trimWidth: 1800,    // 6" at 300dpi
+    trimHeight: 2700,   // 9" at 300dpi
+    bleedWidth: 1875,   // 6.25" with bleed
+    bleedHeight: 2775,  // 9.25" with bleed
+  },
+  'portrait-large': {
+    name: 'Letter',
+    trimWidth: 2550,    // 8.5" at 300dpi
+    trimHeight: 3300,   // 11" at 300dpi
+    bleedWidth: 2625,   // 8.75" with bleed
+    bleedHeight: 3375,  // 11.25" with bleed
+  },
+} as const;
+
+export type BookFormatKey = keyof typeof BOOK_FORMATS;
+
+export const BookFormatKeySchema = z.enum([
+  'square-small',
+  'square-large',
+  'landscape',
+  'portrait-small',
+  'portrait-large',
+]);
+
+// Simplified rendered page - just page number and URL
+export const RenderedPageSchema = z.object({
   pageNumber: z.number().int().min(1),
-  beatOrder: z.number().int().min(1).optional(),
   url: z.string().url(),
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
-  mimeType: z.string().min(1),
-  meta: z.record(z.unknown()).optional(),
 });
 
-export type RenderedImage = z.infer<typeof RenderedImageSchema>;
-
-export const BookPageSchema = z.object({
-  pageNumber: z.number().int().min(1),
-  text: z.string().min(1),
-  images: z.array(RenderedImageSchema).min(1),
-});
-
-export type BookPage = z.infer<typeof BookPageSchema>;
+export type RenderedPage = z.infer<typeof RenderedPageSchema>;
 
 export const BookSchema = z.object({
   storyTitle: z.string().min(1),
   ageRange: AgeRangeSchema,
-  pages: z.array(BookPageSchema).min(1),
-  meta: z.record(z.unknown()).optional(),
+  format: BookFormatKeySchema.default('square-large'),
+  pages: z.array(RenderedPageSchema).min(1),
+  createdAt: z.string().datetime(),
 });
 
 export type Book = z.infer<typeof BookSchema>;

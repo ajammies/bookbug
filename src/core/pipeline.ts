@@ -1,4 +1,4 @@
-import type { StoryBlurb, Manuscript, Story, Book } from './schemas';
+import type { StoryBlurb, Manuscript, Story, Book, BookFormatKey } from './schemas';
 import {
   authorAgent,
   directorAgent,
@@ -81,6 +81,9 @@ export async function runStory(manuscript: Manuscript): Promise<Story> {
   return directorAgent(manuscript);
 }
 
-export async function runBook(story: Story): Promise<Book> {
-  return illustratorAgent(story);
+export async function runBook(
+  story: Story,
+  config?: { mock?: boolean; format?: BookFormatKey }
+): Promise<Book> {
+  return illustratorAgent(story, config);
 }

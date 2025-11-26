@@ -1,63 +1,103 @@
-import type { Story, Book, BookPage, RenderedImage } from '../schemas';
-import type { IllustratorAgent } from './index';
+import type { Story, Book, RenderedPage, BookFormatKey } from '../schemas';
+import { BOOK_FORMATS } from '../schemas';
+import { generatePageImage } from '../services/image-generation';
+
+/**
+ * Configuration for the illustrator agent
+ */
+export interface IllustratorConfig {
+  /** Book format preset (default: 'square-large') */
+  format?: BookFormatKey;
+  /** Use mock data instead of real generation (for testing) */
+  mock?: boolean;
+  /** Callback for progress updates */
+  onPageRendered?: (pageNumber: number, url: string) => void;
+}
 
 /**
  * IllustratorAgent: Takes a Story and produces a rendered Book
  *
- * This agent orchestrates image generation for each beat in the story.
- * The actual image generation would integrate with services like:
- * - Replicate (SDXL, Flux)
- * - OpenAI DALL-E
- * - Midjourney API
- * - ComfyUI
- *
- * For now, this is a placeholder that returns mock data.
+ * Generates one image per page by passing filtered Story JSON to Nano Banana Pro.
+ * The model receives the full context (style, characters) plus the specific page.
  */
-export const illustratorAgent: IllustratorAgent = async (story: Story): Promise<Book> => {
-  const pages: BookPage[] = [];
+export const illustratorAgent = async (
+  story: Story,
+  config: IllustratorConfig = {}
+): Promise<Book> => {
+  const {
+    format = 'square-large',
+    mock = false,
+    onPageRendered,
+  } = config;
+
+  const formatSpec = BOOK_FORMATS[format];
+  const pages: RenderedPage[] = [];
 
   for (const storyPage of story.pages) {
-    const images: RenderedImage[] = [];
+    let url: string;
 
-    for (const beat of storyPage.beats) {
-      // TODO: Generate actual image from beat + style
-      // const prompt = buildPromptFromBeat(beat, story.style);
-      // const imageUrl = await generateImage(prompt);
-
-      const image: RenderedImage = {
-        id: `img_page${storyPage.pageNumber}_beat${beat.order}`,
-        pageNumber: storyPage.pageNumber,
-        beatOrder: beat.order,
-        url: `https://placeholder.com/images/page${storyPage.pageNumber}_beat${beat.order}.png`, // placeholder
-        width: 2048,
-        height: 1536,
-        mimeType: 'image/png',
-        meta: {
-          prompt: beat.summary,
-          style: story.style.art_direction.genre,
-        },
-      };
-
-      images.push(image);
+    if (mock) {
+      // Mock mode for testing
+      url = `https://placeholder.com/pages/page${storyPage.pageNumber}.png`;
+    } else {
+      // Real image generation via Replicate
+      const storySlice = filterStoryForPage(story, storyPage.pageNumber);
+      const result = await generatePageImage({
+        storySlice,
+        format: formatSpec,
+      });
+      url = result.url;
     }
-
-    // Get text from the manuscript using the page number
-    const text = story.manuscript.pages[String(storyPage.pageNumber)]?.text ?? '';
 
     pages.push({
       pageNumber: storyPage.pageNumber,
-      text,
-      images,
+      url,
     });
+
+    onPageRendered?.(storyPage.pageNumber, url);
   }
 
   return {
     storyTitle: story.storyTitle,
     ageRange: story.ageRange,
+    format,
     pages,
-    meta: {
-      createdAt: new Date().toISOString(),
-      version: '1.0',
+    createdAt: new Date().toISOString(),
+  };
+};
+
+/**
+ * Filter a Story to include only data relevant to a specific page.
+ * This creates a minimal payload for image generation.
+ */
+export const filterStoryForPage = (story: Story, pageNumber: number): object => {
+  const storyPage = story.pages.find(p => p.pageNumber === pageNumber);
+  const manuscriptPage = story.manuscript.pages[String(pageNumber)];
+
+  // Collect character IDs used in this page's beats
+  const characterIds = new Set<string>();
+  for (const beat of storyPage?.beats ?? []) {
+    for (const char of beat.characters) {
+      characterIds.add(char.id);
+    }
+  }
+
+  // Filter characters to only those in this page
+  const relevantCharacters: Record<string, unknown> = {};
+  for (const id of characterIds) {
+    if (story.characters[id]) {
+      relevantCharacters[id] = story.characters[id];
+    }
+  }
+
+  return {
+    storyTitle: story.storyTitle,
+    style: story.style,
+    characters: relevantCharacters,
+    page: {
+      pageNumber,
+      text: manuscriptPage?.text,
+      beats: storyPage?.beats,
     },
   };
 };
