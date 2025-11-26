@@ -13,8 +13,8 @@ export const briefCommand = new Command('brief')
 
       displayBrief(brief);
 
-      // Auto-save to story folder
-      const outputManager = await createOutputManager(brief.title);
+      // Save to story folder (custom path or auto-generated)
+      const outputManager = await createOutputManager(brief.title, options.output);
       await outputManager.saveBrief(brief);
       console.log(`\nBrief saved to: ${outputManager.folder}/brief.json`);
     } catch (error) {
