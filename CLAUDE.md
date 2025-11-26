@@ -15,11 +15,19 @@ Always use context7 when I need code generation, setup or configuration steps, o
 - Tackle one thing at a time
 - Prefer editing existing files over creating new ones
 - For any new feature or change request:
-  1. Create a new branch from main
-  2. Implement the changes with atomic commits
-  3. Run `npm run test:run` to verify all tests pass
-  4. Create a PR when finished using `gh pr create`
-  5. Share the PR link with the user for review before merging
+  1. **Create a plan first** - Write a plan to `/plans/plan-<feature-name>.md` and wait for user approval before implementing
+  2. Create a new branch from main
+  3. Implement the changes with atomic commits
+  4. Run `npm run test:run` to verify all tests pass
+  5. Create a PR when finished using `gh pr create`
+  6. Share the PR link with the user for review before merging
+
+# Planning
+- Before implementing any feature, create a plan document in `/plans/`
+- Use `EnterPlanMode` tool to explore the codebase and design the approach
+- Write the plan to `/plans/plan-<feature-name>.md`
+- **WAIT for explicit user approval** before starting implementation
+- Plans should include: goals, approach, files to change, and test strategy
 
 # Branch naming
 - `feat/` - New features (e.g., `feat/output-folders`)
