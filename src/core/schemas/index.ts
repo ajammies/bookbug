@@ -353,54 +353,22 @@ export type Story = z.infer<typeof StorySchema>;
 // 5. ILLUSTRATOR → Book (final rendered book)
 // ============================================================
 
-// Lulu-compatible book format presets (all at 300dpi)
-export const BOOK_FORMATS = {
-  'square-small': {
-    name: 'Small Square',
-    trimWidth: 2250,    // 7.5" at 300dpi
-    trimHeight: 2250,
-    bleedWidth: 2325,   // 7.75" with 0.125" bleed
-    bleedHeight: 2325,
-  },
-  'square-large': {
-    name: 'Large Square',
-    trimWidth: 2550,    // 8.5" at 300dpi
-    trimHeight: 2550,
-    bleedWidth: 2625,   // 8.75" with bleed
-    bleedHeight: 2625,
-  },
-  'landscape': {
-    name: 'Landscape',
-    trimWidth: 2700,    // 9" at 300dpi
-    trimHeight: 2100,   // 7" at 300dpi
-    bleedWidth: 2775,   // 9.25" with bleed
-    bleedHeight: 2175,  // 7.25" with bleed
-  },
-  'portrait-small': {
-    name: 'US Trade',
-    trimWidth: 1800,    // 6" at 300dpi
-    trimHeight: 2700,   // 9" at 300dpi
-    bleedWidth: 1875,   // 6.25" with bleed
-    bleedHeight: 2775,  // 9.25" with bleed
-  },
-  'portrait-large': {
-    name: 'Letter',
-    trimWidth: 2550,    // 8.5" at 300dpi
-    trimHeight: 3300,   // 11" at 300dpi
-    bleedWidth: 2625,   // 8.75" with bleed
-    bleedHeight: 3375,  // 11.25" with bleed
-  },
-} as const;
+// Import and re-export format types and utilities
+import {
+  BOOK_FORMATS as _BOOK_FORMATS,
+  BookFormatKeySchema as _BookFormatKeySchema,
+  getAspectRatio as _getAspectRatio,
+  type BookFormat as _BookFormat,
+  type BookFormatKey as _BookFormatKey,
+  type AspectRatio as _AspectRatio,
+} from './formats';
 
-export type BookFormatKey = keyof typeof BOOK_FORMATS;
-
-export const BookFormatKeySchema = z.enum([
-  'square-small',
-  'square-large',
-  'landscape',
-  'portrait-small',
-  'portrait-large',
-]);
+export const BOOK_FORMATS = _BOOK_FORMATS;
+export const BookFormatKeySchema = _BookFormatKeySchema;
+export const getAspectRatio = _getAspectRatio;
+export type BookFormat = _BookFormat;
+export type BookFormatKey = _BookFormatKey;
+export type AspectRatio = _AspectRatio;
 
 // Simplified rendered page - just page number and URL
 export const RenderedPageSchema = z.object({
@@ -413,7 +381,7 @@ export type RenderedPage = z.infer<typeof RenderedPageSchema>;
 export const BookSchema = z.object({
   storyTitle: z.string().min(1),
   ageRange: AgeRangeSchema,
-  format: BookFormatKeySchema.default('square-large'),
+  format: _BookFormatKeySchema.default('square-large'),
   pages: z.array(RenderedPageSchema).min(1),
   createdAt: z.string().datetime(),
 });

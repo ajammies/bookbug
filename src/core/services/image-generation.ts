@@ -1,5 +1,6 @@
 import Replicate from 'replicate';
-import type { StorySlice, BOOK_FORMATS } from '../schemas';
+import type { StorySlice, BookFormat } from '../schemas';
+import { getAspectRatio } from '../schemas';
 
 /**
  * Image generation service using Replicate API with Nano Banana Pro
@@ -7,8 +8,6 @@ import type { StorySlice, BOOK_FORMATS } from '../schemas';
  * Generates images by passing filtered Story JSON directly as the prompt.
  * The model receives the full context about the story, style, characters, and specific page.
  */
-
-type BookFormat = typeof BOOK_FORMATS[keyof typeof BOOK_FORMATS];
 
 export interface GeneratedPage {
   /** Temporary URL from Replicate (expires after ~24h) */
@@ -91,28 +90,4 @@ export const downloadImage = async (url: string): Promise<Buffer> => {
   }
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
-};
-
-/**
- * Get aspect ratio string for the model
- */
-const getAspectRatio = (format: BookFormat): string => {
-  const width = format.bleedWidth;
-  const height = format.bleedHeight;
-
-  // Find closest standard aspect ratio
-  const ratio = width / height;
-
-  if (Math.abs(ratio - 1) < 0.1) return '1:1';
-  if (Math.abs(ratio - 16 / 9) < 0.1) return '16:9';
-  if (Math.abs(ratio - 9 / 16) < 0.1) return '9:16';
-  if (Math.abs(ratio - 4 / 3) < 0.1) return '4:3';
-  if (Math.abs(ratio - 3 / 4) < 0.1) return '3:4';
-  if (Math.abs(ratio - 3 / 2) < 0.1) return '3:2';
-  if (Math.abs(ratio - 2 / 3) < 0.1) return '2:3';
-
-  // Default to closest match
-  if (ratio > 1) return '4:3';
-  if (ratio < 1) return '3:4';
-  return '1:1';
 };
