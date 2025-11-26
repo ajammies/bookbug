@@ -3,6 +3,7 @@ import { runStory } from '../../core/pipeline';
 import { ManuscriptSchema } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayStory } from '../output/display';
+import { loadOutputManager, isStoryFolder, createOutputManager } from '../utils/output';
 
 export const directCommand = new Command('direct')
   .description('Create visual direction (Story) from a Manuscript')
@@ -26,10 +27,12 @@ export const directCommand = new Command('direct')
 
       displayStory(story);
 
-      if (options.output) {
-        await fs.writeFile(options.output, JSON.stringify(story, null, 2));
-        console.log(`\nStory saved to: ${options.output}`);
-      }
+      // Save to story folder (detect existing or create new)
+      const outputManager = await isStoryFolder(manuscriptFile)
+        ? await loadOutputManager(manuscriptFile)
+        : await createOutputManager(story.storyTitle);
+      await outputManager.saveStory(story);
+      console.log(`\nStory saved to: ${outputManager.folder}/story.json`);
     } catch (error) {
       spinner.fail('Failed to create visual direction');
       console.error(error);

@@ -24,3 +24,6 @@ npm-debug.log*
 
 # Generated files
 *.tsbuildinfo
+
+# Story output
+output/

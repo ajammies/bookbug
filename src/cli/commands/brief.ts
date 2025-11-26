@@ -1,22 +1,22 @@
 import { Command } from 'commander';
 import { runStoryIntake } from '../prompts/story-intake';
 import { displayBrief } from '../output/display';
+import { createOutputManager } from '../utils/output';
 
 export const briefCommand = new Command('brief')
   .description('Create a StoryBrief through conversational chat')
   .argument('[prompt]', 'Optional initial story idea (can also provide interactively)')
-  .option('-o, --output <path>', 'Output file path for JSON')
+  .option('-o, --output <path>', 'Custom output folder path')
   .action(async (prompt: string | undefined, options: { output?: string }) => {
     try {
       const brief = await runStoryIntake(prompt);
 
       displayBrief(brief);
 
-      if (options.output) {
-        const fs = await import('fs/promises');
-        await fs.writeFile(options.output, JSON.stringify(brief, null, 2));
-        console.log(`\nBrief saved to: ${options.output}`);
-      }
+      // Auto-save to story folder
+      const outputManager = await createOutputManager(brief.title);
+      await outputManager.saveBrief(brief);
+      console.log(`\nBrief saved to: ${outputManager.folder}/brief.json`);
     } catch (error) {
       console.error('Failed to create brief:', error);
       process.exit(1);

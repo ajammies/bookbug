@@ -3,6 +3,7 @@ import { runBook } from '../../core/pipeline';
 import { StorySchema } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
+import { loadOutputManager, isStoryFolder, createOutputManager } from '../utils/output';
 
 export const renderCommand = new Command('render')
   .description('Render a Book from a Story (generate images)')
@@ -26,14 +27,12 @@ export const renderCommand = new Command('render')
 
       displayBook(book);
 
-      if (options.output) {
-        await fs.mkdir(options.output, { recursive: true });
-        await fs.writeFile(
-          `${options.output}/book.json`,
-          JSON.stringify(book, null, 2)
-        );
-        console.log(`\nBook saved to: ${options.output}/book.json`);
-      }
+      // Save to story folder (detect existing or create new)
+      const outputManager = await isStoryFolder(storyFile)
+        ? await loadOutputManager(storyFile)
+        : await createOutputManager(book.storyTitle);
+      await outputManager.saveBook(book);
+      console.log(`\nBook saved to: ${outputManager.folder}/book.json`);
     } catch (error) {
       spinner.fail('Failed to render book');
       console.error(error);
