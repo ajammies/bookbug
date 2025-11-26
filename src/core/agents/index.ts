@@ -10,7 +10,6 @@ export type Agent<Input, Output> = (input: Input) => Promise<Output>;
  */
 export type AuthorAgent = Agent<StoryBlurb, Manuscript>;
 export type DirectorAgent = Agent<Manuscript, Story>;
-export type IllustratorAgent = Agent<Story, Book>;
 
 /**
  * Progress callback for pipeline steps
@@ -20,7 +19,7 @@ export type OnStepProgress = (step: string, status: 'start' | 'complete' | 'erro
 // Re-export agents
 export { authorAgent } from './author';
 export { directorAgent } from './director';
-export { illustratorAgent } from './illustrator';
+export { renderPage, renderPageMock, createBook, filterStoryForPage } from './illustrator';
 
 // Chat intake agents (StoryBrief)
 export { interpreterAgent } from './interpreter';

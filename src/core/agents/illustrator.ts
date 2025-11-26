@@ -1,63 +1,82 @@
-import type { Story, Book, BookPage, RenderedImage } from '../schemas';
-import type { IllustratorAgent } from './index';
+import type { Story, Book, RenderedPage, BookFormatKey, StorySlice } from '../schemas';
+import { BOOK_FORMATS } from '../schemas';
+import { generatePageImage } from '../services/image-generation';
 
 /**
- * IllustratorAgent: Takes a Story and produces a rendered Book
+ * Render a single page image from a Story
  *
- * This agent orchestrates image generation for each beat in the story.
- * The actual image generation would integrate with services like:
- * - Replicate (SDXL, Flux)
- * - OpenAI DALL-E
- * - Midjourney API
- * - ComfyUI
- *
- * For now, this is a placeholder that returns mock data.
+ * Returns a RenderedPage with a temporary URL from Replicate.
+ * Call this for each page to have full control over the generation process.
  */
-export const illustratorAgent: IllustratorAgent = async (story: Story): Promise<Book> => {
-  const pages: BookPage[] = [];
+export const renderPage = async (
+  story: Story,
+  pageNumber: number,
+  format: BookFormatKey = 'square-large'
+): Promise<RenderedPage> => {
+  const storySlice = filterStoryForPage(story, pageNumber);
+  const formatSpec = BOOK_FORMATS[format];
+  const result = await generatePageImage(storySlice, formatSpec);
 
-  for (const storyPage of story.pages) {
-    const images: RenderedImage[] = [];
+  return {
+    pageNumber,
+    url: result.url,
+  };
+};
 
-    for (const beat of storyPage.beats) {
-      // TODO: Generate actual image from beat + style
-      // const prompt = buildPromptFromBeat(beat, story.style);
-      // const imageUrl = await generateImage(prompt);
+/**
+ * Create a mock rendered page (for testing without API calls)
+ */
+export const renderPageMock = (pageNumber: number): RenderedPage => ({
+  pageNumber,
+  url: `https://placeholder.com/pages/page${pageNumber}.png`,
+});
 
-      const image: RenderedImage = {
-        id: `img_page${storyPage.pageNumber}_beat${beat.order}`,
-        pageNumber: storyPage.pageNumber,
-        beatOrder: beat.order,
-        url: `https://placeholder.com/images/page${storyPage.pageNumber}_beat${beat.order}.png`, // placeholder
-        width: 2048,
-        height: 1536,
-        mimeType: 'image/png',
-        meta: {
-          prompt: beat.summary,
-          style: story.style.art_direction.genre,
-        },
-      };
+/**
+ * Assemble rendered pages into a Book
+ *
+ * This is a pure function - no generation, just structure.
+ * Pages should already be rendered via renderPage/renderPageMock.
+ */
+export const createBook = (
+  story: Story,
+  pages: RenderedPage[],
+  format: BookFormatKey = 'square-large'
+): Book => ({
+  storyTitle: story.storyTitle,
+  ageRange: story.ageRange,
+  format,
+  pages,
+  createdAt: new Date().toISOString(),
+});
 
-      images.push(image);
-    }
+/**
+ * Filter a Story to include only data relevant to a specific page.
+ * This creates a minimal payload for image generation.
+ */
+export const filterStoryForPage = (story: Story, pageNumber: number): StorySlice => {
+  const storyPage = story.pages[pageNumber - 1]; // Pages are 1-indexed
+  const manuscriptPage = story.manuscript.pages[String(pageNumber)];
 
-    // Get text from the manuscript using the page number
-    const text = story.manuscript.pages[String(storyPage.pageNumber)]?.text ?? '';
+  // Extract character IDs from beats, then pick matching characters
+  const characterIds = (storyPage?.beats ?? [])
+    .flatMap(beat => beat.characters)
+    .map(char => char.id);
 
-    pages.push({
-      pageNumber: storyPage.pageNumber,
-      text,
-      images,
-    });
-  }
+  const relevantCharacters = [...new Set(characterIds)]
+    .filter(id => id in story.characters)
+    .reduce<StorySlice['characters']>((acc, id) => {
+      acc[id] = story.characters[id]!;
+      return acc;
+    }, {});
 
   return {
     storyTitle: story.storyTitle,
-    ageRange: story.ageRange,
-    pages,
-    meta: {
-      createdAt: new Date().toISOString(),
-      version: '1.0',
+    style: story.style,
+    characters: relevantCharacters,
+    page: {
+      pageNumber,
+      text: manuscriptPage?.text,
+      beats: storyPage?.beats,
     },
   };
 };

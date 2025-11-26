@@ -78,19 +78,15 @@ export function displayBook(book: Book): void {
   console.log(chalk.gray('─'.repeat(50)));
   console.log(chalk.bold('Title:'), book.storyTitle);
   console.log(chalk.bold('Age Range:'), `${book.ageRange.min}-${book.ageRange.max} years`);
+  console.log(chalk.bold('Format:'), book.format);
   console.log(chalk.bold('Pages:'), book.pages.length);
 
-  const totalImages = book.pages.reduce((sum, p) => sum + p.images.length, 0);
-  console.log(chalk.bold('Total Images:'), totalImages);
-
-  console.log(chalk.bold('\nPreview:'));
+  console.log(chalk.bold('\nPages:'));
   for (const page of book.pages.slice(0, 3)) {
-    console.log(`\n  ${chalk.yellow(`Page ${page.pageNumber}`)}`);
-    console.log(`  "${chalk.italic(page.text.substring(0, 80))}${page.text.length > 80 ? '...' : ''}"`);
-    console.log(`  ${chalk.gray(`${page.images.length} image(s)`)}`);
+    console.log(`  ${chalk.yellow(`Page ${page.pageNumber}:`)} ${chalk.gray(page.url)}`);
   }
   if (book.pages.length > 3) {
-    console.log(chalk.gray(`\n  ... and ${book.pages.length - 3} more pages`));
+    console.log(chalk.gray(`  ... and ${book.pages.length - 3} more pages`));
   }
 
   console.log('\n' + chalk.green.bold('✨ Book generation complete!'));

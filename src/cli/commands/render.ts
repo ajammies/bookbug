@@ -1,41 +1,128 @@
 import { Command } from 'commander';
-import { runBook } from '../../core/pipeline';
-import { StorySchema } from '../../core/schemas';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { renderPage, renderPageMock, createBook } from '../../core/pipeline';
+import { StorySchema, type BookFormatKey, type Book, type RenderedPage } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager, isStoryFolder, createOutputManager } from '../utils/output';
+import { downloadImage } from '../../core/services/image-generation';
+
+interface RenderOptions {
+  output?: string;
+  mock?: boolean;
+  format?: BookFormatKey;
+}
 
 export const renderCommand = new Command('render')
   .description('Render a Book from a Story (generate images)')
   .argument('<story-file>', 'Path to Story JSON file')
   .option('-o, --output <path>', 'Output directory for book files')
-  .action(async (storyFile: string, options: { output?: string }) => {
+  .option('-m, --mock', 'Use mock images instead of real generation')
+  .option('-f, --format <format>', 'Book format: square-small, square-large, landscape, portrait-small, portrait-large', 'square-large')
+  .action(async (storyFile: string, options: RenderOptions) => {
     const spinner = createSpinner();
 
     try {
       // Load and validate story
       spinner.start('Loading story...');
-      const fs = await import('fs/promises');
       const storyJson = await fs.readFile(storyFile, 'utf-8');
       const story = StorySchema.parse(JSON.parse(storyJson));
       spinner.succeed('Story loaded');
 
-      // Generate book
-      spinner.start('Rendering illustrations...');
-      const book = await runBook(story);
-      spinner.succeed('Illustrations complete');
+      // Set up output manager first (need folder path for saving images)
+      const outputManager = options.output
+        ? await createOutputManager(story.storyTitle, options.output)
+        : await isStoryFolder(storyFile)
+          ? await loadOutputManager(storyFile)
+          : await createOutputManager(story.storyTitle);
 
-      displayBook(book);
+      // Ensure assets folder exists
+      const assetsFolder = path.join(outputManager.folder, 'assets');
+      await fs.mkdir(assetsFolder, { recursive: true });
 
-      // Save to story folder (detect existing or create new)
-      const outputManager = await isStoryFolder(storyFile)
-        ? await loadOutputManager(storyFile)
-        : await createOutputManager(book.storyTitle);
-      await outputManager.saveBook(book);
+      // Render pages one at a time (images have temporary URLs from Replicate)
+      const totalPages = story.pages.length;
+      const format = options.format ?? 'square-large';
+      const pages: RenderedPage[] = [];
+
+      for (const storyPage of story.pages) {
+        spinner.start(`Rendering page ${storyPage.pageNumber}/${totalPages}${options.mock ? ' (mock)' : ''}...`);
+
+        const page = options.mock
+          ? renderPageMock(storyPage.pageNumber)
+          : await renderPage(story, storyPage.pageNumber, format);
+
+        pages.push(page);
+        spinner.succeed(`Rendered page ${storyPage.pageNumber}/${totalPages}`);
+      }
+
+      const book = createBook(story, pages, format);
+
+      // Download images and save locally (skip in mock mode)
+      let finalBook: Book;
+      if (options.mock) {
+        finalBook = book;
+      } else {
+        spinner.start('Downloading images...');
+        finalBook = await downloadAndSaveImages(book, assetsFolder, (completed, total) => {
+          spinner.text = `Downloading images... (${completed}/${total})`;
+        });
+        spinner.succeed('Images downloaded');
+      }
+
+      displayBook(finalBook);
+
+      // Save book with local paths
+      await outputManager.saveBook(finalBook);
       console.log(`\nBook saved to: ${outputManager.folder}/book.json`);
+      if (!options.mock) {
+        console.log(`Images saved to: ${assetsFolder}/`);
+      }
     } catch (error) {
       spinner.fail('Failed to render book');
       console.error(error);
       process.exit(1);
     }
   });
+
+/**
+ * Download images from temporary URLs and save to local disk.
+ * Returns a new Book with updated local paths.
+ */
+async function downloadAndSaveImages(
+  book: Book,
+  assetsFolder: string,
+  onProgress?: (completed: number, total: number) => void
+): Promise<Book> {
+  const updatedPages = [];
+  const total = book.pages.length;
+
+  for (const page of book.pages) {
+    const filename = `page-${page.pageNumber}.png`;
+    const localPath = path.join(assetsFolder, filename);
+
+    try {
+      // Download from temporary URL
+      const imageBuffer = await downloadImage(page.url);
+      await fs.writeFile(localPath, imageBuffer);
+
+      // Update page with relative path
+      updatedPages.push({
+        pageNumber: page.pageNumber,
+        url: `assets/${filename}`,
+      });
+    } catch (err) {
+      console.warn(`\nWarning: Failed to download page ${page.pageNumber}: ${err}`);
+      // Keep original URL if download fails
+      updatedPages.push(page);
+    }
+
+    onProgress?.(updatedPages.length, total);
+  }
+
+  return {
+    ...book,
+    pages: updatedPages,
+  };
+}

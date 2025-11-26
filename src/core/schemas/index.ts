@@ -353,33 +353,74 @@ export type Story = z.infer<typeof StorySchema>;
 // 5. ILLUSTRATOR → Book (final rendered book)
 // ============================================================
 
-export const RenderedImageSchema = z.object({
-  id: z.string().min(1),
+// Import and re-export format types and utilities
+import {
+  BOOK_FORMATS as _BOOK_FORMATS,
+  BookFormatKeySchema as _BookFormatKeySchema,
+  getAspectRatio as _getAspectRatio,
+  type BookFormat as _BookFormat,
+  type BookFormatKey as _BookFormatKey,
+  type AspectRatio as _AspectRatio,
+} from './formats';
+
+export const BOOK_FORMATS = _BOOK_FORMATS;
+export const BookFormatKeySchema = _BookFormatKeySchema;
+export const getAspectRatio = _getAspectRatio;
+export type BookFormat = _BookFormat;
+export type BookFormatKey = _BookFormatKey;
+export type AspectRatio = _AspectRatio;
+
+// Simplified rendered page - just page number and URL
+export const RenderedPageSchema = z.object({
   pageNumber: z.number().int().min(1),
-  beatOrder: z.number().int().min(1).optional(),
   url: z.string().url(),
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
-  mimeType: z.string().min(1),
-  meta: z.record(z.unknown()).optional(),
 });
 
-export type RenderedImage = z.infer<typeof RenderedImageSchema>;
-
-export const BookPageSchema = z.object({
-  pageNumber: z.number().int().min(1),
-  text: z.string().min(1),
-  images: z.array(RenderedImageSchema).min(1),
-});
-
-export type BookPage = z.infer<typeof BookPageSchema>;
+export type RenderedPage = z.infer<typeof RenderedPageSchema>;
 
 export const BookSchema = z.object({
   storyTitle: z.string().min(1),
   ageRange: AgeRangeSchema,
-  pages: z.array(BookPageSchema).min(1),
-  meta: z.record(z.unknown()).optional(),
+  format: _BookFormatKeySchema.default('square-large'),
+  pages: z.array(RenderedPageSchema).min(1),
+  createdAt: z.string().datetime(),
 });
 
 export type Book = z.infer<typeof BookSchema>;
+
+// ============================================================
+// 6. IMAGE GENERATION (intermediate types)
+// ============================================================
+
+/**
+ * StorySlice: filtered Story data for a single page
+ * Contains only the information needed to generate one illustration
+ */
+export const StorySliceSchema = z.object({
+  storyTitle: z.string().min(1),
+  style: VisualStyleGuideSchema,
+  characters: z.record(z.string(), StoryCharacterSchema),
+  page: z.object({
+    pageNumber: z.number().int().min(1),
+    text: z.string().optional(),
+    beats: z.array(StoryBeatSchema).optional(),
+  }),
+});
+
+export type StorySlice = z.infer<typeof StorySliceSchema>;
+
+/**
+ * ImageGenerationResult: raw output from image generation API
+ * Handles the various formats Replicate may return
+ */
+export const ImageGenerationResultSchema = z.union([
+  // Array of string URLs
+  z.array(z.string().url()).min(1),
+  // Array of FileOutput objects with url() method - validated as objects with url
+  z.array(z.object({ url: z.function().returns(z.string()) })).min(1),
+  // Single string URL
+  z.string().url(),
+]);
+
+export type ImageGenerationResult = z.infer<typeof ImageGenerationResultSchema>;
 
