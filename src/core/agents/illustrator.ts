@@ -3,65 +3,51 @@ import { BOOK_FORMATS } from '../schemas';
 import { generatePageImage } from '../services/image-generation';
 
 /**
- * Configuration for the illustrator agent
- */
-export interface IllustratorConfig {
-  /** Book format preset (default: 'square-large') */
-  format?: BookFormatKey;
-  /** Use mock data instead of real generation (for testing) */
-  mock?: boolean;
-  /** Callback for progress updates */
-  onPageRendered?: (pageNumber: number, url: string) => void;
-}
-
-/**
- * IllustratorAgent: Takes a Story and produces a rendered Book
+ * Render a single page image from a Story
  *
- * Generates one image per page by passing filtered Story JSON to Nano Banana Pro.
- * The model receives the full context (style, characters) plus the specific page.
+ * Returns a RenderedPage with a temporary URL from Replicate.
+ * Call this for each page to have full control over the generation process.
  */
-export const illustratorAgent = async (
+export const renderPage = async (
   story: Story,
-  config: IllustratorConfig = {}
-): Promise<Book> => {
-  const {
-    format = 'square-large',
-    mock = false,
-    onPageRendered,
-  } = config;
-
+  pageNumber: number,
+  format: BookFormatKey = 'square-large'
+): Promise<RenderedPage> => {
+  const storySlice = filterStoryForPage(story, pageNumber);
   const formatSpec = BOOK_FORMATS[format];
-  const pages: RenderedPage[] = [];
-
-  for (const storyPage of story.pages) {
-    let url: string;
-
-    if (mock) {
-      // Mock mode for testing
-      url = `https://placeholder.com/pages/page${storyPage.pageNumber}.png`;
-    } else {
-      // Real image generation via Replicate
-      const storySlice = filterStoryForPage(story, storyPage.pageNumber);
-      const result = await generatePageImage(storySlice, formatSpec);
-      url = result.url;
-    }
-
-    pages.push({
-      pageNumber: storyPage.pageNumber,
-      url,
-    });
-
-    onPageRendered?.(storyPage.pageNumber, url);
-  }
+  const result = await generatePageImage(storySlice, formatSpec);
 
   return {
-    storyTitle: story.storyTitle,
-    ageRange: story.ageRange,
-    format,
-    pages,
-    createdAt: new Date().toISOString(),
+    pageNumber,
+    url: result.url,
   };
 };
+
+/**
+ * Create a mock rendered page (for testing without API calls)
+ */
+export const renderPageMock = (pageNumber: number): RenderedPage => ({
+  pageNumber,
+  url: `https://placeholder.com/pages/page${pageNumber}.png`,
+});
+
+/**
+ * Assemble rendered pages into a Book
+ *
+ * This is a pure function - no generation, just structure.
+ * Pages should already be rendered via renderPage/renderPageMock.
+ */
+export const createBook = (
+  story: Story,
+  pages: RenderedPage[],
+  format: BookFormatKey = 'square-large'
+): Book => ({
+  storyTitle: story.storyTitle,
+  ageRange: story.ageRange,
+  format,
+  pages,
+  createdAt: new Date().toISOString(),
+});
 
 /**
  * Filter a Story to include only data relevant to a specific page.

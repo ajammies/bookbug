@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runBook } from '../../core/pipeline';
-import { StorySchema, type BookFormatKey, type Book } from '../../core/schemas';
+import { renderPage, renderPageMock, createBook } from '../../core/pipeline';
+import { StorySchema, type BookFormatKey, type Book, type RenderedPage } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager, isStoryFolder, createOutputManager } from '../utils/output';
@@ -41,15 +41,23 @@ export const renderCommand = new Command('render')
       const assetsFolder = path.join(outputManager.folder, 'assets');
       await fs.mkdir(assetsFolder, { recursive: true });
 
-      // Generate book (images have temporary URLs from Replicate)
+      // Render pages one at a time (images have temporary URLs from Replicate)
       const totalPages = story.pages.length;
-      spinner.start(`Rendering ${totalPages} pages${options.mock ? ' (mock mode)' : ''}...`);
+      const format = options.format ?? 'square-large';
+      const pages: RenderedPage[] = [];
 
-      const book = await runBook(story, {
-        mock: options.mock,
-        format: options.format,
-      });
-      spinner.succeed(`Rendered ${totalPages} pages`);
+      for (const storyPage of story.pages) {
+        spinner.start(`Rendering page ${storyPage.pageNumber}/${totalPages}${options.mock ? ' (mock)' : ''}...`);
+
+        const page = options.mock
+          ? renderPageMock(storyPage.pageNumber)
+          : await renderPage(story, storyPage.pageNumber, format);
+
+        pages.push(page);
+        spinner.succeed(`Rendered page ${storyPage.pageNumber}/${totalPages}`);
+      }
+
+      const book = createBook(story, pages, format);
 
       // Download images and save locally (skip in mock mode)
       let finalBook: Book;

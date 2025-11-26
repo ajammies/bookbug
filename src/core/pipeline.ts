@@ -1,8 +1,10 @@
-import type { StoryBlurb, Manuscript, Story, Book, BookFormatKey } from './schemas';
+import type { StoryBlurb, Manuscript, Story, Book, BookFormatKey, RenderedPage } from './schemas';
 import {
   authorAgent,
   directorAgent,
-  illustratorAgent,
+  renderPage,
+  renderPageMock,
+  createBook,
   type OnStepProgress,
 } from './agents';
 
@@ -62,9 +64,14 @@ export async function executePipeline(
     return { blurb, manuscript, story, book: null as any };
   }
 
-  // Step 3: Illustrate book from story
+  // Step 3: Illustrate book from story (render all pages)
   onProgress?.('illustrator', 'start');
-  const book = await illustratorAgent(story);
+  const pages: RenderedPage[] = [];
+  for (const storyPage of story.pages) {
+    const page = await renderPage(story, storyPage.pageNumber);
+    pages.push(page);
+  }
+  const book = createBook(story, pages);
   onProgress?.('illustrator', 'complete', book);
 
   return { blurb, manuscript, story, book };
@@ -81,9 +88,28 @@ export async function runStory(manuscript: Manuscript): Promise<Story> {
   return directorAgent(manuscript);
 }
 
+/**
+ * Render a single page (re-export for CLI convenience)
+ */
+export { renderPage, renderPageMock, createBook } from './agents';
+
+/**
+ * Render all pages and create a book (convenience wrapper)
+ */
 export async function runBook(
   story: Story,
-  config?: { mock?: boolean; format?: BookFormatKey }
+  config?: { mock?: boolean; format?: BookFormatKey; onPageRendered?: (page: RenderedPage) => void }
 ): Promise<Book> {
-  return illustratorAgent(story, config);
+  const { mock = false, format = 'square-large', onPageRendered } = config ?? {};
+
+  const pages: RenderedPage[] = [];
+  for (const storyPage of story.pages) {
+    const page = mock
+      ? renderPageMock(storyPage.pageNumber)
+      : await renderPage(story, storyPage.pageNumber, format);
+    pages.push(page);
+    onPageRendered?.(page);
+  }
+
+  return createBook(story, pages, format);
 }
