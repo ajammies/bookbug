@@ -420,3 +420,39 @@ export const BookSchema = z.object({
 
 export type Book = z.infer<typeof BookSchema>;
 
+// ============================================================
+// 6. IMAGE GENERATION (intermediate types)
+// ============================================================
+
+/**
+ * StorySlice: filtered Story data for a single page
+ * Contains only the information needed to generate one illustration
+ */
+export const StorySliceSchema = z.object({
+  storyTitle: z.string().min(1),
+  style: VisualStyleGuideSchema,
+  characters: z.record(z.string(), StoryCharacterSchema),
+  page: z.object({
+    pageNumber: z.number().int().min(1),
+    text: z.string().optional(),
+    beats: z.array(StoryBeatSchema).optional(),
+  }),
+});
+
+export type StorySlice = z.infer<typeof StorySliceSchema>;
+
+/**
+ * ImageGenerationResult: raw output from image generation API
+ * Handles the various formats Replicate may return
+ */
+export const ImageGenerationResultSchema = z.union([
+  // Array of string URLs
+  z.array(z.string().url()).min(1),
+  // Array of FileOutput objects with url() method - validated as objects with url
+  z.array(z.object({ url: z.function().returns(z.string()) })).min(1),
+  // Single string URL
+  z.string().url(),
+]);
+
+export type ImageGenerationResult = z.infer<typeof ImageGenerationResultSchema>;
+

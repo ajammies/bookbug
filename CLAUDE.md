@@ -43,6 +43,22 @@ Always use context7 when I need code generation, setup or configuration steps, o
 - Data flows through function parameters, not global state
 - Avoid unnecessary helper functions - prefer direct property access on data structures
 
+## Functional patterns
+- Prefer functional chaining (map, filter, reduce, flatMap) over imperative loops
+- Avoid nested loops - use flatMap to flatten nested iterations
+- Use direct array indexing when index is known (e.g., `arr[i - 1]`) instead of `.find()`
+- Extract complex conditionals into small helper functions for readability
+
+## Function signatures
+- Use direct arguments instead of options objects when there are 2-3 required parameters
+- Options objects are appropriate for optional configuration or 4+ parameters
+- Return explicitly typed values - use Zod schemas for complex types
+
+## Types and schemas
+- Create explicit types for data structures that flow between functions
+- Add Zod schemas for external API responses that have variable formats
+- Extract complex type manipulation into separate helper functions when it aids clarity
+
 # Testing
 Tests are co-located with source files (`file.ts` → `file.test.ts`).
 

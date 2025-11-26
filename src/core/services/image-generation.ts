@@ -1,5 +1,5 @@
 import Replicate from 'replicate';
-import type { BOOK_FORMATS } from '../schemas';
+import type { StorySlice, BOOK_FORMATS } from '../schemas';
 
 /**
  * Image generation service using Replicate API with Nano Banana Pro
@@ -9,13 +9,6 @@ import type { BOOK_FORMATS } from '../schemas';
  */
 
 type BookFormat = typeof BOOK_FORMATS[keyof typeof BOOK_FORMATS];
-
-export interface GeneratePageOptions {
-  /** Filtered Story JSON for a single page */
-  storySlice: object;
-  /** Book format spec with dimensions */
-  format: BookFormat;
-}
 
 export interface GeneratedPage {
   /** Temporary URL from Replicate (expires after ~24h) */
@@ -49,49 +42,43 @@ export const _setClient = (client: Replicate): void => {
 };
 
 /**
+ * Extract URL from Replicate output (handles various formats)
+ */
+const extractImageUrl = (output: unknown): string => {
+  // Array of strings
+  if (Array.isArray(output) && output.length > 0) {
+    const first = output[0];
+    if (typeof first === 'string') return first;
+    // FileOutput object with url() method
+    if (first && typeof first === 'object' && 'url' in first) {
+      return (first as { url: () => string }).url();
+    }
+  }
+  // Single string
+  if (typeof output === 'string') return output;
+
+  throw new Error('Unexpected output format from model');
+};
+
+/**
  * Generate a page image using Nano Banana Pro via Replicate
  *
  * Passes the filtered Story JSON directly as the prompt.
- * The storySlice should contain:
- * - storyTitle
- * - style (VisualStyleGuide)
- * - characters (relevant to this page)
- * - page (pageNumber, text, beats)
  */
 export const generatePageImage = async (
-  options: GeneratePageOptions
+  storySlice: StorySlice,
+  format: BookFormat
 ): Promise<GeneratedPage> => {
-  const { storySlice, format } = options;
-
   const client = getClient();
 
-  // Pass the Story JSON directly as the prompt
-  const input = {
-    prompt: JSON.stringify(storySlice),
-    aspect_ratio: getAspectRatio(format),
-  };
+  const output = await client.run('google/imagen-3', {
+    input: {
+      prompt: JSON.stringify(storySlice),
+      aspect_ratio: getAspectRatio(format),
+    },
+  });
 
-  const output = await client.run('google/imagen-3', { input });
-
-  // Handle output format - Replicate returns temporary URLs
-  let imageUrl: string;
-
-  if (Array.isArray(output) && output.length > 0) {
-    const firstOutput = output[0];
-    if (typeof firstOutput === 'string') {
-      imageUrl = firstOutput;
-    } else if (firstOutput && typeof firstOutput === 'object' && 'url' in firstOutput) {
-      imageUrl = (firstOutput as { url: () => string }).url();
-    } else {
-      throw new Error('Unexpected output format from model');
-    }
-  } else if (typeof output === 'string') {
-    imageUrl = output;
-  } else {
-    throw new Error('Unexpected output format from model');
-  }
-
-  return { url: imageUrl };
+  return { url: extractImageUrl(output) };
 };
 
 /**

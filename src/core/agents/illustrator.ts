@@ -1,4 +1,4 @@
-import type { Story, Book, RenderedPage, BookFormatKey } from '../schemas';
+import type { Story, Book, RenderedPage, BookFormatKey, StorySlice } from '../schemas';
 import { BOOK_FORMATS } from '../schemas';
 import { generatePageImage } from '../services/image-generation';
 
@@ -42,10 +42,7 @@ export const illustratorAgent = async (
     } else {
       // Real image generation via Replicate
       const storySlice = filterStoryForPage(story, storyPage.pageNumber);
-      const result = await generatePageImage({
-        storySlice,
-        format: formatSpec,
-      });
+      const result = await generatePageImage(storySlice, formatSpec);
       url = result.url;
     }
 
@@ -70,25 +67,21 @@ export const illustratorAgent = async (
  * Filter a Story to include only data relevant to a specific page.
  * This creates a minimal payload for image generation.
  */
-export const filterStoryForPage = (story: Story, pageNumber: number): object => {
-  const storyPage = story.pages.find(p => p.pageNumber === pageNumber);
+export const filterStoryForPage = (story: Story, pageNumber: number): StorySlice => {
+  const storyPage = story.pages[pageNumber - 1]; // Pages are 1-indexed
   const manuscriptPage = story.manuscript.pages[String(pageNumber)];
 
-  // Collect character IDs used in this page's beats
-  const characterIds = new Set<string>();
-  for (const beat of storyPage?.beats ?? []) {
-    for (const char of beat.characters) {
-      characterIds.add(char.id);
-    }
-  }
+  // Extract character IDs from beats, then pick matching characters
+  const characterIds = (storyPage?.beats ?? [])
+    .flatMap(beat => beat.characters)
+    .map(char => char.id);
 
-  // Filter characters to only those in this page
-  const relevantCharacters: Record<string, unknown> = {};
-  for (const id of characterIds) {
-    if (story.characters[id]) {
-      relevantCharacters[id] = story.characters[id];
-    }
-  }
+  const relevantCharacters = [...new Set(characterIds)]
+    .filter(id => id in story.characters)
+    .reduce<StorySlice['characters']>((acc, id) => {
+      acc[id] = story.characters[id]!;
+      return acc;
+    }, {});
 
   return {
     storyTitle: story.storyTitle,
