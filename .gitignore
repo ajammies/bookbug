@@ -27,3 +27,6 @@ npm-debug.log*
 
 # Story output
 output/
+
+# Test coverage
+coverage/
