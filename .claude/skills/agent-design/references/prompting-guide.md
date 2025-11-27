@@ -149,5 +149,5 @@ Guidelines by [context variable]:
 ## Prompt Length
 
 - Keep prompts under 500 words
-- Move property specific examples and instructiosn to zod schema `.describe()`
+- Move property specific examples and instructions to zod schema `.describe()`
 - Use bullet points for lists
