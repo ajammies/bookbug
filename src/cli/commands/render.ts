@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { renderPage, renderPageMock, createBook } from '../../core/pipeline';
-import { StorySchema, type BookFormatKey, type Book, type RenderedPage } from '../../core/schemas';
+import { StorySchema, type BookFormatKey, type RenderedBook, type RenderedPage } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, getOrCreateOutputManager } from '../utils/output';
@@ -58,7 +58,7 @@ export const renderCommand = new Command('render')
       const book = createBook(story, pages, format);
 
       // Download images and save locally (skip in mock mode)
-      let finalBook: Book;
+      let finalBook: RenderedBook;
       if (options.mock) {
         finalBook = book;
       } else {
@@ -86,13 +86,13 @@ export const renderCommand = new Command('render')
 
 /**
  * Download images from temporary URLs and save to local disk.
- * Returns a new Book with updated local paths.
+ * Returns a new RenderedBook with updated local paths.
  */
 async function downloadAndSaveImages(
-  book: Book,
+  book: RenderedBook,
   assetsFolder: string,
   onProgress?: (completed: number, total: number) => void
-): Promise<Book> {
+): Promise<RenderedBook> {
   const updatedPages = [];
   const total = book.pages.length;
 

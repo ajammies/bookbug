@@ -5,7 +5,7 @@ import type {
   StoryBlurb,
   Manuscript,
   Story,
-  Book,
+  RenderedBook,
 } from '../../core/schemas';
 import { createStoryFolderName } from './naming';
 
@@ -29,8 +29,8 @@ export interface StoryOutputManager {
   saveManuscript(manuscript: Manuscript): Promise<void>;
   /** Save Story to story.json */
   saveStory(story: Story): Promise<void>;
-  /** Save Book to book.json */
-  saveBook(book: Book): Promise<void>;
+  /** Save RenderedBook to book.json */
+  saveBook(book: RenderedBook): Promise<void>;
 }
 
 /**

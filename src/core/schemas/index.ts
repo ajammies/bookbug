@@ -282,8 +282,8 @@ export const BeatCharacterSchema = z.object({
 
 export type BeatCharacter = z.infer<typeof BeatCharacterSchema>;
 
-// StoryBeat: one narrative moment + visual shot description
-export const StoryBeatSchema = z.object({
+// IllustrationBeat: one visual moment with shot composition
+export const IllustrationBeatSchema = z.object({
   order: z.number().int().min(1),
   purpose: z.enum(["setup", "build", "twist", "climax", "payoff", "button"]),
   summary: z.string().min(1),
@@ -293,7 +293,7 @@ export const StoryBeatSchema = z.object({
   shot: ShotCompositionSchema,
 });
 
-export type StoryBeat = z.infer<typeof StoryBeatSchema>;
+export type IllustrationBeat = z.infer<typeof IllustrationBeatSchema>;
 
 // VisualStyleGuide: Global visual style applied across the entire book
 export const VisualStyleGuideSchema = z.object({
@@ -314,13 +314,13 @@ export const VisualStyleGuideSchema = z.object({
 
 export type VisualStyleGuide = z.infer<typeof VisualStyleGuideSchema>;
 
-// StoryPage: a single page with visual beats
-export const StoryPageSchema = z.object({
+// IllustratedPage: a single page with visual beats
+export const IllustratedPageSchema = z.object({
   pageNumber: z.number().int().min(1),
-  beats: z.array(StoryBeatSchema).min(1),
+  beats: z.array(IllustrationBeatSchema).min(1),
 });
 
-export type StoryPage = z.infer<typeof StoryPageSchema>;
+export type IllustratedPage = z.infer<typeof IllustratedPageSchema>;
 
 /**
  * Story: complete story ready for rendering
@@ -344,13 +344,13 @@ export const StorySchema = z.object({
     pages: z.record(z.string(), ManuscriptPageSchema),
   }),
   style: VisualStyleGuideSchema,
-  pages: z.array(StoryPageSchema).min(1),
+  pages: z.array(IllustratedPageSchema).min(1),
 });
 
 export type Story = z.infer<typeof StorySchema>;
 
 // ============================================================
-// 5. ILLUSTRATOR → Book (final rendered book)
+// 5. RENDERER → RenderedBook (final rendered book)
 // ============================================================
 
 // Import and re-export format types and utilities
@@ -378,7 +378,7 @@ export const RenderedPageSchema = z.object({
 
 export type RenderedPage = z.infer<typeof RenderedPageSchema>;
 
-export const BookSchema = z.object({
+export const RenderedBookSchema = z.object({
   storyTitle: z.string().min(1),
   ageRange: AgeRangeSchema,
   format: _BookFormatKeySchema.default('square-large'),
@@ -386,7 +386,7 @@ export const BookSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-export type Book = z.infer<typeof BookSchema>;
+export type RenderedBook = z.infer<typeof RenderedBookSchema>;
 
 // ============================================================
 // 6. IMAGE GENERATION (intermediate types)
@@ -403,7 +403,7 @@ export const StorySliceSchema = z.object({
   page: z.object({
     pageNumber: z.number().int().min(1),
     text: z.string().optional(),
-    beats: z.array(StoryBeatSchema).optional(),
+    beats: z.array(IllustrationBeatSchema).optional(),
   }),
 });
 

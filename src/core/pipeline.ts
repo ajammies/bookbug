@@ -1,7 +1,7 @@
-import type { StoryBlurb, Manuscript, Story, Book, BookFormatKey, RenderedPage } from './schemas';
+import type { StoryBlurb, Manuscript, Story, RenderedBook, BookFormatKey, RenderedPage } from './schemas';
 import {
   authorAgent,
-  directorAgent,
+  illustratorAgent,
   renderPage,
   renderPageMock,
   createBook,
@@ -19,7 +19,7 @@ import {
 export type PipelineResult =
   | { stage: 'manuscript'; blurb: StoryBlurb; manuscript: Manuscript }
   | { stage: 'story'; blurb: StoryBlurb; manuscript: Manuscript; story: Story }
-  | { stage: 'book'; blurb: StoryBlurb; manuscript: Manuscript; story: Story; book: Book };
+  | { stage: 'book'; blurb: StoryBlurb; manuscript: Manuscript; story: Story; book: RenderedBook };
 
 /**
  * Pipeline options
@@ -36,8 +36,8 @@ export interface PipelineOptions {
  *
  * Pipeline flow:
  *   StoryBlurb → Author → Manuscript
- *   Manuscript → Director → Story
- *   Story → Illustrator → Book
+ *   Manuscript → Illustrator → Story
+ *   Story → Renderer → RenderedBook
  *
  * Note: StoryBlurb is created via:
  *   1. runStoryIntake (chat) → StoryBrief
@@ -58,24 +58,24 @@ export async function executePipeline(
     return { stage: 'manuscript', blurb, manuscript };
   }
 
-  // Step 2: Direct visual story from manuscript
-  onProgress?.('director', 'start');
-  const story = await directorAgent(manuscript);
-  onProgress?.('director', 'complete', story);
+  // Step 2: Illustrate visual story from manuscript
+  onProgress?.('illustrator', 'start');
+  const story = await illustratorAgent(manuscript);
+  onProgress?.('illustrator', 'complete', story);
 
   if (stopAfter === 'story') {
     return { stage: 'story', blurb, manuscript, story };
   }
 
-  // Step 3: Illustrate book from story (render all pages)
-  onProgress?.('illustrator', 'start');
+  // Step 3: Render book from story (generate all page images)
+  onProgress?.('renderer', 'start');
   const pages: RenderedPage[] = [];
   for (const storyPage of story.pages) {
     const page = await renderPage(story, storyPage.pageNumber);
     pages.push(page);
   }
   const book = createBook(story, pages);
-  onProgress?.('illustrator', 'complete', book);
+  onProgress?.('renderer', 'complete', book);
 
   return { stage: 'book', blurb, manuscript, story, book };
 }
@@ -88,7 +88,7 @@ export async function runManuscript(blurb: StoryBlurb): Promise<Manuscript> {
 }
 
 export async function runStory(manuscript: Manuscript): Promise<Story> {
-  return directorAgent(manuscript);
+  return illustratorAgent(manuscript);
 }
 
 /**
@@ -102,7 +102,7 @@ export { renderPage, renderPageMock, createBook } from './agents';
 export async function runBook(
   story: Story,
   config?: { mock?: boolean; format?: BookFormatKey; onPageRendered?: (page: RenderedPage) => void }
-): Promise<Book> {
+): Promise<RenderedBook> {
   const { mock = false, format = 'square-large', onPageRendered } = config ?? {};
 
   const pages: RenderedPage[] = [];

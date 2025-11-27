@@ -40,8 +40,8 @@ bookbug/
 │   │   │   ├── interpreter.ts    # Extracts StoryBrief from user input
 │   │   │   ├── conversation.ts   # Generates follow-up questions for chat
 │   │   │   ├── author.ts         # Manuscript generation from brief
-│   │   │   ├── director.ts       # Visual story direction from manuscript
-│   │   │   └── illustrator.ts    # Image generation from story
+│   │   │   ├── illustrator.ts    # Visual story direction from manuscript
+│   │   │   └── renderer.ts       # Image generation from story
 │   │   └── pipeline.ts           # Pipeline orchestration
 │   └── cli/
 │       ├── index.ts              # CLI entry point (Commander.js)
@@ -88,8 +88,8 @@ All types are defined in `src/core/schemas/index.ts`. Key schemas:
 | Schema | Description |
 |--------|-------------|
 | `Story` | Complete visual story (normalized blob) |
-| `StoryPage` | Page with visual beats |
-| `StoryBeat` | Single illustration: shot composition, characters, emotion |
+| `IllustratedPage` | Page with visual beats |
+| `IllustrationBeat` | Single illustration: shot composition, characters, emotion |
 | `VisualStyleGuide` | Global art direction, lighting, colors |
 | `ShotComposition` | Camera: size, angle, POV, staging, cinematography |
 
@@ -105,8 +105,8 @@ All types are defined in `src/core/schemas/index.ts`. Key schemas:
 ### Output Types
 | Schema | Description |
 |--------|-------------|
-| `Book` | Final rendered book with pages and images |
-| `BookPage` | Page with text and rendered images |
+| `RenderedBook` | Final rendered book with pages and images |
+| `RenderedPage` | Page with rendered image URL |
 | `RenderedImage` | Generated image: url, dimensions, metadata |
 
 ---
@@ -142,7 +142,7 @@ Generates the complete `Story.json` containing manuscript text and visual direct
 
 **Agents:**
 1. **AuthorAgent**: `StoryBlurb` → `Manuscript` (per-page text, summaries, image concepts)
-2. **DirectorAgent**: `Manuscript` → `Story` (visual style guide, shot compositions, beat breakdowns)
+2. **IllustratorAgent**: `Manuscript` → `Story` (visual style guide, shot compositions, beat breakdowns)
 3. **TypographerAgent** *(planned)*: `Story` → `Story` with text styling (font, position, size, decoration per page)
 
 **Output:** `Story.json` (normalized blob with characters lookup, manuscript pages, visual beats)
@@ -224,8 +224,8 @@ export async function executePipeline(
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
   const manuscript = await authorAgent(brief);
-  const story = await directorAgent(manuscript);
-  const book = await illustratorAgent(story);
+  const story = await illustratorAgent(manuscript);
+  const book = await rendererAgent(story);
   return { brief, manuscript, story, book };
 }
 ```
@@ -244,7 +244,7 @@ Story {
     pages: Record<pageNum, ManuscriptPage>  // Lookup table
   }
   style: VisualStyleGuide
-  pages: StoryPage[]                        // References lookups by ID
+  pages: IllustratedPage[]                  // References lookups by ID
 }
 ```
 
@@ -343,11 +343,11 @@ inngest.createFunction(
     const manuscript = await step.run("write-manuscript", () =>
       authorAgent(brief)
     );
-    const story = await step.run("direct-story", () =>
-      directorAgent(manuscript)
+    const story = await step.run("illustrate", () =>
+      illustratorAgent(manuscript)
     );
-    const book = await step.run("illustrate", () =>
-      illustratorAgent(story)
+    const book = await step.run("render", () =>
+      rendererAgent(story)
     );
     return book;
   }
