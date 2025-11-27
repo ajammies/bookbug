@@ -39,7 +39,10 @@ export const createCommand = new Command('create')
         },
       });
 
-      // Save all artifacts
+      // Save all artifacts (pipeline always completes to 'book' stage here)
+      if (result.stage !== 'book') {
+        throw new Error('Pipeline did not complete');
+      }
       await outputManager.saveManuscript(result.manuscript);
       await outputManager.saveStory(result.story);
       await outputManager.saveBook(result.book);

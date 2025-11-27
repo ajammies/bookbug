@@ -9,14 +9,17 @@ import {
 } from './agents';
 
 /**
- * Pipeline result containing all intermediate outputs
+ * Pipeline result - discriminated union based on completion stage
+ *
+ * Use the `stage` field to determine which properties are available:
+ * - 'manuscript': blurb + manuscript only
+ * - 'story': blurb + manuscript + story
+ * - 'book': all properties (complete pipeline)
  */
-export interface PipelineResult {
-  blurb: StoryBlurb;
-  manuscript: Manuscript;
-  story: Story;
-  book: Book;
-}
+export type PipelineResult =
+  | { stage: 'manuscript'; blurb: StoryBlurb; manuscript: Manuscript }
+  | { stage: 'story'; blurb: StoryBlurb; manuscript: Manuscript; story: Story }
+  | { stage: 'book'; blurb: StoryBlurb; manuscript: Manuscript; story: Story; book: Book };
 
 /**
  * Pipeline options
@@ -52,7 +55,7 @@ export async function executePipeline(
   onProgress?.('author', 'complete', manuscript);
 
   if (stopAfter === 'manuscript') {
-    return { blurb, manuscript, story: null as any, book: null as any };
+    return { stage: 'manuscript', blurb, manuscript };
   }
 
   // Step 2: Direct visual story from manuscript
@@ -61,7 +64,7 @@ export async function executePipeline(
   onProgress?.('director', 'complete', story);
 
   if (stopAfter === 'story') {
-    return { blurb, manuscript, story, book: null as any };
+    return { stage: 'story', blurb, manuscript, story };
   }
 
   // Step 3: Illustrate book from story (render all pages)
@@ -74,7 +77,7 @@ export async function executePipeline(
   const book = createBook(story, pages);
   onProgress?.('illustrator', 'complete', book);
 
-  return { blurb, manuscript, story, book };
+  return { stage: 'book', blurb, manuscript, story, book };
 }
 
 /**
