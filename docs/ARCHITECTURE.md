@@ -55,6 +55,12 @@ erDiagram
     %% STAGE 3: Prose (author agent output)
     %% ============================================
 
+    ProseSetup {
+        string logline
+        string theme
+        string styleNotes "optional"
+    }
+
     Prose {
         string logline
         string theme
@@ -190,6 +196,7 @@ erDiagram
     StoryBrief ||--|| AgeRange : contains
     StoryBrief ||--|{ StoryCharacter : has
     PlotStructure ||--|{ PlotBeat : has
+    ProseSetup ||--o| Prose : "subset of"
     Prose ||--|{ ProsePage : has
     VisualDirection ||--|| VisualStyleGuide : has
     VisualDirection ||--|{ IllustratedPage : has
@@ -226,6 +233,47 @@ erDiagram
   (conversation)      → PlotStructure        → Prose               → VisualDirection      → RenderedBook
 ```
 
+## Incremental Pipeline (executePipeline)
+
+The main pipeline uses incremental page-by-page execution for better progress tracking:
+
+```
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                           executePipeline(StoryWithPlot)                          │
+├───────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                   │
+│  Step 1: Setup (parallel)                                                         │
+│  ┌─────────────────────┐    ┌─────────────────────┐                              │
+│  │  styleGuideAgent    │    │  proseSetupAgent    │                              │
+│  │  → VisualStyleGuide │    │  → ProseSetup       │                              │
+│  └─────────────────────┘    └─────────────────────┘                              │
+│                                                                                   │
+│  Step 2: Generate prose pages (sequential, with context)                          │
+│  ┌──────────────────────────────────────────────────────────────────────┐        │
+│  │  for each page:                                                       │        │
+│  │    prosePageAgent({ story, proseSetup, pageNumber, previousPages })   │        │
+│  │    → ProsePage                                                        │        │
+│  └──────────────────────────────────────────────────────────────────────┘        │
+│                                                                                   │
+│  Step 3: Generate illustrated pages (sequential)                                  │
+│  ┌──────────────────────────────────────────────────────────────────────┐        │
+│  │  for each page:                                                       │        │
+│  │    pageVisualsAgent({ story, styleGuide, pageNumber, prosePage })     │        │
+│  │    → IllustratedPage                                                  │        │
+│  └──────────────────────────────────────────────────────────────────────┘        │
+│                                                                                   │
+│  Step 4: Render pages (sequential, with onPageComplete callback)                  │
+│  ┌──────────────────────────────────────────────────────────────────────┐        │
+│  │  for each page:                                                       │        │
+│  │    renderPage(composedStory, pageNumber)                              │        │
+│  │    → RenderedPage                                                     │        │
+│  │    onPageComplete(pageNumber, renderedPage)                           │        │
+│  └──────────────────────────────────────────────────────────────────────┘        │
+│                                                                                   │
+│  Step 5: Assemble → RenderedBook                                                  │
+└───────────────────────────────────────────────────────────────────────────────────┘
+```
+
 ### Composition at Each Stage
 
 ```typescript
@@ -249,6 +297,7 @@ type Story = ComposedStory
 
 Agents are named after their output for clarity.
 
+### Intake Agents
 | Agent | Input | Output | Purpose |
 |-------|-------|--------|---------|
 | `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
@@ -256,11 +305,27 @@ Agents are named after their output for clarity.
 | `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
 | `plotConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `PlotConversationResponse` | Guide plot refinement |
 | `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
-| `proseAgent` | `StoryWithPlot` | `Prose` | Write prose from plot |
-| `visualsAgent` | `StoryWithProse` | `VisualDirection` | Create visual direction from prose |
+| `detectApproval` | `string` | `boolean` | Detect user approval intent |
+
+### Batch Agents (used by CLI commands)
+| Agent | Input | Output | Purpose |
+|-------|-------|--------|---------|
+| `proseAgent` | `StoryWithPlot` | `Prose` | Write all prose at once |
+| `visualsAgent` | `StoryWithProse` | `VisualDirection` | Create all visual direction at once |
+
+### Per-Page Agents (used by incremental pipeline)
+| Agent | Input | Output | Purpose |
+|-------|-------|--------|---------|
+| `proseSetupAgent` | `StoryWithPlot` | `ProseSetup` | Generate story-wide prose metadata (once) |
+| `prosePageAgent` | `ProsePageInput` | `ProsePage` | Write prose for one page |
+| `styleGuideAgent` | `StoryWithPlot` | `VisualStyleGuide` | Generate visual style guide (once) |
+| `pageVisualsAgent` | `PageVisualsInput` | `IllustratedPage` | Create illustration beats for one page |
+
+### Rendering
+| Agent | Input | Output | Purpose |
+|-------|-------|--------|---------|
 | `renderPage` | `ComposedStory` + `pageNumber` | `RenderedPage` | Generate page image |
 | `createBook` | `ComposedStory` + `RenderedPage[]` | `RenderedBook` | Assemble final book |
-| `detectApproval` | `string` | `boolean` | Detect user approval intent |
 
 ## Conversation Response Types
 
