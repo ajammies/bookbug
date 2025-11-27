@@ -5,7 +5,7 @@ import { renderPage, renderPageMock, createBook } from '../../core/pipeline';
 import { StorySchema, type BookFormatKey, type Book, type RenderedPage } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
-import { loadOutputManager, isStoryFolder, createOutputManager } from '../utils/output';
+import { createOutputManager, getOrCreateOutputManager } from '../utils/output';
 import { downloadImage } from '../../core/services/image-generation';
 
 interface RenderOptions {
@@ -30,12 +30,10 @@ export const renderCommand = new Command('render')
       const story = StorySchema.parse(JSON.parse(storyJson));
       spinner.succeed('Story loaded');
 
-      // Set up output manager first (need folder path for saving images)
+      // Set up output manager (custom path takes precedence)
       const outputManager = options.output
         ? await createOutputManager(story.storyTitle, options.output)
-        : await isStoryFolder(storyFile)
-          ? await loadOutputManager(storyFile)
-          : await createOutputManager(story.storyTitle);
+        : await getOrCreateOutputManager(storyFile, story.storyTitle);
 
       // Ensure assets folder exists
       const assetsFolder = path.join(outputManager.folder, 'assets');

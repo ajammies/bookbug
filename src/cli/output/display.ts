@@ -5,7 +5,7 @@ import type { StoryBrief, Manuscript, Story, Book } from '../../core/schemas';
  * Display a StoryBrief summary
  */
 export function displayBrief(brief: StoryBrief): void {
-  console.log('\n' + chalk.bold.blue('📖 Story Brief'));
+  console.log('\n' + chalk.bold.blue('Story Brief'));
   console.log(chalk.gray('─'.repeat(50)));
   console.log(chalk.bold('Title:'), brief.title);
   console.log(chalk.bold('Arc:'), brief.storyArc);
@@ -26,7 +26,7 @@ export function displayBrief(brief: StoryBrief): void {
  * Display a Manuscript summary
  */
 export function displayManuscript(manuscript: Manuscript): void {
-  console.log('\n' + chalk.bold.green('📝 Manuscript'));
+  console.log('\n' + chalk.bold.green('Manuscript'));
   console.log(chalk.gray('─'.repeat(50)));
   console.log(chalk.bold('Title:'), manuscript.title);
   console.log(chalk.bold('Logline:'), manuscript.logline);
@@ -47,7 +47,7 @@ export function displayManuscript(manuscript: Manuscript): void {
  * Display a Story summary
  */
 export function displayStory(story: Story): void {
-  console.log('\n' + chalk.bold.magenta('🎬 Visual Story'));
+  console.log('\n' + chalk.bold.magenta('Visual Story'));
   console.log(chalk.gray('─'.repeat(50)));
   console.log(chalk.bold('Title:'), story.storyTitle);
   console.log(chalk.bold('Pages:'), story.pages.length);
@@ -74,7 +74,7 @@ export function displayStory(story: Story): void {
  * Display a Book summary
  */
 export function displayBook(book: Book): void {
-  console.log('\n' + chalk.bold.yellow('📚 Generated Book'));
+  console.log('\n' + chalk.bold.yellow('Generated Book'));
   console.log(chalk.gray('─'.repeat(50)));
   console.log(chalk.bold('Title:'), book.storyTitle);
   console.log(chalk.bold('Age Range:'), `${book.ageRange.min}-${book.ageRange.max} years`);
@@ -89,5 +89,5 @@ export function displayBook(book: Book): void {
     console.log(chalk.gray(`  ... and ${book.pages.length - 3} more pages`));
   }
 
-  console.log('\n' + chalk.green.bold('✨ Book generation complete!'));
+  console.log('\n' + chalk.green.bold('Book generation complete!'));
 }

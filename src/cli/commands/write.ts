@@ -3,7 +3,7 @@ import { runManuscript } from '../../core/pipeline';
 import { StoryBlurbSchema } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayManuscript } from '../output/display';
-import { loadOutputManager, isStoryFolder, createOutputManager } from '../utils/output';
+import { getOrCreateOutputManager } from '../utils/output';
 
 export const writeCommand = new Command('write')
   .description('Write a manuscript from a StoryBlurb')
@@ -28,9 +28,7 @@ export const writeCommand = new Command('write')
       displayManuscript(manuscript);
 
       // Save to story folder (detect existing or create new)
-      const outputManager = await isStoryFolder(blurbFile)
-        ? await loadOutputManager(blurbFile)
-        : await createOutputManager(manuscript.title);
+      const outputManager = await getOrCreateOutputManager(blurbFile, manuscript.title);
       await outputManager.saveManuscript(manuscript);
       console.log(`\nManuscript saved to: ${outputManager.folder}/manuscript.json`);
     } catch (error) {

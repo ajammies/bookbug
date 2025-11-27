@@ -7,9 +7,13 @@ import type {
   Story,
   Book,
 } from '../../core/schemas';
-import { generateStoryFolder } from './naming';
+import { createStoryFolderName } from './naming';
 
 const OUTPUT_DIR = './output';
+const ARTIFACT_FILES = ['brief.json', 'blurb.json', 'manuscript.json', 'story.json', 'book.json'];
+
+const saveJson = (folder: string, filename: string, data: unknown): Promise<void> =>
+  fs.writeFile(path.join(folder, filename), JSON.stringify(data, null, 2));
 
 /**
  * Manages saving story artifacts to a folder structure
@@ -38,7 +42,7 @@ export const createOutputManager = async (
   title: string,
   customPath?: string
 ): Promise<StoryOutputManager> => {
-  const folder = customPath ?? path.join(OUTPUT_DIR, generateStoryFolder(title));
+  const folder = customPath ?? path.join(OUTPUT_DIR, createStoryFolderName(title));
   await fs.mkdir(folder, { recursive: true });
   await fs.mkdir(path.join(folder, 'assets'), { recursive: true });
   return createManager(folder);
@@ -54,9 +58,7 @@ export const loadOutputManager = async (
   const folder = path.dirname(artifactPath);
   // Verify it's a valid story folder (contains at least one artifact)
   const files = await fs.readdir(folder);
-  const hasArtifact = files.some((f) =>
-    ['brief.json', 'blurb.json', 'manuscript.json', 'story.json', 'book.json'].includes(f)
-  );
+  const hasArtifact = files.some((f) => ARTIFACT_FILES.includes(f));
   if (!hasArtifact) {
     throw new Error(`Not a valid story folder: ${folder}`);
   }
@@ -70,28 +72,28 @@ export const isStoryFolder = async (filePath: string): Promise<boolean> => {
   try {
     const folder = path.dirname(filePath);
     const files = await fs.readdir(folder);
-    return files.some((f) =>
-      ['brief.json', 'blurb.json', 'manuscript.json', 'story.json', 'book.json'].includes(f)
-    );
+    return files.some((f) => ARTIFACT_FILES.includes(f));
   } catch {
     return false;
   }
 };
 
-const createManager = (folder: string): StoryOutputManager => {
-  const saveJson = async (filename: string, data: unknown): Promise<void> => {
-    await fs.writeFile(
-      path.join(folder, filename),
-      JSON.stringify(data, null, 2)
-    );
-  };
+const createManager = (folder: string): StoryOutputManager => ({
+  folder,
+  saveBrief: (brief) => saveJson(folder, 'brief.json', brief),
+  saveBlurb: (blurb) => saveJson(folder, 'blurb.json', blurb),
+  saveManuscript: (manuscript) => saveJson(folder, 'manuscript.json', manuscript),
+  saveStory: (story) => saveJson(folder, 'story.json', story),
+  saveBook: (book) => saveJson(folder, 'book.json', book),
+});
 
-  return {
-    folder,
-    saveBrief: (brief) => saveJson('brief.json', brief),
-    saveBlurb: (blurb) => saveJson('blurb.json', blurb),
-    saveManuscript: (manuscript) => saveJson('manuscript.json', manuscript),
-    saveStory: (story) => saveJson('story.json', story),
-    saveBook: (book) => saveJson('book.json', book),
-  };
-};
+/**
+ * Get existing output manager or create new one
+ */
+export const getOrCreateOutputManager = async (
+  filePath: string,
+  fallbackTitle: string
+): Promise<StoryOutputManager> =>
+  (await isStoryFolder(filePath))
+    ? loadOutputManager(filePath)
+    : createOutputManager(fallbackTitle);
