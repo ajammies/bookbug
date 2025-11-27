@@ -78,21 +78,31 @@ Always use context7 when I need code generation, setup or configuration steps, o
 - Add Zod schemas for external API responses that have variable formats
 - Extract complex type manipulation into separate helper functions when it aids clarity
 
-## Functional patterns
-- Prefer functional chaining (map, filter, reduce, flatMap) over imperative loops
-- Avoid nested loops - use flatMap to flatten nested iterations
-- Use direct array indexing when index is known (e.g., `arr[i - 1]`) instead of `.find()`
-- Extract complex conditionals into small helper functions for readability
+# Agent design
+Best practices for LLM-powered agents using `generateObject`.
 
-## Function signatures
-- Use direct arguments instead of options objects when there are 2-3 required parameters
-- Options objects are appropriate for optional configuration or 4+ parameters
-- Return explicitly typed values - use Zod schemas for complex types
+## Never hardcode what an LLM can decide
+- **Bad:** Hardcoded phrase matching for user intent (`if (text.includes('looks good'))`)
+- **Good:** Small focused agent that uses `generateObject` to determine intent
+- LLMs handle natural language variations, typos, and context that regex/includes never will
+- When in doubt, let the model decide - that's what it's for
 
-## Types and schemas
-- Create explicit types for data structures that flow between functions
-- Add Zod schemas for external API responses that have variable formats
-- Extract complex type manipulation into separate helper functions when it aids clarity
+## One agent, one job
+- Each agent should do exactly one thing well
+- `detectApproval()` returns `{ isApproval: boolean }` - nothing else
+- `blurbInterpreterAgent()` modifies plot beats - doesn't also detect approval
+- Compose small agents rather than building monolithic ones
+
+## Schema-first design
+- Define the output schema before writing the prompt
+- Use Zod schemas with `generateObject` for type-safe responses
+- The schema IS the contract - make it explicit and minimal
+
+## Prompt structure
+- System prompt defines the agent's role and rules
+- User prompt provides the specific input to process
+- Keep system prompts focused - don't overload with edge cases
+- Let the schema constrain outputs, not verbose prompt instructions
 
 # Testing
 Tests are co-located with source files (`file.ts` → `file.test.ts`).
