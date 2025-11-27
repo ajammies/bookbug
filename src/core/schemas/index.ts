@@ -84,6 +84,23 @@ export const PlotBeatSchema = z.object({
 
 export type PlotBeat = z.infer<typeof PlotBeatSchema>;
 
+// ============================================================
+// NEW: Stage 2 - PlotStructure (only NEW fields from blurb generator)
+// ============================================================
+
+/**
+ * PlotStructure: Output of blurb generator agent
+ * Contains ONLY the new fields produced at this stage, not the entire StoryBrief.
+ */
+export const PlotStructureSchema = z.object({
+  storyArcSummary: z.string().min(1).describe('1-2 sentence story arc summary'),
+  plotBeats: z.array(PlotBeatSchema).min(4).max(6).describe('Key story structure beats'),
+  allowCreativeLiberty: z.boolean().default(true).describe('Whether the author can embellish beyond the beats'),
+});
+
+export type PlotStructure = z.infer<typeof PlotStructureSchema>;
+
+// LEGACY: StoryBlurb (embedded StoryBrief) - to be removed after migration
 export const StoryBlurbSchema = z.object({
   brief: StoryBriefSchema,
   storyArcSummary: z.string().min(1).describe('1-2 sentence story arc summary'),
@@ -117,7 +134,26 @@ export const ManuscriptPageSchema = z.object({
 
 export type ManuscriptPage = z.infer<typeof ManuscriptPageSchema>;
 
-// Manuscript metadata (without pages, for embedding in Story)
+// ============================================================
+// NEW: Stage 3 - Prose (only NEW fields from author agent)
+// ============================================================
+
+/**
+ * Prose: Output of author agent
+ * Contains ONLY the new fields produced at this stage.
+ * The agent receives StoryWithPlot (StoryBrief & { plot: PlotStructure })
+ * and outputs only the prose content.
+ */
+export const ProseSchema = z.object({
+  logline: z.string().min(1).describe('One-sentence story summary'),
+  theme: z.string().min(1).describe('Central theme or message'),
+  styleNotes: z.string().optional().describe('Notes on writing style for this story'),
+  pages: z.array(ManuscriptPageSchema).min(1).describe('One ManuscriptPage per page of the book'),
+});
+
+export type Prose = z.infer<typeof ProseSchema>;
+
+// LEGACY: Manuscript metadata (without pages, for embedding in Story)
 export const ManuscriptMetaSchema = z.object({
   title: z.string().min(1),
   logline: z.string().min(1).describe('One-sentence story summary'),
@@ -130,8 +166,7 @@ export const ManuscriptMetaSchema = z.object({
 
 export type ManuscriptMeta = z.infer<typeof ManuscriptMetaSchema>;
 
-// Full Manuscript: what AuthorAgent emits, Director consumes.
-// Note: This is the intermediate format; Story uses a normalized version.
+// LEGACY: Full Manuscript - to be removed after migration
 export const ManuscriptSchema = z.object({
   blurb: StoryBlurbSchema,
   title: z.string().min(1),
@@ -340,20 +375,31 @@ export const IllustratedPageSchema = z.object({
 
 export type IllustratedPage = z.infer<typeof IllustratedPageSchema>;
 
+// ============================================================
+// NEW: Stage 4 - VisualDirection (only NEW fields from illustrator agent)
+// ============================================================
+
 /**
- * Story: complete story ready for rendering
- *
- * NORMALIZED STRUCTURE:
- * - characters: Record<id, StoryCharacter> - lookup table for all characters
- * - manuscript: { meta, pages: Record<pageNum, ManuscriptPage> } - lookup table for text
- * - pages: StoryPage[] - visual beats that reference the above by ID
- *
- * This structure is:
- * 1. Self-contained: all referenced data is in the blob
- * 2. Concise: no duplication of character/manuscript data
- * 3. Functional: immutable, serializable, no external lookups needed
+ * VisualDirection: Output of illustrator agent
+ * Contains ONLY the new fields produced at this stage.
+ * The agent receives StoryWithProse and outputs visual direction.
  */
-export const StorySchema = z.object({
+export const VisualDirectionSchema = z.object({
+  style: VisualStyleGuideSchema,
+  illustratedPages: z.array(IllustratedPageSchema).min(1),
+});
+
+export type VisualDirection = z.infer<typeof VisualDirectionSchema>;
+
+// ============================================================
+// LEGACY: Story (old self-contained blob) - to be replaced
+// ============================================================
+
+/**
+ * LEGACY Story: complete story ready for rendering
+ * To be replaced by composed Story type after migration.
+ */
+export const LegacyStorySchema = z.object({
   storyTitle: z.string().min(1),
   ageRange: AgeRangeSchema,
   characters: z.record(z.string(), StoryCharacterSchema),
@@ -365,7 +411,11 @@ export const StorySchema = z.object({
   pages: z.array(IllustratedPageSchema).min(1),
 });
 
-export type Story = z.infer<typeof StorySchema>;
+export type LegacyStory = z.infer<typeof LegacyStorySchema>;
+
+// Keep StorySchema as alias for backwards compatibility during migration
+export const StorySchema = LegacyStorySchema;
+export type Story = LegacyStory;
 
 // ============================================================
 // 5. RENDERER → RenderedBook (final rendered book)
