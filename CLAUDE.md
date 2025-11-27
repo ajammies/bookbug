@@ -54,11 +54,16 @@
 
 # Agent design
 - Never hardcode what an LLM can decide - use `generateObject`, not `if (text.includes(...))`
-- One agent, one job - `detectApproval()` returns `{ isApproval: boolean }`, nothing else
+- Agent, should be like pure functions - single transformation, no side effects, small scope.
 - Schema-first - define Zod schema before prompt, schema IS the contract
+- Add .describe() to Zod Schemas as a way of concisely prompting the AI to fill the field correctly
 - Trust the model - don't over-prescribe what it already understands (approval, extraction, conversation)
 - Provide domain knowledge, not step-by-step instructions - the model knows how to converse
-- Over-prescription causes overfitting - model follows rules rigidly instead of using intelligence
+
+# Schema descriptions (.describe())
+- `.describe()` is a mini-prompt to guide the model on ambiguous fields
+- Disambiguate similar fields: `layout` (page structure) vs `composition` (element arrangement)
+- On `NoObjectGeneratedError`: add `.describe()` to failing field before retry logic
 
 # Testing
 - Tests co-located: `file.ts` → `file.test.ts`
