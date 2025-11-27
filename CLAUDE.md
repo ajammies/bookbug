@@ -36,12 +36,20 @@ Always use context7 when I need code generation, setup or configuration steps, o
 - `docs/` - Documentation updates
 - `chore/` - Maintenance tasks (deps, configs, etc.)
 
+# Programming philosophy (Carmack-inspired)
+- **Make it as simple as possible, but not simpler** - Complexity is the enemy. Cut until it hurts, then stop.
+- **Write code that is easy to delete** - Loose coupling, no tentacles. If removing a feature requires surgery across 10 files, you've failed.
+- **Keep functions small enough to fit in your head** - If you can't hold the entire function's state in your mind, break it down.
+- **Don't abstract until you see the pattern three times** - Premature abstraction is worse than duplication. Wait for the pattern to emerge.
+- **Prefer explicit over implicit** - Magic is the enemy of debugging. Make data flow and dependencies obvious.
+
 # Code style
 - Follow functional principles: pure functions, immutability, no side effects
 - Use standalone exported functions (modern TypeScript idiom, better tree-shaking)
 - Organize related functions by file/module, not by class
 - Data flows through function parameters, not global state
 - Avoid unnecessary helper functions - prefer direct property access on data structures
+- **Intuitive file organization** - If you have to explain where something lives, it's in the wrong place. `formats.ts` for formats, not buried in `schemas/index.ts`.
 
 ## Functional patterns
 - Prefer functional chaining (map, filter, reduce, flatMap) over imperative loops
@@ -53,6 +61,17 @@ Always use context7 when I need code generation, setup or configuration steps, o
 - Use direct arguments instead of options objects when there are 2-3 required parameters
 - Options objects are appropriate for optional configuration or 4+ parameters
 - Return explicitly typed values - use Zod schemas for complex types
+
+## Single responsibility
+- One function, one job. `renderPage()` renders one page, not `renderAllPages()`.
+- Batch operations belong in the caller, not the callee. This gives control back to the user of the function.
+- If a function name has "and" in it, split it.
+
+## Dependency injection
+- External services (APIs, databases) should be injectable via optional parameters
+- Factory functions for client creation: `createReplicateClient()` not global `replicateClient`
+- Default parameter provides production behavior, tests inject mocks
+- No test-only exports (`_resetClient`, `_setClient`) - if you need these, your design is wrong
 
 ## Types and schemas
 - Create explicit types for data structures that flow between functions
@@ -84,3 +103,13 @@ Tests are co-located with source files (`file.ts` → `file.test.ts`).
 - Run `npm run typecheck` to verify no type errors
 - Include test changes in the same commit as implementation
 - If tests fail, fix them before committing
+
+## PR review checklist
+Before merging, review against these CLAUDE.md principles:
+- [ ] No global mutable state - data flows through parameters
+- [ ] Functions are single-responsibility and small enough to fit in your head
+- [ ] External services use dependency injection (factory + optional parameter)
+- [ ] Full test coverage for new/changed code
+- [ ] File organization is intuitive - no hunting for where things live
+- [ ] No premature abstractions - concrete code unless pattern appears 3+ times
+- [ ] Code is easy to delete - loosely coupled, no tentacles across files
