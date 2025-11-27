@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
 import { StoryBriefSchema, type StoryBrief } from '../schemas';
+import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `You extract story details from user input into a StoryBrief. Be thorough but don't invent details the user didn't provide.
 
@@ -47,7 +47,7 @@ export const interpreterAgent = async (
     : userMessage;
 
   const { object } = await generateObject({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: getModel(),
     schema: StoryBriefSchema.partial(),
     system: SYSTEM_PROMPT,
     prompt: contextualPrompt,
