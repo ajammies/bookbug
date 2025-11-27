@@ -14,26 +14,27 @@ A user may ask you create, modify, fix, refactor or improve any agent code. An a
 
 ## Principles
 
-- **Strict Schema Adherance** — Define simple but comprehensive Zod schema for the agent output before designing the prompt.  
-- **Explict Zod Schema properties** — llms will make mistakes with properties unless explicitly instructed. use .describe() to give the llm enough context so it clearly adheres to the schema and does not make mistakes
-- **Agents as Pure functions** — Each agent should have minimal scope. Consider breaking agents into simpler, "pure" agents when the task is complex. 
-- **Use llms to intepret responses** — never pattern match or use deterministic algorithms to interpret fuzzy text. 
-- **Keep instructions simple** — Don't use overly formulaic instructions or contrived examples - treat agents as intelligent, capable of understanding without overly prescriptive instructions
-- **Prompting with Domain knowledge > instructions** — Tell it WHAT constraints exist, best practices, and clear examples, not deterministic instructions (unless absolutely necessary)
+- **Name agents after their output** — `proseAgent` outputs `Prose`, `visualsAgent` outputs `VisualDirection`
+- **Schema-first** — Define Zod schema before prompt. Schema IS the contract.
+- **Explicit `.describe()`** — LLMs make mistakes unless explicitly guided. Use `.describe()` on every ambiguous field.
+- **Agents as pure functions** — Single transformation, minimal scope. Split complex tasks into chained agents.
+- **LLMs interpret, not regex** — Never pattern match fuzzy text. Use a small agent instead.
+- **Domain knowledge > instructions** — Tell it WHAT constraints exist, not step-by-step HOW.
 
 ## Template
 
 ```typescript
 import { generateObject } from 'ai';
-import { OutputSchema, type Input, type Output } from '../schemas';
+import { ProseSchema, type StoryWithPlot, type Prose } from '../schemas';
 import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `Domain knowledge here. Not step-by-step instructions.`;
 
-export const myAgent = async (input: Input): Promise<Output> => {
+// Agent named after output: proseAgent → Prose
+export const proseAgent = async (input: StoryWithPlot): Promise<Prose> => {
   const { object } = await generateObject({
     model: getModel(),
-    schema: OutputSchema,
+    schema: ProseSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(input, null, 2),
   });
@@ -68,12 +69,13 @@ A well-designed agent:
 
 ## Checklist
 
+- [ ] Agent named after output type (`fooAgent` → `Foo`)
 - [ ] Schema defined before prompt
 - [ ] `.describe()` on ambiguous/similar fields
 - [ ] System prompt provides domain knowledge, not steps
 - [ ] Single responsibility (one transformation)
 - [ ] Input/output types explicit
-- [ ] Tests written to cover a wide variety of unstructured inputs, outputs, error handling
+- [ ] Tests cover valid input, edge cases, malformed input
 
 ## Limitations
 
