@@ -1,82 +1,38 @@
-import type { Story, Book, RenderedPage, BookFormatKey, StorySlice } from '../schemas';
-import { BOOK_FORMATS } from '../schemas';
-import { generatePageImage } from '../services/image-generation';
+import { generateObject } from 'ai';
+import { StorySchema, type Manuscript, type Story } from '../schemas';
+import { getModel } from '../config';
+import type { IllustratorAgent } from './index';
+
+const SYSTEM_PROMPT = `You are an illustrator for children's picture books. Given a Manuscript, create a complete visual Story with detailed shot compositions for each beat.
+
+Your responsibilities:
+1. Define a cohesive VisualStyleGuide (art direction, setting, lighting, colors, mood)
+2. Break each manuscript page into one or more StoryBeats
+3. For each beat, specify:
+   - Shot composition (size, angle, POV, layout)
+   - Character positions, expressions, poses
+   - Setting details (can override global setting per-beat)
+   - Any visual overrides for lighting, mood, atmosphere
+
+Visual principles:
+- Use variety in shot sizes (mix wide establishing shots with close-ups)
+- Match shot composition to emotional beats (wide for wonder, close for intimacy)
+- Consider child's eye level for relatable perspective
+- Use color and lighting to reinforce mood
+- Ensure visual continuity across pages
+
+Output a complete Story ready for illustration.`;
 
 /**
- * Render a single page image from a Story
- *
- * Returns a RenderedPage with a temporary URL from Replicate.
- * Call this for each page to have full control over the generation process.
+ * IllustratorAgent: Takes a Manuscript and produces a visual Story
  */
-export const renderPage = async (
-  story: Story,
-  pageNumber: number,
-  format: BookFormatKey = 'square-large'
-): Promise<RenderedPage> => {
-  const storySlice = filterStoryForPage(story, pageNumber);
-  const formatSpec = BOOK_FORMATS[format];
-  const result = await generatePageImage(storySlice, formatSpec);
+export const illustratorAgent: IllustratorAgent = async (manuscript: Manuscript): Promise<Story> => {
+  const { object } = await generateObject({
+    model: getModel(),
+    schema: StorySchema,
+    system: SYSTEM_PROMPT,
+    prompt: JSON.stringify(manuscript, null, 2),
+  });
 
-  return {
-    pageNumber,
-    url: result.url,
-  };
-};
-
-/**
- * Create a mock rendered page (for testing without API calls)
- */
-export const renderPageMock = (pageNumber: number): RenderedPage => ({
-  pageNumber,
-  url: `https://placeholder.com/pages/page${pageNumber}.png`,
-});
-
-/**
- * Assemble rendered pages into a Book
- *
- * This is a pure function - no generation, just structure.
- * Pages should already be rendered via renderPage/renderPageMock.
- */
-export const createBook = (
-  story: Story,
-  pages: RenderedPage[],
-  format: BookFormatKey = 'square-large'
-): Book => ({
-  storyTitle: story.storyTitle,
-  ageRange: story.ageRange,
-  format,
-  pages,
-  createdAt: new Date().toISOString(),
-});
-
-/**
- * Filter a Story to include only data relevant to a specific page.
- * This creates a minimal payload for image generation.
- */
-export const filterStoryForPage = (story: Story, pageNumber: number): StorySlice => {
-  const storyPage = story.pages[pageNumber - 1]; // Pages are 1-indexed
-  const manuscriptPage = story.manuscript.pages[String(pageNumber)];
-
-  // Extract character IDs from beats, then pick matching characters
-  const characterIds = (storyPage?.beats ?? [])
-    .flatMap(beat => beat.characters)
-    .map(char => char.id);
-
-  const relevantCharacters = [...new Set(characterIds)]
-    .filter(id => id in story.characters)
-    .reduce<StorySlice['characters']>((acc, id) => {
-      acc[id] = story.characters[id]!;
-      return acc;
-    }, {});
-
-  return {
-    storyTitle: story.storyTitle,
-    style: story.style,
-    characters: relevantCharacters,
-    page: {
-      pageNumber,
-      text: manuscriptPage?.text,
-      beats: storyPage?.beats,
-    },
-  };
+  return object;
 };
