@@ -1,9 +1,13 @@
 # Bookbug Type Diagram
 
+## Functional Composition Pipeline
+
+The type system uses pure functional composition. Each stage produces only NEW fields, which are composed with previous stages to build the complete story.
+
 ```mermaid
 erDiagram
     %% ============================================
-    %% PIPELINE FLOW: StoryBrief → StoryBlurb → Manuscript → Story → RenderedBook
+    %% STAGE 1: StoryBrief (user requirements)
     %% ============================================
 
     StoryBrief {
@@ -32,31 +36,30 @@ erDiagram
         string[] notes
     }
 
-    PlotBeat {
-        enum purpose "setup|conflict|rising_action|climax|resolution"
-        string description
-    }
+    %% ============================================
+    %% STAGE 2: PlotStructure (blurb generator output)
+    %% ============================================
 
-    StoryBlurb {
-        StoryBrief brief
+    PlotStructure {
         string storyArcSummary
         PlotBeat[] plotBeats "4-6 beats"
         boolean allowCreativeLiberty
     }
 
-    Manuscript {
-        StoryBlurb blurb
-        string title
+    PlotBeat {
+        enum purpose "setup|conflict|rising_action|climax|resolution"
+        string description
+    }
+
+    %% ============================================
+    %% STAGE 3: Prose (author agent output)
+    %% ============================================
+
+    Prose {
         string logline
         string theme
-        string setting
-        string moral "optional"
-        AgeRange ageRange
-        string tone "optional"
         string styleNotes "optional"
-        StoryCharacter[] characters
         ManuscriptPage[] pages
-        int pageCount
     }
 
     ManuscriptPage {
@@ -65,28 +68,13 @@ erDiagram
         string imageConcept
     }
 
-    Story {
-        string storyTitle
-        AgeRange ageRange
-        Record_StoryCharacter characters "id → StoryCharacter"
-        ManuscriptEmbed manuscript
+    %% ============================================
+    %% STAGE 4: VisualDirection (illustrator agent output)
+    %% ============================================
+
+    VisualDirection {
         VisualStyleGuide style
-        IllustratedPage[] pages
-    }
-
-    ManuscriptEmbed {
-        ManuscriptMeta meta
-        Record_ManuscriptPage pages "pageNum → ManuscriptPage"
-    }
-
-    ManuscriptMeta {
-        string title
-        string logline
-        string theme
-        string setting
-        string moral "optional"
-        string tone "optional"
-        string styleNotes "optional"
+        IllustratedPage[] illustratedPages
     }
 
     IllustratedPage {
@@ -105,7 +93,7 @@ erDiagram
     }
 
     BeatCharacter {
-        string id "references Story.characters"
+        string id "references character by name"
         string expression
         string pose
         enum focus "primary|secondary|background"
@@ -148,6 +136,29 @@ erDiagram
         string[] diegetic_lights
     }
 
+    %% ============================================
+    %% COMPOSED TYPES (linear composition)
+    %% ============================================
+
+    StoryWithPlot {
+        "extends StoryBrief"
+        PlotStructure plot
+    }
+
+    StoryWithProse {
+        "extends StoryWithPlot"
+        Prose prose
+    }
+
+    ComposedStory {
+        "extends StoryWithProse"
+        VisualDirection visuals
+    }
+
+    %% ============================================
+    %% FINAL OUTPUT
+    %% ============================================
+
     RenderedBook {
         string storyTitle
         AgeRange ageRange
@@ -180,19 +191,10 @@ erDiagram
 
     StoryBrief ||--|| AgeRange : contains
     StoryBrief ||--|{ StoryCharacter : has
-    StoryBlurb ||--|| StoryBrief : contains
-    StoryBlurb ||--|{ PlotBeat : has
-    Manuscript ||--|| StoryBlurb : contains
-    Manuscript ||--|| AgeRange : contains
-    Manuscript ||--|{ StoryCharacter : has
-    Manuscript ||--|{ ManuscriptPage : has
-    Story ||--|| AgeRange : contains
-    Story ||--|{ StoryCharacter : "characters lookup"
-    Story ||--|| ManuscriptEmbed : contains
-    Story ||--|| VisualStyleGuide : has
-    Story ||--|{ IllustratedPage : has
-    ManuscriptEmbed ||--|| ManuscriptMeta : contains
-    ManuscriptEmbed ||--|{ ManuscriptPage : "pages lookup"
+    PlotStructure ||--|{ PlotBeat : has
+    Prose ||--|{ ManuscriptPage : has
+    VisualDirection ||--|| VisualStyleGuide : has
+    VisualDirection ||--|{ IllustratedPage : has
     IllustratedPage ||--|{ IllustrationBeat : contains
     IllustrationBeat ||--|{ BeatCharacter : has
     IllustrationBeat ||--o| Setting : "optional override"
@@ -204,34 +206,63 @@ erDiagram
     StorySlice ||--|| VisualStyleGuide : contains
     StorySlice ||--|{ StoryCharacter : "filtered characters"
     StorySlice ||--|| PageSlice : contains
+    StoryWithPlot ||--|| StoryBrief : extends
+    StoryWithPlot ||--|| PlotStructure : "plot"
+    StoryWithProse ||--|| StoryWithPlot : extends
+    StoryWithProse ||--|| Prose : "prose"
+    ComposedStory ||--|| StoryWithProse : extends
+    ComposedStory ||--|| VisualDirection : "visuals"
 ```
 
 ## Pipeline Flow
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌──────────────┐
-│ StoryBrief  │────▶│ StoryBlurb  │────▶│ Manuscript  │────▶│   Story     │────▶│ RenderedBook │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘     └──────────────┘
-       │                   │                   │                   │                    │
-       ▼                   ▼                   ▼                   ▼                    ▼
-  Chat Intake         Blurb Iteration      Author Agent      Illustrator Agent    Renderer Agent
-  (conversation)      (plot beats)         (write text)      (visual direction)   (image gen)
+                              Stage Outputs (NEW fields only)
+                              ─────────────────────────────────
+┌─────────────┐     ┌───────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
+│ StoryBrief  │────▶│ StoryWithPlot │────▶│ StoryWithProse  │────▶│ ComposedStory   │────▶│ RenderedBook │
+└─────────────┘     └───────────────┘     └─────────────────┘     └─────────────────┘     └──────────────┘
+       │                   │                       │                       │                    │
+       ▼                   ▼                       ▼                       ▼                    ▼
+  Chat Intake          plotAgent             proseAgent            visualsAgent           renderPage
+  (conversation)      → PlotStructure        → Prose               → VisualDirection      → RenderedBook
+```
+
+### Composition at Each Stage
+
+```typescript
+// Stage 1: User provides requirements
+StoryBrief
+
+// Stage 2: Blurb generator adds plot structure
+StoryWithPlot = StoryBrief & { plot: PlotStructure }
+
+// Stage 3: Author adds prose
+StoryWithProse = StoryWithPlot & { prose: Prose }
+
+// Stage 4: Illustrator adds visual direction
+ComposedStory = StoryWithProse & { visuals: VisualDirection }
+
+// Alias for convenience
+type Story = ComposedStory
 ```
 
 ## Agent Types
 
-| Agent | Input | Output | File |
-|-------|-------|--------|------|
-| `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | `interpreter.ts` |
-| `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | `conversation.ts` |
-| `blurbGeneratorAgent` | `StoryBrief` | `StoryBlurb` | `blurb-generator.ts` |
-| `blurbConversationAgent` | `StoryBlurb` + `BlurbMessage[]` | `BlurbConversationResponse` | `blurb-conversation.ts` |
-| `blurbInterpreterAgent` | `string` + `StoryBlurb` | `StoryBlurb` | `blurb-interpreter.ts` |
-| `authorAgent` | `StoryBlurb` | `Manuscript` | `author.ts` |
-| `illustratorAgent` | `Manuscript` | `Story` | `illustrator.ts` |
-| `renderPage` | `Story` + `pageNumber` | `RenderedPage` | `renderer.ts` |
-| `createBook` | `Story` + `RenderedPage[]` | `RenderedBook` | `renderer.ts` |
-| `detectApproval` | `string` | `boolean` | `approval-detector.ts` |
+Agents are named after their output for clarity.
+
+| Agent | Input | Output | Purpose |
+|-------|-------|--------|---------|
+| `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
+| `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
+| `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
+| `plotConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `BlurbConversationResponse` | Guide plot refinement |
+| `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
+| `proseAgent` | `StoryWithPlot` | `Prose` | Write prose from plot |
+| `visualsAgent` | `StoryWithProse` | `VisualDirection` | Create visual direction from prose |
+| `renderPage` | `ComposedStory` + `pageNumber` | `RenderedPage` | Generate page image |
+| `createBook` | `ComposedStory` + `RenderedPage[]` | `RenderedBook` | Assemble final book |
+| `detectApproval` | `string` | `boolean` | Detect user approval intent |
 
 ## Conversation Response Types
 
@@ -248,6 +279,21 @@ BlurbConversationResponse {
     isApproved: boolean
 }
 ```
+
+## Key Design Principles
+
+1. **Pure Composition**: Each agent outputs only NEW fields, never duplicates
+2. **No Embedding**: Stages compose types, not embed them
+3. **Linear Flow**: Each type extends the previous, building up the story
+4. **Zero Duplication**: Fields exist in exactly one place
+5. **Type Safety**: Zod schemas enforce structure at each stage
+
+## Legacy Types (for reference)
+
+The following types are marked as LEGACY in the codebase and will be removed:
+- `StoryBlurb` - replaced by `StoryWithPlot`
+- `Manuscript` - replaced by `StoryWithProse`
+- `LegacyStory` - replaced by `ComposedStory`
 
 ## Book Formats
 

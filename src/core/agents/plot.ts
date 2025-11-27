@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { StoryBlurbSchema, type StoryBrief, type StoryBlurb } from '../schemas';
+import { PlotStructureSchema, type StoryBrief, type PlotStructure } from '../schemas';
 import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `Generate a story arc summary and 5-6 structural plot beats from a StoryBrief.
@@ -16,12 +16,15 @@ plotBeats (5-6 beats with purpose labels):
 Keep descriptions concrete and visual. The author will expand each beat into multiple pages.`;
 
 /**
- * BlurbGeneratorAgent: Takes a StoryBrief and generates initial plot beats
+ * PlotAgent: Takes a StoryBrief and generates plot structure
+ *
+ * Output contains ONLY the new fields (storyArcSummary, plotBeats, allowCreativeLiberty).
+ * Caller composes the result: StoryWithPlot = { ...brief, plot: result }
  */
-export const blurbGeneratorAgent = async (brief: StoryBrief): Promise<StoryBlurb> => {
+export const plotAgent = async (brief: StoryBrief): Promise<PlotStructure> => {
   const { object } = await generateObject({
     model: getModel(),
-    schema: StoryBlurbSchema,
+    schema: PlotStructureSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(brief, null, 2),
   });

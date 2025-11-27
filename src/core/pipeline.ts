@@ -1,7 +1,19 @@
-import type { StoryBlurb, Manuscript, Story, RenderedBook, BookFormatKey, RenderedPage } from './schemas';
+import type {
+  StoryBlurb,
+  StoryWithPlot,
+  StoryWithProse,
+  ComposedStory,
+  Prose,
+  VisualDirection,
+  Manuscript,
+  Story,
+  RenderedBook,
+  BookFormatKey,
+  RenderedPage,
+} from './schemas';
 import {
-  authorAgent,
-  illustratorAgent,
+  proseAgent,
+  visualsAgent,
   renderPage,
   renderPageMock,
   createBook,
@@ -10,16 +22,15 @@ import {
 
 /**
  * Pipeline result - discriminated union based on completion stage
- *
- * Use the `stage` field to determine which properties are available:
- * - 'manuscript': blurb + manuscript only
- * - 'story': blurb + manuscript + story
- * - 'book': all properties (complete pipeline)
+ * Uses composed types for the functional pipeline.
  */
 export type PipelineResult =
+  | { stage: 'prose'; storyWithPlot: StoryWithPlot; prose: Prose }
+  | { stage: 'visuals'; storyWithProse: StoryWithProse; visuals: VisualDirection }
+  | { stage: 'book'; story: ComposedStory; book: RenderedBook }
+  // LEGACY: Keep old result shape for backward compatibility during migration
   | { stage: 'manuscript'; blurb: StoryBlurb; manuscript: Manuscript }
-  | { stage: 'story'; blurb: StoryBlurb; manuscript: Manuscript; story: Story }
-  | { stage: 'book'; blurb: StoryBlurb; manuscript: Manuscript; story: Story; book: RenderedBook };
+  | { stage: 'story'; blurb: StoryBlurb; manuscript: Manuscript; story: Story };
 
 /**
  * Pipeline options
@@ -28,20 +39,28 @@ export interface PipelineOptions {
   /** Callback for progress updates */
   onProgress?: OnStepProgress;
   /** Stop after a specific step (for partial runs) */
-  stopAfter?: 'manuscript' | 'story' | 'book';
+  stopAfter?: 'prose' | 'visuals' | 'book';
 }
+
+/**
+ * Convert StoryBlurb (legacy) to StoryWithPlot (composed)
+ */
+const toStoryWithPlot = (blurb: StoryBlurb): StoryWithPlot => ({
+  ...blurb.brief,
+  plot: {
+    storyArcSummary: blurb.storyArcSummary,
+    plotBeats: blurb.plotBeats,
+    allowCreativeLiberty: blurb.allowCreativeLiberty,
+  },
+});
 
 /**
  * Execute the pipeline from StoryBlurb to rendered book
  *
- * Pipeline flow:
- *   StoryBlurb → Author → Manuscript
- *   Manuscript → Illustrator → Story
- *   Story → Renderer → RenderedBook
- *
- * Note: StoryBlurb is created via:
- *   1. runStoryIntake (chat) → StoryBrief
- *   2. runBlurbIntake (iterate plot) → StoryBlurb
+ * Pipeline flow (functional composition):
+ *   StoryWithPlot → proseAgent → Prose
+ *   StoryWithProse → visualsAgent → VisualDirection
+ *   ComposedStory → Renderer → RenderedBook
  */
 export async function executePipeline(
   blurb: StoryBlurb,
@@ -49,46 +68,55 @@ export async function executePipeline(
 ): Promise<PipelineResult> {
   const { onProgress, stopAfter } = options;
 
-  // Step 1: Write manuscript from blurb
-  onProgress?.('author', 'start');
-  const manuscript = await authorAgent(blurb);
-  onProgress?.('author', 'complete', manuscript);
+  // Convert legacy StoryBlurb to composed StoryWithPlot
+  const storyWithPlot = toStoryWithPlot(blurb);
 
-  if (stopAfter === 'manuscript') {
-    return { stage: 'manuscript', blurb, manuscript };
+  // Step 1: Write prose from story with plot
+  onProgress?.('prose', 'start');
+  const prose = await proseAgent(storyWithPlot);
+  onProgress?.('prose', 'complete', prose);
+
+  if (stopAfter === 'prose') {
+    return { stage: 'prose', storyWithPlot, prose };
   }
 
-  // Step 2: Illustrate visual story from manuscript
-  onProgress?.('illustrator', 'start');
-  const story = await illustratorAgent(manuscript);
-  onProgress?.('illustrator', 'complete', story);
+  // Compose StoryWithProse
+  const storyWithProse: StoryWithProse = { ...storyWithPlot, prose };
 
-  if (stopAfter === 'story') {
-    return { stage: 'story', blurb, manuscript, story };
+  // Step 2: Create visual direction from story with prose
+  onProgress?.('visuals', 'start');
+  const visuals = await visualsAgent(storyWithProse);
+  onProgress?.('visuals', 'complete', visuals);
+
+  if (stopAfter === 'visuals') {
+    return { stage: 'visuals', storyWithProse, visuals };
   }
+
+  // Compose full Story
+  const story: ComposedStory = { ...storyWithProse, visuals };
 
   // Step 3: Render book from story (generate all page images)
   onProgress?.('renderer', 'start');
   const pages: RenderedPage[] = [];
-  for (const storyPage of story.pages) {
+  for (const storyPage of story.visuals.illustratedPages) {
     const page = await renderPage(story, storyPage.pageNumber);
     pages.push(page);
   }
   const book = createBook(story, pages);
   onProgress?.('renderer', 'complete', book);
 
-  return { stage: 'book', blurb, manuscript, story, book };
+  return { stage: 'book', story, book };
 }
 
 /**
  * Run individual pipeline steps (for CLI commands)
  */
-export async function runManuscript(blurb: StoryBlurb): Promise<Manuscript> {
-  return authorAgent(blurb);
+export async function runProse(storyWithPlot: StoryWithPlot): Promise<Prose> {
+  return proseAgent(storyWithPlot);
 }
 
-export async function runStory(manuscript: Manuscript): Promise<Story> {
-  return illustratorAgent(manuscript);
+export async function runVisuals(storyWithProse: StoryWithProse): Promise<VisualDirection> {
+  return visualsAgent(storyWithProse);
 }
 
 /**
@@ -100,13 +128,13 @@ export { renderPage, renderPageMock, createBook } from './agents';
  * Render all pages and create a book (convenience wrapper)
  */
 export async function runBook(
-  story: Story,
+  story: ComposedStory,
   config?: { mock?: boolean; format?: BookFormatKey; onPageRendered?: (page: RenderedPage) => void }
 ): Promise<RenderedBook> {
   const { mock = false, format = 'square-large', onPageRendered } = config ?? {};
 
   const pages: RenderedPage[] = [];
-  for (const storyPage of story.pages) {
+  for (const storyPage of story.visuals.illustratedPages) {
     const page = mock
       ? renderPageMock(storyPage.pageNumber)
       : await renderPage(story, storyPage.pageNumber, format);

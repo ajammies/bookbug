@@ -49,19 +49,19 @@ export function displayManuscript(manuscript: Manuscript): void {
 export function displayStory(story: Story): void {
   console.log('\n' + chalk.bold.magenta('Visual Story'));
   console.log(chalk.gray('─'.repeat(50)));
-  console.log(chalk.bold('Title:'), story.storyTitle);
-  console.log(chalk.bold('Pages:'), story.pages.length);
+  console.log(chalk.bold('Title:'), story.title);
+  console.log(chalk.bold('Pages:'), story.visuals.illustratedPages.length);
 
-  const totalBeats = story.pages.reduce((sum, p) => sum + p.beats.length, 0);
+  const totalBeats = story.visuals.illustratedPages.reduce((sum, p) => sum + p.beats.length, 0);
   console.log(chalk.bold('Total Beats:'), totalBeats);
 
   console.log(chalk.bold('\nArt Direction:'));
-  console.log(`  Genre: ${story.style.art_direction.genre.join(', ')}`);
-  console.log(`  Medium: ${story.style.art_direction.medium.join(', ')}`);
-  console.log(`  Technique: ${story.style.art_direction.technique.join(', ')}`);
+  console.log(`  Genre: ${story.visuals.style.art_direction.genre.join(', ')}`);
+  console.log(`  Medium: ${story.visuals.style.art_direction.medium.join(', ')}`);
+  console.log(`  Technique: ${story.visuals.style.art_direction.technique.join(', ')}`);
 
   console.log(chalk.bold('\nFirst Page Beats:'));
-  const firstPage = story.pages[0];
+  const firstPage = story.visuals.illustratedPages[0];
   if (firstPage) {
     for (const beat of firstPage.beats) {
       console.log(`  • ${chalk.cyan(`Beat ${beat.order}`)}: ${beat.summary}`);

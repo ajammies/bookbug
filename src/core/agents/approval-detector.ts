@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getModel } from '../config';
 
 const ApprovalResponseSchema = z.object({
-  isApproval: z.boolean(),
+  isApproval: z.boolean().describe('True if user is approving/accepting, false if requesting changes'),
 });
 
 const SYSTEM_PROMPT = `Determine if the user is approving the current state or requesting changes.`;
