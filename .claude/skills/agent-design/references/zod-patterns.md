@@ -36,6 +36,7 @@ z.object({
 ```
 
 **When to use `.describe()`:**
+- Ambigous field names
 - Similar field names (layout vs composition, size vs scale)
 - Non-obvious enum values
 - Fields with specific format requirements
@@ -58,9 +59,7 @@ z.object({
 });
 ```
 
-**Why:** `.nullable()` forces the model to consciously decide. `.optional()` may be ignored.
-
-**Note:** Some providers (OpenAI structured output) don't support `.optional()` or `.nullish()`.
+**Why:** `.nullable()` forces the model to consciously decide. `.optional()` may be ignored. Some providers (OpenAI structured output) don't support `.optional()` or `.nullish()`.
 
 ## Enums
 

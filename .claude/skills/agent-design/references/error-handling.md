@@ -1,5 +1,7 @@
 # Error Handling for generateObject
 
+LLMs are not deterministic, and frequently make mistakes when using generateObject, which then fails in the Zod Schema validation stage. This reference covers important measure to fix this issue through defensive agent design.
+
 ## NoObjectGeneratedError
 
 Thrown when model output doesn't match schema.

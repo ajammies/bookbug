@@ -1,25 +1,25 @@
 ---
 name: agent-design
 description: |
-  Design AI agents using Vercel AI SDK generateObject with Zod schemas.
-
-  Triggers: "create an agent", "new agent for X", "fix NoObjectGeneratedError", "agent isn't returning correct schema", "design a Zod schema for generateObject", "why is the model returning wrong values", "split this into smaller agents".
+  Comprehensive Agent Design, Creation and modification using Vercel AI SDK generateObject with Zod schemas. used when claude needs to create, prompt, modify, fix, refactor or improve any agent code, and any time a Zod Schema is modified that is used by an agent. 
 
   Covers: agent architecture, Zod schema patterns, .describe() usage, prompting for structured output, error handling.
 ---
 
-# Agent Design
+# Agent creation, modification, error handling
 
 ## Overview
 
-Agents are pure functions: one input → one transformation → one output.
+A user may ask you create, modify, fix, refactor or improve any agent code. An agent is any code scaffolding that calls llms (either to generate text or generateObject). LLM calls are fragile, since they are non-deterministic, and require strict adherance to design principles, typed schemas, explicit descritions of ZOD properties using .describe() and error handling. This skill strictly enforces best practices of agent architecture, prompting, Zod schema patterns, .describe() usage, prompting for structured output, error handling.
 
 ## Principles
 
-- **Schema-first** — Define Zod schema before prompt; schema IS the contract
-- **Never hardcode LLM decisions** — Use `generateObject`, not `if (text.includes(...))`
-- **Trust the model** — Don't over-prescribe what it already understands
-- **Domain knowledge > instructions** — Tell it WHAT constraints exist, not HOW to think
+- **Strict Schema Adherance** — Define simple but comprehensive Zod schema for the agent output before designing the prompt.  
+- **Explict Zod Schema properties** — llms will make mistakes with properties unless explicitly instructed. use .describe() to give the llm enough context so it clearly adheres to the schema and does not make mistakes
+- **Agents as Pure functions** — Each agent should have minimal scope. Consider breaking agents into simpler, "pure" agents when the task is complex. 
+- **Use llms to intepret responses** — never pattern match or use deterministic algorithms to interpret fuzzy text. 
+- **Keep instructions simple** — Don't use overly formulaic instructions or contrived examples - treat agents as intelligent, capable of understanding without overly prescriptive instructions
+- **Prompting with Domain knowledge > instructions** — Tell it WHAT constraints exist, best practices, and clear examples, not deterministic instructions (unless absolutely necessary)
 
 ## Template
 
@@ -73,7 +73,7 @@ A well-designed agent:
 - [ ] System prompt provides domain knowledge, not steps
 - [ ] Single responsibility (one transformation)
 - [ ] Input/output types explicit
-- [ ] Tests written
+- [ ] Tests written to cover a wide variety of unstructured inputs, outputs, error handling
 
 ## Limitations
 

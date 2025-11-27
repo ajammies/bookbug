@@ -34,25 +34,23 @@ await generateObject({
 
 **Good - domain knowledge:**
 ```
-Write a complete manuscript from a StoryBlurb.
+Write a complete manuscript, which contains the text and imagePrompt for each page of the book.
 
-The blurb contains 5-6 structural beats (setup, conflict, rising_action, climax, resolution). Expand each beat into multiple pages based on pageCount.
+The blurb contains 5-6 structural beats (setup, conflict, rising_action, climax, resolution). Expand each beat into multiple pages based on pageCount. Use your best judgement based on the narrative, age range, style, to pace the story.
 
-For a 24-page book with 5 beats:
-- Setup: ~4 pages (introduce world and character)
-- Conflict: ~4 pages (establish the problem)
-- Rising Action: ~6 pages (attempts and obstacles)
-- Climax: ~4 pages (turning point)
-- Resolution: ~6 pages (ending and lesson)
 
 Writing guidelines by age:
 - Ages 2-5: Simple words, rhythmic patterns, 1-2 sentences per page
 - Ages 6-9: Longer sentences, more vocabulary, up to a paragraph
+
+Best Practices to follow:
+- Do not describe visuals in the story, the illustration will do show this
+...
 ```
 
-The model knows HOW to write. Tell it WHAT domain constraints exist.
+Provide clear explanation of inputs / outputs, constraints, best practices.
 
-## Examples Over Explanations
+## Examples Over verbose explanations
 
 **Bad - verbose explanation:**
 ```
@@ -147,29 +145,9 @@ Guidelines by [context variable]:
 "Set isApproved=true when the user approves the current state."
 ```
 
-### 4. Repeating Schema in Prompt
-```
-// Bad - redundant with schema
-"The output should have: title (string), ageRange (object with min and max numbers)..."
-
-// Good - trust schema, add context
-"Title should be engaging for the target age range."
-```
-
-## Age-Appropriate Content
-
-When generating content for children:
-
-```typescript
-const SYSTEM_PROMPT = `Writing guidelines by age:
-- Ages 2-5: Simple words, rhythmic patterns, 1-2 sentences per page, gentle themes
-- Ages 6-9: Longer sentences, more vocabulary, mild challenges, clear resolutions
-- Ages 10-12: Complex narratives, nuanced emotions, age-appropriate conflict`;
-```
 
 ## Prompt Length
 
 - Keep prompts under 500 words
-- Move detailed examples to schema `.describe()`
-- Front-load the most important information
+- Move property specific examples and instructiosn to zod schema `.describe()`
 - Use bullet points for lists
