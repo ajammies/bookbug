@@ -3,13 +3,14 @@ import * as path from 'path';
 import type {
   StoryBrief,
   StoryWithPlot,
+  StoryWithProse,
   Story,
   RenderedBook,
 } from '../../core/schemas';
 import { createStoryFolderName } from './naming';
 
 const OUTPUT_DIR = './output';
-const ARTIFACT_FILES = ['brief.json', 'blurb.json', 'manuscript.json', 'story.json', 'book.json'];
+const ARTIFACT_FILES = ['brief.json', 'blurb.json', 'prose.json', 'story.json', 'book.json'];
 
 const saveJson = (folder: string, filename: string, data: unknown): Promise<void> =>
   fs.writeFile(path.join(folder, filename), JSON.stringify(data, null, 2));
@@ -24,6 +25,8 @@ export interface StoryOutputManager {
   saveBrief(brief: StoryBrief): Promise<void>;
   /** Save StoryWithPlot to blurb.json (composed brief + plot) */
   saveBlurb(story: StoryWithPlot): Promise<void>;
+  /** Save StoryWithProse to prose.json (composed brief + plot + prose) */
+  saveProse(story: StoryWithProse): Promise<void>;
   /** Save Story to story.json */
   saveStory(story: Story): Promise<void>;
   /** Save RenderedBook to book.json */
@@ -79,6 +82,7 @@ const createManager = (folder: string): StoryOutputManager => ({
   folder,
   saveBrief: (brief) => saveJson(folder, 'brief.json', brief),
   saveBlurb: (blurb) => saveJson(folder, 'blurb.json', blurb),
+  saveProse: (story) => saveJson(folder, 'prose.json', story),
   saveStory: (story) => saveJson(folder, 'story.json', story),
   saveBook: (book) => saveJson(folder, 'book.json', book),
 });

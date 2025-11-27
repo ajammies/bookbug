@@ -64,6 +64,18 @@ describe('createOutputManager', () => {
     );
   });
 
+  it('saveProse writes to prose.json', async () => {
+    const manager = await createOutputManager('Test Story');
+    const storyWithProse = { prose: { logline: 'Test' } } as any;
+
+    await manager.saveProse(storyWithProse);
+
+    expect(mockedFs.writeFile).toHaveBeenCalledWith(
+      'output/test-story-20241126-143052/prose.json',
+      JSON.stringify(storyWithProse, null, 2)
+    );
+  });
+
   it('saveStory writes to story.json', async () => {
     const manager = await createOutputManager('Test Story');
     const story = { storyTitle: 'Test' } as any;
@@ -129,10 +141,10 @@ describe('loadOutputManager', () => {
     expect(manager.folder).toBe('/path');
   });
 
-  it('accepts folder with manuscript.json', async () => {
-    mockedFs.readdir.mockResolvedValue(['manuscript.json'] as any);
+  it('accepts folder with prose.json', async () => {
+    mockedFs.readdir.mockResolvedValue(['prose.json'] as any);
 
-    const manager = await loadOutputManager('/path/manuscript.json');
+    const manager = await loadOutputManager('/path/prose.json');
     expect(manager.folder).toBe('/path');
   });
 
@@ -164,7 +176,7 @@ describe('isStoryFolder', () => {
   });
 
   it('returns true if folder contains any artifact file', async () => {
-    mockedFs.readdir.mockResolvedValue(['manuscript.json'] as any);
+    mockedFs.readdir.mockResolvedValue(['prose.json'] as any);
 
     const result = await isStoryFolder('/path/to/story/file.txt');
     expect(result).toBe(true);

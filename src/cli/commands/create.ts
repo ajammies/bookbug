@@ -5,14 +5,13 @@ import { runPlotIntake } from '../prompts/plot-intake';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 
 export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
   .argument('[prompt]', 'Optional initial story idea (can also provide interactively)')
   .option('-o, --output <path>', 'Output directory for generated files')
-  .action(async (prompt: string | undefined, options: { output?: string }) => {
+  .option('--no-save', 'Disable automatic artifact saving')
+  .action(async (prompt: string | undefined, options: { output?: string; save?: boolean }) => {
     const spinner = createSpinner();
     let outputManager: StoryOutputManager;
 
@@ -38,18 +37,13 @@ export const createCommand = new Command('create')
             spinner.succeed(formatStep(step, true));
           }
         },
+        outputManager: options.save !== false ? outputManager : undefined,
       });
 
-      // Save all artifacts (pipeline always completes to 'book' stage here)
+      // Pipeline always completes to 'book' stage here
       if (result.stage !== 'book') {
         throw new Error('Pipeline did not complete');
       }
-      // Save the composed story
-      await fs.writeFile(
-        path.join(outputManager.folder, 'story.json'),
-        JSON.stringify(result.story, null, 2)
-      );
-      await outputManager.saveBook(result.book);
 
       displayBook(result.book);
       console.log(`\nAll files saved to: ${outputManager.folder}`);
