@@ -60,6 +60,9 @@
 - Trust the model - don't over-prescribe what it already understands (approval, extraction, conversation)
 - Provide domain knowledge, not step-by-step instructions - the model knows how to converse
 
+# Skills
+- use the skill-creator skill when creating or updating skills
+
 # Schema descriptions (.describe())
 - `.describe()` is a mini-prompt to guide the model on ambiguous fields
 - Disambiguate similar fields: `layout` (page structure) vs `composition` (element arrangement)
