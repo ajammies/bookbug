@@ -2,25 +2,18 @@ import { generateObject } from 'ai';
 import { StoryBlurbSchema, type StoryBrief, type StoryBlurb } from '../schemas';
 import { getModel } from '../config';
 
-const SYSTEM_PROMPT = `You are a children's book story planner. Given a StoryBrief, expand it into a StoryBlurb with detailed plot beats.
+const SYSTEM_PROMPT = `Generate a story arc summary and 5-6 structural plot beats from a StoryBrief.
 
-Your job:
-1. Take the story arc and break it into clear plot beats (typically 8-12 beats for a picture book)
-2. Each beat should be a single sentence describing what happens
-3. Follow classic story structure: setup → rising action → climax → resolution
-4. Make sure the beats flow naturally and build tension appropriately for the age range
-5. Include character moments that show personality and growth
-6. Set allowCreativeLiberty based on how much the user specified
+storyArcSummary: 1-2 sentences capturing the core journey and theme.
 
-PLOT BEAT GUIDELINES:
-- Beat 1-2: Introduction, establish character and setting
-- Beat 3-4: Inciting incident, character wants/needs something
-- Beat 5-7: Rising action, obstacles and attempts
-- Beat 8-9: Climax, biggest challenge or revelation
-- Beat 10-12: Resolution, character growth, satisfying ending
+plotBeats (5-6 beats with purpose labels):
+- setup: Introduce character, world, and status quo
+- conflict: The problem, challenge, or inciting incident
+- rising_action: Attempts, obstacles, escalation (can have 1-2 of these)
+- climax: The turning point or biggest moment
+- resolution: How it ends, what's learned
 
-Each beat should be concrete and visual (good for illustration).
-Keep language simple - these will guide page-by-page writing.`;
+Keep descriptions concrete and visual. The author will expand each beat into multiple pages.`;
 
 /**
  * BlurbGeneratorAgent: Takes a StoryBrief and generates initial plot beats

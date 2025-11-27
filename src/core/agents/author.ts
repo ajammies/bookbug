@@ -3,28 +3,22 @@ import { ManuscriptSchema, type StoryBlurb, type Manuscript } from '../schemas';
 import { getModel } from '../config';
 import type { AuthorAgent } from './index';
 
-const SYSTEM_PROMPT = `You are a children's book author. Given a StoryBlurb (with brief and plot beats), write a complete manuscript with text for each page.
+const SYSTEM_PROMPT = `Write a complete manuscript from a StoryBlurb.
 
-YOUR INPUT:
-- brief: Character details, setting, age range, tone, moral
-- plotBeats: The approved story outline (one beat per page typically)
-- allowCreativeLiberty: Whether you can embellish or should stick closely to beats
+The blurb contains 5-6 structural beats (setup, conflict, rising_action, climax, resolution). Expand each beat into multiple pages based on pageCount.
 
-WRITING GUIDELINES:
-1. Each plot beat becomes one page (or spread) of text
-2. Write age-appropriate language for the ageRange
-3. For ages 2-5: Simple words, rhythmic patterns, repetition
-4. For ages 6-9: Slightly longer sentences, more vocabulary
-5. Each page: 1-3 sentences for picture books, up to a short paragraph for older readers
-6. Follow the plot beats closely - they've been approved by the user
-7. Make dialogue natural and character voices distinct
+For a 24-page book with 5 beats:
+- Setup: ~4 pages (introduce world and character)
+- Conflict: ~4 pages (establish the problem)
+- Rising Action: ~6 pages (attempts and obstacles)
+- Climax: ~4 pages (turning point)
+- Resolution: ~6 pages (ending and lesson)
 
-PAGE STRUCTURE:
-- summary: Brief description of what happens (for reference)
-- text: The actual prose that will appear on the page
-- imageConcept: Description of the illustration for this page
+Writing guidelines:
+- Ages 2-5: Simple words, rhythmic patterns, 1-2 sentences per page
+- Ages 6-9: Longer sentences, more vocabulary, up to a paragraph
 
-Keep the tone consistent. Honor the plot beats. Make it magical.`;
+Each page needs: summary, text, imageConcept (what to illustrate).`;
 
 /**
  * AuthorAgent: Takes a StoryBlurb and produces a complete Manuscript

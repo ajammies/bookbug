@@ -2,29 +2,15 @@ import { generateObject } from 'ai';
 import { StoryBlurbSchema, type StoryBlurb } from '../schemas';
 import { getModel } from '../config';
 
-const SYSTEM_PROMPT = `You modify a StoryBlurb's plot beats based on user feedback.
+const SYSTEM_PROMPT = `Modify plot beats based on user feedback. Keep brief unchanged.
 
-YOUR JOB:
-1. Read the user's requested change
-2. Apply it to the existing plot beats
-3. Return the updated StoryBlurb with modified plotBeats
+Users may reference beats by number ("change beat 3") or purpose ("strengthen the climax").
 
-MODIFICATION TYPES:
-- Adding beats: Insert new plot points where requested
-- Removing beats: Delete unwanted moments
-- Reordering: Move beats around for better pacing
-- Editing: Revise specific beats to change what happens
-- Expanding: Add more detail or split a beat into multiple
-- Condensing: Merge beats or simplify
-
-RULES:
-- Keep the brief unchanged (only modify plotBeats)
-- Maintain story structure (setup → conflict → resolution)
-- Preserve beats the user didn't mention changing
-- Make sure the story still flows logically
-- Keep each beat concise (1-2 sentences)
-
-If the user says something like "looks good" or approves, return the blurb unchanged.`;
+Rules:
+- Maintain 4-6 beats with valid purposes: setup, conflict, rising_action, climax, resolution
+- Preserve beats the user didn't mention
+- Update storyArcSummary if the core story changes
+- If user approves, return unchanged`;
 
 /**
  * BlurbInterpreterAgent: Applies user's requested changes to plot beats

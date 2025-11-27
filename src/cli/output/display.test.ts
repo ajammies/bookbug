@@ -98,7 +98,13 @@ describe('displayManuscript', () => {
       interests: [],
       customInstructions: [],
     },
-    plotBeats: [],
+    storyArcSummary: 'A test story about testing',
+    plotBeats: [
+      { purpose: 'setup' as const, description: 'Setup beat' },
+      { purpose: 'conflict' as const, description: 'Conflict beat' },
+      { purpose: 'climax' as const, description: 'Climax beat' },
+      { purpose: 'resolution' as const, description: 'Resolution beat' },
+    ],
     allowCreativeLiberty: true,
   };
 
