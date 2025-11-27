@@ -1,4 +1,4 @@
-import type { Story, Book, RenderedPage, BookFormatKey, StorySlice } from '../schemas';
+import type { Story, RenderedBook, RenderedPage, BookFormatKey, StorySlice } from '../schemas';
 import { BOOK_FORMATS } from '../schemas';
 import { generatePageImage } from '../services/image-generation';
 
@@ -32,7 +32,7 @@ export const renderPageMock = (pageNumber: number): RenderedPage => ({
 });
 
 /**
- * Assemble rendered pages into a Book
+ * Assemble rendered pages into a RenderedBook
  *
  * This is a pure function - no generation, just structure.
  * Pages should already be rendered via renderPage/renderPageMock.
@@ -41,7 +41,7 @@ export const createBook = (
   story: Story,
   pages: RenderedPage[],
   format: BookFormatKey = 'square-large'
-): Book => ({
+): RenderedBook => ({
   storyTitle: story.storyTitle,
   ageRange: story.ageRange,
   format,

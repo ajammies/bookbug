@@ -1,4 +1,4 @@
-import type { StoryBlurb, Manuscript, Story, Book, BookFormatKey, RenderedPage } from './schemas';
+import type { StoryBlurb, Manuscript, Story, RenderedBook, BookFormatKey, RenderedPage } from './schemas';
 import {
   authorAgent,
   illustratorAgent,
@@ -19,7 +19,7 @@ import {
 export type PipelineResult =
   | { stage: 'manuscript'; blurb: StoryBlurb; manuscript: Manuscript }
   | { stage: 'story'; blurb: StoryBlurb; manuscript: Manuscript; story: Story }
-  | { stage: 'book'; blurb: StoryBlurb; manuscript: Manuscript; story: Story; book: Book };
+  | { stage: 'book'; blurb: StoryBlurb; manuscript: Manuscript; story: Story; book: RenderedBook };
 
 /**
  * Pipeline options
@@ -37,7 +37,7 @@ export interface PipelineOptions {
  * Pipeline flow:
  *   StoryBlurb → Author → Manuscript
  *   Manuscript → Illustrator → Story
- *   Story → Renderer → Book
+ *   Story → Renderer → RenderedBook
  *
  * Note: StoryBlurb is created via:
  *   1. runStoryIntake (chat) → StoryBrief
@@ -102,7 +102,7 @@ export { renderPage, renderPageMock, createBook } from './agents';
 export async function runBook(
   story: Story,
   config?: { mock?: boolean; format?: BookFormatKey; onPageRendered?: (page: RenderedPage) => void }
-): Promise<Book> {
+): Promise<RenderedBook> {
   const { mock = false, format = 'square-large', onPageRendered } = config ?? {};
 
   const pages: RenderedPage[] = [];

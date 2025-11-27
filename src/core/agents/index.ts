@@ -1,4 +1,4 @@
-import type { StoryBrief, StoryBlurb, Manuscript, Story, Book } from '../schemas';
+import type { StoryBrief, StoryBlurb, Manuscript, Story, RenderedBook } from '../schemas';
 
 /**
  * Generic agent type: async function from Input to Output

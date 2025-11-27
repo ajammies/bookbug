@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { StoryBrief, Manuscript, Story, Book } from '../../core/schemas';
+import type { StoryBrief, Manuscript, Story, RenderedBook } from '../../core/schemas';
 
 /**
  * Display a StoryBrief summary
@@ -71,9 +71,9 @@ export function displayStory(story: Story): void {
 }
 
 /**
- * Display a Book summary
+ * Display a RenderedBook summary
  */
-export function displayBook(book: Book): void {
+export function displayBook(book: RenderedBook): void {
   console.log('\n' + chalk.bold.yellow('📚 Generated Book'));
   console.log(chalk.gray('─'.repeat(50)));
   console.log(chalk.bold('Title:'), book.storyTitle);

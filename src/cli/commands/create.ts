@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { executePipeline } from '../../core/pipeline';
-import type { Manuscript, Story, Book } from '../../core/schemas';
+import type { Manuscript, Story, RenderedBook } from '../../core/schemas';
 import { runStoryIntake } from '../prompts/story-intake';
 import { runBlurbIntake } from '../prompts/blurb-intake';
 import { createSpinner, formatStep } from '../output/progress';
