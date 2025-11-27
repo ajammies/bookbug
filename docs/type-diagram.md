@@ -138,20 +138,18 @@ erDiagram
 
     %% ============================================
     %% COMPOSED TYPES (linear composition)
+    %% Each extends the previous via relationship
     %% ============================================
 
     StoryWithPlot {
-        "extends StoryBrief"
         PlotStructure plot
     }
 
     StoryWithProse {
-        "extends StoryWithPlot"
         Prose prose
     }
 
     ComposedStory {
-        "extends StoryWithProse"
         VisualDirection visuals
     }
 
