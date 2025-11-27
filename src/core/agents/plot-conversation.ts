@@ -27,11 +27,11 @@ export type BlurbMessage = {
 };
 
 /**
- * BlurbConversationAgent: Presents plot beats and gathers feedback
+ * PlotConversationAgent: Presents plot beats and gathers feedback
  *
  * Takes StoryWithPlot (composed type) which includes both the brief and plot structure.
  */
-export const blurbConversationAgent = async (
+export const plotConversationAgent = async (
   story: StoryWithPlot,
   history: BlurbMessage[]
 ): Promise<BlurbConversationResponse> => {

@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { executePipeline } from '../../core/pipeline';
 import type { StoryWithPlot, StoryBlurb } from '../../core/schemas';
 import { runStoryIntake } from '../prompts/story-intake';
-import { runBlurbIntake } from '../prompts/blurb-intake';
+import { runPlotIntake } from '../prompts/plot-intake';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
@@ -39,7 +39,7 @@ export const createCommand = new Command('create')
       console.log(`\nStory folder created: ${outputManager.folder}`);
 
       // Step 2: Get StoryWithPlot via plot iteration
-      const storyWithPlot = await runBlurbIntake(brief);
+      const storyWithPlot = await runPlotIntake(brief);
       await outputManager.saveBlurb(storyWithPlot);
 
       // Step 3: Run pipeline from blurb to book

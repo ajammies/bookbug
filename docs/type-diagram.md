@@ -224,8 +224,8 @@ erDiagram
 └─────────────┘     └───────────────┘     └─────────────────┘     └─────────────────┘     └──────────────┘
        │                   │                       │                       │                    │
        ▼                   ▼                       ▼                       ▼                    ▼
-  Chat Intake        Blurb Generator         Author Agent           Illustrator Agent     Renderer Agent
-  (conversation)     → PlotStructure         → Prose                → VisualDirection     → RenderedBook
+  Chat Intake          plotAgent             proseAgent            visualsAgent           renderPage
+  (conversation)      → PlotStructure        → Prose               → VisualDirection      → RenderedBook
 ```
 
 ### Composition at Each Stage
@@ -249,15 +249,17 @@ type Story = ComposedStory
 
 ## Agent Types
 
+Agents are named after their output for clarity.
+
 | Agent | Input | Output | Purpose |
 |-------|-------|--------|---------|
 | `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
 | `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
-| `blurbGeneratorAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
-| `blurbConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `BlurbConversationResponse` | Guide plot refinement |
-| `blurbInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
-| `authorAgent` | `StoryWithPlot` | `Prose` | Write prose from plot |
-| `illustratorAgent` | `StoryWithProse` | `VisualDirection` | Create visual direction from prose |
+| `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
+| `plotConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `BlurbConversationResponse` | Guide plot refinement |
+| `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
+| `proseAgent` | `StoryWithPlot` | `Prose` | Write prose from plot |
+| `visualsAgent` | `StoryWithProse` | `VisualDirection` | Create visual direction from prose |
 | `renderPage` | `ComposedStory` + `pageNumber` | `RenderedPage` | Generate page image |
 | `createBook` | `ComposedStory` + `RenderedPage[]` | `RenderedBook` | Assemble final book |
 | `detectApproval` | `string` | `boolean` | Detect user approval intent |

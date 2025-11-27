@@ -17,32 +17,32 @@ import type {
 export type Agent<Input, Output> = (input: Input) => Promise<Output>;
 
 /**
- * Pipeline agent types with concrete input/output (NEW composed types)
+ * Pipeline agent types with concrete input/output (named after output)
  */
-export type AuthorAgentType = Agent<StoryWithPlot, Prose>;
-export type IllustratorAgentType = Agent<StoryWithProse, VisualDirection>;
+export type ProseAgentType = Agent<StoryWithPlot, Prose>;
+export type VisualsAgentType = Agent<StoryWithProse, VisualDirection>;
 
 /**
  * LEGACY agent types (to be removed after full migration)
  */
-export type AuthorAgent = Agent<StoryBlurb, Manuscript>;
-export type IllustratorAgent = Agent<Manuscript, Story>;
+export type LegacyAuthorAgent = Agent<StoryBlurb, Manuscript>;
+export type LegacyIllustratorAgent = Agent<Manuscript, Story>;
 
 /**
  * Progress callback for pipeline steps
  */
 export type OnStepProgress = (step: string, status: 'start' | 'complete' | 'error', data?: unknown) => void;
 
-// Re-export agents
-export { authorAgent } from './author';
-export { illustratorAgent } from './illustrator';
+// Re-export agents (named after their output)
+export { proseAgent } from './prose';
+export { visualsAgent } from './visuals';
 export { renderPage, renderPageMock, createBook, filterStoryForPage } from './renderer';
 
 // Chat intake agents (StoryBrief)
 export { interpreterAgent } from './interpreter';
 export { conversationAgent, type Message, type MessageRole } from './conversation';
 
-// Blurb iteration agents (StoryBlurb)
-export { blurbGeneratorAgent } from './blurb-generator';
-export { blurbConversationAgent, type BlurbMessage } from './blurb-conversation';
-export { blurbInterpreterAgent } from './blurb-interpreter';
+// Plot iteration agents (PlotStructure)
+export { plotAgent } from './plot';
+export { plotConversationAgent, type BlurbMessage } from './plot-conversation';
+export { plotInterpreterAgent } from './plot-interpreter';

@@ -25,12 +25,12 @@ Output only the prose fields:
 - pages: Array of pages, each with summary, text, imageConcept`;
 
 /**
- * AuthorAgent: Takes a StoryWithPlot and produces Prose
+ * ProseAgent: Takes a StoryWithPlot and produces Prose
  *
  * Output contains ONLY the new fields (logline, theme, styleNotes, pages).
  * Caller composes the result: StoryWithProse = { ...story, prose: result }
  */
-export const authorAgent = async (story: StoryWithPlot): Promise<Prose> => {
+export const proseAgent = async (story: StoryWithPlot): Promise<Prose> => {
   const { object } = await generateObject({
     model: getModel(),
     schema: ProseSchema,

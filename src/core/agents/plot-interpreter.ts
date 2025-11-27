@@ -15,12 +15,12 @@ Rules:
 Output only the plot fields (storyArcSummary, plotBeats, allowCreativeLiberty).`;
 
 /**
- * BlurbInterpreterAgent: Applies user's requested changes to plot beats
+ * PlotInterpreterAgent: Applies user's requested changes to plot beats
  *
  * Takes StoryWithPlot and user feedback, outputs PlotStructure.
  * Caller merges the result: { ...story, plot: result }
  */
-export const blurbInterpreterAgent = async (
+export const plotInterpreterAgent = async (
   userFeedback: string,
   story: StoryWithPlot
 ): Promise<PlotStructure> => {

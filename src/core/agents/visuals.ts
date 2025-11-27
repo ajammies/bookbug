@@ -25,12 +25,12 @@ Output only the visual direction fields:
 - illustratedPages: Array of pages, each with pageNumber and beats`;
 
 /**
- * IllustratorAgent: Takes a StoryWithProse and produces VisualDirection
+ * VisualsAgent: Takes a StoryWithProse and produces VisualDirection
  *
  * Output contains ONLY the new fields (style, illustratedPages).
  * Caller composes the result: ComposedStory = { ...story, visuals: result }
  */
-export const illustratorAgent = async (story: StoryWithProse): Promise<VisualDirection> => {
+export const visualsAgent = async (story: StoryWithProse): Promise<VisualDirection> => {
   const { object } = await generateObject({
     model: getModel(),
     schema: VisualDirectionSchema,

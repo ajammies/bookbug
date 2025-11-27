@@ -16,12 +16,12 @@ plotBeats (5-6 beats with purpose labels):
 Keep descriptions concrete and visual. The author will expand each beat into multiple pages.`;
 
 /**
- * BlurbGeneratorAgent: Takes a StoryBrief and generates plot structure
+ * PlotAgent: Takes a StoryBrief and generates plot structure
  *
  * Output contains ONLY the new fields (storyArcSummary, plotBeats, allowCreativeLiberty).
  * Caller composes the result: StoryWithPlot = { ...brief, plot: result }
  */
-export const blurbGeneratorAgent = async (brief: StoryBrief): Promise<PlotStructure> => {
+export const plotAgent = async (brief: StoryBrief): Promise<PlotStructure> => {
   const { object } = await generateObject({
     model: getModel(),
     schema: PlotStructureSchema,

@@ -138,14 +138,14 @@ Expands the brief into a `StoryBlurb` with plot beats.
 
 ### Phase 3: Story Generation
 
-Generates the complete `Story.json` containing manuscript text and visual direction.
+Generates the complete story using composed types.
 
-**Agents:**
-1. **AuthorAgent**: `StoryBlurb` → `Manuscript` (per-page text, summaries, image concepts)
-2. **IllustratorAgent**: `Manuscript` → `Story` (visual style guide, shot compositions, beat breakdowns)
+**Agents (named after their output):**
+1. **proseAgent**: `StoryWithPlot` → `Prose` (logline, theme, per-page text)
+2. **visualsAgent**: `StoryWithProse` → `VisualDirection` (visual style guide, shot compositions, beat breakdowns)
 3. **TypographerAgent** *(planned)*: `Story` → `Story` with text styling (font, position, size, decoration per page)
 
-**Output:** `Story.json` (normalized blob with characters lookup, manuscript pages, visual beats)
+**Output:** `ComposedStory` (StoryBrief + plot + prose + visuals)
 
 ### Phase 4: Asset Generation
 
@@ -198,16 +198,16 @@ Assembles page images into a print-ready PDF.
 
 ### Agent Pattern
 
-Agents are standalone async functions following functional principles:
+Agents are standalone async functions following functional principles. Each agent is named after its output:
 
 ```typescript
-// src/core/agents/author.ts
-export const authorAgent = async (brief: StoryBrief): Promise<Manuscript> => {
+// src/core/agents/prose.ts
+export const proseAgent = async (story: StoryWithPlot): Promise<Prose> => {
   const { object } = await generateObject({
     model: anthropic('claude-sonnet-4-5-20250929'),
-    schema: ManuscriptSchema,
+    schema: ProseSchema,
     system: SYSTEM_PROMPT,
-    prompt: JSON.stringify(brief, null, 2),
+    prompt: JSON.stringify(story, null, 2),
   });
   return object;
 };
@@ -215,37 +215,39 @@ export const authorAgent = async (brief: StoryBrief): Promise<Manuscript> => {
 
 ### Pipeline Orchestration
 
-The pipeline executes agents sequentially with progress callbacks. StoryBrief is created via chat intake before the pipeline runs:
+The pipeline executes agents sequentially with progress callbacks, composing types at each stage:
 
 ```typescript
 // src/core/pipeline.ts
 export async function executePipeline(
-  brief: StoryBrief,
+  storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
-  const manuscript = await authorAgent(brief);
-  const story = await illustratorAgent(manuscript);
-  const book = await rendererAgent(story);
-  return { brief, manuscript, story, book };
+  const prose = await proseAgent(storyWithPlot);
+  const storyWithProse = { ...storyWithPlot, prose };
+  const visuals = await visualsAgent(storyWithProse);
+  const story = { ...storyWithProse, visuals };
+  const book = await renderBook(story);
+  return { story, book };
 }
 ```
 
-### Normalized Data Structure
+### Composed Data Structure
 
-`Story.json` uses lookup tables for efficient, self-contained data:
+`Story.json` uses functional composition - each stage adds new fields:
 
 ```typescript
-Story {
-  storyTitle: string
-  ageRange: AgeRange
-  characters: Record<id, StoryCharacter>    // Lookup table
-  manuscript: {
-    meta: ManuscriptMeta
-    pages: Record<pageNum, ManuscriptPage>  // Lookup table
-  }
-  style: VisualStyleGuide
-  pages: IllustratedPage[]                  // References lookups by ID
-}
+// StoryBrief (user requirements)
+StoryBrief { title, storyArc, setting, ageRange, characters[], ... }
+
+// StoryWithPlot = StoryBrief + plot
+StoryWithPlot { ...StoryBrief, plot: { storyArcSummary, plotBeats[], ... } }
+
+// StoryWithProse = StoryWithPlot + prose
+StoryWithProse { ...StoryWithPlot, prose: { logline, theme, pages[], ... } }
+
+// ComposedStory = StoryWithProse + visuals (alias: Story)
+ComposedStory { ...StoryWithProse, visuals: { style, illustratedPages[] } }
 ```
 
 ### CLI Commands

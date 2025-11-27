@@ -22,19 +22,19 @@ describe('formatStep', () => {
     expect(formatStep('book-builder', true)).toBe('Extracting story brief ✓');
   });
 
-  it('formats author step', () => {
-    expect(formatStep('author')).toBe('Writing manuscript...');
-    expect(formatStep('author', true)).toBe('Writing manuscript ✓');
+  it('formats prose step', () => {
+    expect(formatStep('prose')).toBe('Writing prose...');
+    expect(formatStep('prose', true)).toBe('Writing prose ✓');
   });
 
-  it('formats director step', () => {
-    expect(formatStep('director')).toBe('Creating visual direction...');
-    expect(formatStep('director', true)).toBe('Creating visual direction ✓');
+  it('formats visuals step', () => {
+    expect(formatStep('visuals')).toBe('Creating visual direction...');
+    expect(formatStep('visuals', true)).toBe('Creating visual direction ✓');
   });
 
-  it('formats illustrator step', () => {
-    expect(formatStep('illustrator')).toBe('Rendering illustrations...');
-    expect(formatStep('illustrator', true)).toBe('Rendering illustrations ✓');
+  it('formats renderer step', () => {
+    expect(formatStep('renderer')).toBe('Rendering illustrations...');
+    expect(formatStep('renderer', true)).toBe('Rendering illustrations ✓');
   });
 
   it('uses step name as fallback for unknown steps', () => {

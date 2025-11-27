@@ -12,8 +12,8 @@ import type {
   RenderedPage,
 } from './schemas';
 import {
-  authorAgent,
-  illustratorAgent,
+  proseAgent,
+  visualsAgent,
   renderPage,
   renderPageMock,
   createBook,
@@ -58,8 +58,8 @@ const toStoryWithPlot = (blurb: StoryBlurb): StoryWithPlot => ({
  * Execute the pipeline from StoryBlurb to rendered book
  *
  * Pipeline flow (functional composition):
- *   StoryWithPlot → Author → Prose
- *   StoryWithProse → Illustrator → VisualDirection
+ *   StoryWithPlot → proseAgent → Prose
+ *   StoryWithProse → visualsAgent → VisualDirection
  *   ComposedStory → Renderer → RenderedBook
  */
 export async function executePipeline(
@@ -72,9 +72,9 @@ export async function executePipeline(
   const storyWithPlot = toStoryWithPlot(blurb);
 
   // Step 1: Write prose from story with plot
-  onProgress?.('author', 'start');
-  const prose = await authorAgent(storyWithPlot);
-  onProgress?.('author', 'complete', prose);
+  onProgress?.('prose', 'start');
+  const prose = await proseAgent(storyWithPlot);
+  onProgress?.('prose', 'complete', prose);
 
   if (stopAfter === 'prose') {
     return { stage: 'prose', storyWithPlot, prose };
@@ -83,10 +83,10 @@ export async function executePipeline(
   // Compose StoryWithProse
   const storyWithProse: StoryWithProse = { ...storyWithPlot, prose };
 
-  // Step 2: Illustrate visual direction from story with prose
-  onProgress?.('illustrator', 'start');
-  const visuals = await illustratorAgent(storyWithProse);
-  onProgress?.('illustrator', 'complete', visuals);
+  // Step 2: Create visual direction from story with prose
+  onProgress?.('visuals', 'start');
+  const visuals = await visualsAgent(storyWithProse);
+  onProgress?.('visuals', 'complete', visuals);
 
   if (stopAfter === 'visuals') {
     return { stage: 'visuals', storyWithProse, visuals };
@@ -112,11 +112,11 @@ export async function executePipeline(
  * Run individual pipeline steps (for CLI commands)
  */
 export async function runProse(storyWithPlot: StoryWithPlot): Promise<Prose> {
-  return authorAgent(storyWithPlot);
+  return proseAgent(storyWithPlot);
 }
 
 export async function runVisuals(storyWithProse: StoryWithProse): Promise<VisualDirection> {
-  return illustratorAgent(storyWithProse);
+  return visualsAgent(storyWithProse);
 }
 
 /**

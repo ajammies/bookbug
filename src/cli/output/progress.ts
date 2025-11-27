@@ -15,9 +15,9 @@ export function createSpinner(): Ora {
 export function formatStep(step: string, complete = false): string {
   const stepNames: Record<string, string> = {
     'book-builder': 'Extracting story brief',
-    'author': 'Writing manuscript',
-    'director': 'Creating visual direction',
-    'illustrator': 'Rendering illustrations',
+    'prose': 'Writing prose',
+    'visuals': 'Creating visual direction',
+    'renderer': 'Rendering illustrations',
   };
 
   const name = stepNames[step] || step;
