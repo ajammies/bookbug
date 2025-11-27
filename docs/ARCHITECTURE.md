@@ -1,365 +1,304 @@
-# Bookbug Architecture
+# Bookbug Type Diagram
 
-A CLI tool that guides users through creating personalized children's picture books via conversational AI, then generates print-ready PDFs.
+## Functional Composition Pipeline
 
----
+The type system uses pure functional composition. Each stage produces only NEW fields, which are composed with previous stages to build the complete story.
 
-## Table of Contents
+```mermaid
+erDiagram
+    %% ============================================
+    %% STAGE 1: StoryBrief (user requirements)
+    %% ============================================
 
-1. [Pipeline Overview](#pipeline-overview)
-2. [Directory Structure](#directory-structure)
-3. [Schema Reference](#schema-reference)
-4. [Pipeline Phases](#pipeline-phases)
-5. [Technical Implementation](#technical-implementation)
-6. [Testing](#testing)
-7. [Version Scope](#version-scope)
-8. [Future Considerations](#future-considerations)
+    StoryBrief {
+        string title
+        string storyArc
+        string setting
+        AgeRange ageRange
+        int pageCount
+        StoryCharacter[] characters
+        string tone "optional"
+        string moral "optional"
+        string[] interests
+        string[] customInstructions
+    }
 
----
+    AgeRange {
+        int min "2-12"
+        int max "2-12"
+    }
 
-## Pipeline Overview
+    StoryCharacter {
+        string name
+        string description
+        string role "optional"
+        string[] traits
+        string[] notes
+    }
+
+    %% ============================================
+    %% STAGE 2: PlotStructure (blurb generator output)
+    %% ============================================
+
+    PlotStructure {
+        string storyArcSummary
+        PlotBeat[] plotBeats "4-6 beats"
+        boolean allowCreativeLiberty
+    }
+
+    PlotBeat {
+        enum purpose "setup|conflict|rising_action|climax|resolution"
+        string description
+    }
+
+    %% ============================================
+    %% STAGE 3: Prose (author agent output)
+    %% ============================================
+
+    Prose {
+        string logline
+        string theme
+        string styleNotes "optional"
+        ManuscriptPage[] pages
+    }
+
+    ManuscriptPage {
+        string summary
+        string text
+        string imageConcept
+    }
+
+    %% ============================================
+    %% STAGE 4: VisualDirection (illustrator agent output)
+    %% ============================================
+
+    VisualDirection {
+        VisualStyleGuide style
+        IllustratedPage[] illustratedPages
+    }
+
+    IllustratedPage {
+        int pageNumber
+        IllustrationBeat[] beats
+    }
+
+    IllustrationBeat {
+        int order
+        enum purpose "setup|build|twist|climax|payoff|button"
+        string summary
+        string emotion
+        BeatCharacter[] characters
+        Setting setting "optional override"
+        ShotComposition shot
+    }
+
+    BeatCharacter {
+        string id "references character by name"
+        string expression
+        string pose
+        enum focus "primary|secondary|background"
+    }
+
+    ShotComposition {
+        enum size "extreme_wide|wide|medium|close_up|..."
+        enum angle "eye_level|childs_eye|high_angle|..."
+        enum pov "optional"
+        enum[] composition "optional"
+        enum layout "optional"
+        Staging staging "optional"
+        Cinematography cinematography "optional"
+        Overrides overrides "optional"
+    }
+
+    VisualStyleGuide {
+        ArtDirection art_direction
+        Setting setting
+        Lighting lighting "optional"
+        ColorScript color_script "optional"
+        Mood mood_narrative "optional"
+        AtmosphereFx atmosphere_fx "optional"
+    }
+
+    ArtDirection {
+        string[] genre
+        string[] medium
+        string[] technique
+        float style_strength "0-1, optional"
+    }
+
+    Setting {
+        string biome "optional"
+        string location "optional"
+        string detail_description "optional"
+        string season "optional"
+        string time_of_day "optional"
+        string[] landmarks
+        string[] diegetic_lights
+    }
+
+    %% ============================================
+    %% COMPOSED TYPES (linear composition)
+    %% Each extends the previous via relationship
+    %% ============================================
+
+    StoryWithPlot {
+        PlotStructure plot
+    }
+
+    StoryWithProse {
+        Prose prose
+    }
+
+    ComposedStory {
+        VisualDirection visuals
+    }
+
+    %% ============================================
+    %% FINAL OUTPUT
+    %% ============================================
+
+    RenderedBook {
+        string storyTitle
+        AgeRange ageRange
+        BookFormatKey format
+        RenderedPage[] pages
+        string createdAt "ISO datetime"
+    }
+
+    RenderedPage {
+        int pageNumber
+        string url
+    }
+
+    StorySlice {
+        string storyTitle
+        VisualStyleGuide style
+        Record_StoryCharacter characters
+        PageSlice page
+    }
+
+    PageSlice {
+        int pageNumber
+        string text "optional"
+        IllustrationBeat[] beats "optional"
+    }
+
+    %% ============================================
+    %% RELATIONSHIPS
+    %% ============================================
+
+    StoryBrief ||--|| AgeRange : contains
+    StoryBrief ||--|{ StoryCharacter : has
+    PlotStructure ||--|{ PlotBeat : has
+    Prose ||--|{ ManuscriptPage : has
+    VisualDirection ||--|| VisualStyleGuide : has
+    VisualDirection ||--|{ IllustratedPage : has
+    IllustratedPage ||--|{ IllustrationBeat : contains
+    IllustrationBeat ||--|{ BeatCharacter : has
+    IllustrationBeat ||--o| Setting : "optional override"
+    IllustrationBeat ||--|| ShotComposition : has
+    VisualStyleGuide ||--|| ArtDirection : contains
+    VisualStyleGuide ||--|| Setting : contains
+    RenderedBook ||--|| AgeRange : contains
+    RenderedBook ||--|{ RenderedPage : has
+    StorySlice ||--|| VisualStyleGuide : contains
+    StorySlice ||--|{ StoryCharacter : "filtered characters"
+    StorySlice ||--|| PageSlice : contains
+    StoryWithPlot ||--|| StoryBrief : extends
+    StoryWithPlot ||--|| PlotStructure : "plot"
+    StoryWithProse ||--|| StoryWithPlot : extends
+    StoryWithProse ||--|| Prose : "prose"
+    ComposedStory ||--|| StoryWithProse : extends
+    ComposedStory ||--|| VisualDirection : "visuals"
+```
+
+## Pipeline Flow
 
 ```
-User Chat → StoryBrief → StoryBlurb (iterate) → Story.json
-         → Character Sheets → Environment Concepts
-         → Page Images (with text) → PDF (Lulu-ready)
+                              Stage Outputs (NEW fields only)
+                              ─────────────────────────────────
+┌─────────────┐     ┌───────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
+│ StoryBrief  │────▶│ StoryWithPlot │────▶│ StoryWithProse  │────▶│ ComposedStory   │────▶│ RenderedBook │
+└─────────────┘     └───────────────┘     └─────────────────┘     └─────────────────┘     └──────────────┘
+       │                   │                       │                       │                    │
+       ▼                   ▼                       ▼                       ▼                    ▼
+  Chat Intake          plotAgent             proseAgent            visualsAgent           renderPage
+  (conversation)      → PlotStructure        → Prose               → VisualDirection      → RenderedBook
 ```
 
----
-
-## Directory Structure
-
-```
-bookbug/
-├── src/
-│   ├── core/
-│   │   ├── schemas/
-│   │   │   └── index.ts          # All Zod schemas and TypeScript types
-│   │   ├── agents/
-│   │   │   ├── index.ts          # Agent type definitions and exports
-│   │   │   ├── interpreter.ts    # Extracts StoryBrief from user input
-│   │   │   ├── conversation.ts   # Generates follow-up questions for chat
-│   │   │   ├── author.ts         # Manuscript generation from brief
-│   │   │   ├── illustrator.ts    # Visual story direction from manuscript
-│   │   │   └── renderer.ts       # Image generation from story
-│   │   └── pipeline.ts           # Pipeline orchestration
-│   └── cli/
-│       ├── index.ts              # CLI entry point (Commander.js)
-│       ├── commands/
-│       │   ├── create.ts         # Full pipeline command
-│       │   ├── brief.ts          # Generate brief only
-│       │   ├── write.ts          # Generate manuscript only
-│       │   ├── direct.ts         # Generate visual story only
-│       │   └── render.ts         # Generate images only
-│       ├── prompts/
-│       │   └── story-intake.ts   # Interactive story intake prompts
-│       └── output/
-│           ├── display.ts        # Console output formatting
-│           └── progress.ts       # Progress indicators
-├── scripts/
-│   └── build-cli.ts              # CLI build script
-├── examples/
-│   └── otto-brief.json           # Example StoryBrief
-├── ARCHITECTURE.md               # This file
-├── CLAUDE.md                     # AI assistant instructions
-└── package.json
-```
-
----
-
-## Schema Reference
-
-All types are defined in `src/core/schemas/index.ts`. Key schemas:
-
-### Input Types
-| Schema | Description |
-|--------|-------------|
-| `StoryBrief` | User requirements: title, arc, setting, characters, age range |
-| `StoryBlurb` | Brief + plotBeats + creative liberty flag |
-
-### Manuscript Types
-| Schema | Description |
-|--------|-------------|
-| `Manuscript` | Full text content: blurb, title, logline, pages |
-| `ManuscriptPage` | Per-page: summary, text, imageConcept |
-| `ManuscriptMeta` | Metadata: title, logline, theme, tone |
-
-### Visual Direction Types
-| Schema | Description |
-|--------|-------------|
-| `Story` | Complete visual story (normalized blob) |
-| `IllustratedPage` | Page with visual beats |
-| `IllustrationBeat` | Single illustration: shot composition, characters, emotion |
-| `VisualStyleGuide` | Global art direction, lighting, colors |
-| `ShotComposition` | Camera: size, angle, POV, staging, cinematography |
-
-### Style Components
-| Schema | Description |
-|--------|-------------|
-| `Setting` | Biome, location, time, landmarks |
-| `Lighting` | Scheme, direction, temperature, volumetrics |
-| `ColorScript` | Palette, harmony, saturation |
-| `AtmosphereFx` | Fog, bloom, particles |
-| `BeatCharacter` | Character in a beat: id, expression, pose, focus |
-
-### Output Types
-| Schema | Description |
-|--------|-------------|
-| `RenderedBook` | Final rendered book with pages and images |
-| `RenderedPage` | Page with rendered image URL |
-| `RenderedImage` | Generated image: url, dimensions, metadata |
-
----
-
-## Pipeline Phases
-
-### Phase 1: BookBuilder Chat
-
-An LLM-powered conversational interface that guides the user through creating a complete `StoryBrief`.
-
-**Behavior:**
-- Asks clarifying questions one at a time
-- Every question includes AI-generated default suggestions ("chips") based on context so far
-- User can accept defaults, modify them, or provide custom input
-- Seamless iteration - user can change anything at any point
-
-**Output:** `StoryBrief`
-
-### Phase 2: StoryBlurb Creation & Iteration
-
-Expands the brief into a `StoryBlurb` with plot beats.
-
-**Behavior:**
-- AI generates initial plotBeats based on the brief
-- User can iterate freely: add detail, change characters, modify plot, or restart entirely
-- Conversation continues until user approves
-
-**Output:** `StoryBlurb`
-
-### Phase 3: Story Generation
-
-Generates the complete story using composed types.
-
-**Agents (named after their output):**
-1. **proseAgent**: `StoryWithPlot` → `Prose` (logline, theme, per-page text)
-2. **visualsAgent**: `StoryWithProse` → `VisualDirection` (visual style guide, shot compositions, beat breakdowns)
-3. **TypographerAgent** *(planned)*: `Story` → `Story` with text styling (font, position, size, decoration per page)
-
-**Output:** `ComposedStory` (StoryBrief + plot + prose + visuals)
-
-### Phase 4: Asset Generation
-
-Generates reference images for consistency before rendering final pages.
-
-**Character Sheets:**
-For each main character:
-- **Expressions** (4-8 images): emotions dictated by `Story.json` beats
-- **Turnarounds** (4 images): front, back, 3/4 left, 3/4 right
-
-**Environment Concepts:**
-For recurring locations only:
-- **One reference image** per environment
-- Only generated if location appears multiple times
-
-### Phase 5: Page Rendering
-
-Generates final page illustrations with text rendered into the image.
-
-**Image Generation:**
-- Model: Nano Banana Pro
-- Input: Beat description + style guide + character sheet refs + environment refs
-- Text is rendered INTO the illustration (picture book style)
-
-**Text Rendering Requirements:**
-- Pre-defined text styles and fonts
-- Dynamic sizing based on text length
-- Smart line breaks
-- Decorative elements (optional)
-- Configurable positioning (top, bottom, overlay, etc.)
-
-**Output:** One image per page (or spread) with text baked in
-
-### Phase 6: PDF Compilation
-
-Assembles page images into a print-ready PDF.
-
-**Requirements:**
-- Lulu print specifications
-- Support for multiple trim sizes (configurable)
-- Full-bleed or framed layouts (configurable)
-- Front/back cover handling
-- Page ordering and bleed margins
-
-**Output:** Print-ready PDF
-
----
-
-## Technical Implementation
-
-### Agent Pattern
-
-Agents are standalone async functions following functional principles. Each agent is named after its output:
+### Composition at Each Stage
 
 ```typescript
-// src/core/agents/prose.ts
-export const proseAgent = async (story: StoryWithPlot): Promise<Prose> => {
-  const { object } = await generateObject({
-    model: anthropic('claude-sonnet-4-5-20250929'),
-    schema: ProseSchema,
-    system: SYSTEM_PROMPT,
-    prompt: JSON.stringify(story, null, 2),
-  });
-  return object;
-};
+// Stage 1: User provides requirements
+StoryBrief
+
+// Stage 2: Blurb generator adds plot structure
+StoryWithPlot = StoryBrief & { plot: PlotStructure }
+
+// Stage 3: Author adds prose
+StoryWithProse = StoryWithPlot & { prose: Prose }
+
+// Stage 4: Illustrator adds visual direction
+ComposedStory = StoryWithProse & { visuals: VisualDirection }
+
+// Alias for convenience
+type Story = ComposedStory
 ```
 
-### Pipeline Orchestration
+## Agent Types
 
-The pipeline executes agents sequentially with progress callbacks, composing types at each stage:
+Agents are named after their output for clarity.
+
+| Agent | Input | Output | Purpose |
+|-------|-------|--------|---------|
+| `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
+| `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
+| `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
+| `plotConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `BlurbConversationResponse` | Guide plot refinement |
+| `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
+| `proseAgent` | `StoryWithPlot` | `Prose` | Write prose from plot |
+| `visualsAgent` | `StoryWithProse` | `VisualDirection` | Create visual direction from prose |
+| `renderPage` | `ComposedStory` + `pageNumber` | `RenderedPage` | Generate page image |
+| `createBook` | `ComposedStory` + `RenderedPage[]` | `RenderedBook` | Assemble final book |
+| `detectApproval` | `string` | `boolean` | Detect user approval intent |
+
+## Conversation Response Types
 
 ```typescript
-// src/core/pipeline.ts
-export async function executePipeline(
-  storyWithPlot: StoryWithPlot,
-  options: PipelineOptions = {}
-): Promise<PipelineResult> {
-  const prose = await proseAgent(storyWithPlot);
-  const storyWithProse = { ...storyWithPlot, prose };
-  const visuals = await visualsAgent(storyWithProse);
-  const story = { ...storyWithProse, visuals };
-  const book = await renderBook(story);
-  return { story, book };
+ConversationResponse {
+    question: string
+    chips: string[]
+    isComplete: boolean
+}
+
+BlurbConversationResponse {
+    message: string
+    chips: string[]
+    isApproved: boolean
 }
 ```
 
-### Composed Data Structure
+## Key Design Principles
 
-`Story.json` uses functional composition - each stage adds new fields:
+1. **Pure Composition**: Each agent outputs only NEW fields, never duplicates
+2. **No Embedding**: Stages compose types, not embed them
+3. **Linear Flow**: Each type extends the previous, building up the story
+4. **Zero Duplication**: Fields exist in exactly one place
+5. **Type Safety**: Zod schemas enforce structure at each stage
 
-```typescript
-// StoryBrief (user requirements)
-StoryBrief { title, storyArc, setting, ageRange, characters[], ... }
+## Legacy Types (for reference)
 
-// StoryWithPlot = StoryBrief + plot
-StoryWithPlot { ...StoryBrief, plot: { storyArcSummary, plotBeats[], ... } }
+The following types are marked as LEGACY in the codebase and will be removed:
+- `StoryBlurb` - replaced by `StoryWithPlot`
+- `Manuscript` - replaced by `StoryWithProse`
+- `LegacyStory` - replaced by `ComposedStory`
 
-// StoryWithProse = StoryWithPlot + prose
-StoryWithProse { ...StoryWithPlot, prose: { logline, theme, pages[], ... } }
+## Book Formats
 
-// ComposedStory = StoryWithProse + visuals (alias: Story)
-ComposedStory { ...StoryWithProse, visuals: { style, illustratedPages[] } }
-```
-
-### CLI Commands
-
-```bash
-npm run dev create "A story about..."   # Full pipeline
-npm run dev brief "A story about..."    # Generate brief only
-npm run dev write <brief.json>          # Generate manuscript
-npm run dev direct <manuscript.json>    # Generate visual story
-npm run dev render <story.json>         # Generate images
-```
-
----
-
-## Testing
-
-Bookbug uses [Vitest](https://vitest.dev/) for testing, with co-located test files alongside source code.
-
-### Running Tests
-
-```bash
-npm test              # Run tests in watch mode
-npm run test:run      # Run tests once
-npm run test:coverage # Run tests with coverage report
-```
-
-### Test Structure
-
-Tests are co-located with source files (`file.ts` → `file.test.ts`):
-
-```
-src/
-├── cli/
-│   ├── utils/
-│   │   ├── naming.ts
-│   │   ├── naming.test.ts        # Unit tests for naming utilities
-│   │   ├── output.ts
-│   │   └── output.test.ts        # Integration tests with fs mocking
-│   └── output/
-│       ├── progress.ts
-│       └── progress.test.ts      # Unit tests for progress formatting
-└── core/
-    └── schemas/
-        ├── index.ts
-        └── index.test.ts         # Schema validation tests
-```
-
-### Test Categories
-
-| Category | Description | Mocking |
-|----------|-------------|---------|
-| **Unit Tests** | Pure functions with no side effects | None |
-| **Integration Tests** | Functions with I/O (file system, network) | `vi.mock()` for fs/promises |
-| **Agent Tests** | LLM calls via AI SDK | Mock `generateObject` responses |
-
-### Future: Agent Eval Tests (V2)
-
-Planned evaluation framework for LLM output quality:
-- Test cases with expected outputs
-- Scoring metrics (creativity, consistency, age-appropriateness)
-- Regression testing for prompt changes
-
----
-
-## Version Scope
-
-### V1 (CLI)
-- Full pipeline from chat to PDF
-- Single-session flow
-- CLI interface
-- Nano Banana Pro for image generation
-- Lulu PDF output
-
-### V2 (Web)
-- Save and resume sessions
-- Web interface
-- User accounts and book history
-- Durable pipeline orchestration (Inngest)
-
----
-
-## Future Considerations
-
-### Durable Step Functions (Inngest)
-
-For V2, the pipeline will benefit from **durable orchestration** using [Inngest](https://www.inngest.com/). Each pipeline step becomes independently retryable and memoized:
-
-```typescript
-inngest.createFunction(
-  { id: "book-pipeline" },
-  { event: "book/create" },
-  async ({ event, step }) => {
-    // StoryBrief is created via chat intake before triggering this event
-    const brief = event.data.brief;
-    const manuscript = await step.run("write-manuscript", () =>
-      authorAgent(brief)
-    );
-    const story = await step.run("illustrate", () =>
-      illustratorAgent(manuscript)
-    );
-    const book = await step.run("render", () =>
-      rendererAgent(story)
-    );
-    return book;
-  }
-);
-```
-
-**Benefits:**
-- **Automatic retries**: If image generation fails, only that step retries (not the whole pipeline)
-- **Memoization**: Completed steps are skipped on re-runs, preserving progress
-- **Observability**: Built-in dashboard for monitoring pipeline runs
-- **Resume from failure**: Users don't lose work if the pipeline crashes mid-way
-
-This is especially valuable for long-running image generation where API timeouts and rate limits are common.
+| Key | Name | Width | Height | Aspect |
+|-----|------|-------|--------|--------|
+| `square-small` | Small Square | 1024 | 1024 | 1:1 |
+| `square-large` | Large Square | 1440 | 1440 | 1:1 |
+| `landscape` | Landscape | 1792 | 1024 | 7:4 |
+| `portrait-small` | Portrait Small | 1024 | 1280 | 4:5 |
+| `portrait-large` | Portrait Large | 1024 | 1792 | 4:7 |

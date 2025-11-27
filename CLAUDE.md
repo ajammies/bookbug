@@ -24,12 +24,13 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - `src/core/pipeline.ts` - Pipeline orchestration
 - `src/cli/commands/` - CLI commands (create, write, direct, render)
 - `src/cli/prompts/` - Interactive prompts (story-intake, plot-intake)
-- `docs/` - Architecture, diagrams, and plans
+- `docs/ARCHITECTURE.md` - Type system and pipeline diagrams (keep updated)
+- `docs/plans/` - Feature planning docs
 
 # Workflow
 - Changes should be small, contained, and atomic
 - New features: 
-  - Enter Planning mode to create plan, write to `docs/plan-<feature-name>.md` and wait for user approval
+  - Enter Planning mode to create plan, write to `docs/plans/plan-<feature-name>.md` and wait for user approval
     - plan includes goals, approach, files to change, test strategy   
   - branch from main
   - implement features
