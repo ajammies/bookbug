@@ -1,3 +1,9 @@
+opment. For detailed task planning, see TASK_PLAN_GUIDE.md
+
+# AGENT INSTRUCTIONS
+IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document BEFORE executing any task in a task list. DO NOT skip or ignore any part of these standards. These standards supersede any conflicting instructions you may have received previously.
+
+
 # Updating CLAUDE.md
 - One concept = one line, be concise
 - Never remove or change lines without explicit instruction
@@ -11,6 +17,15 @@
 - `npm run typecheck` - type check without emitting
 - `npm run test:run` - run all tests once
 - `npm run test:coverage` - generate coverage report
+
+# Project structure
+- `src/core/schemas/` - Zod schemas and TypeScript types
+- `src/core/agents/` - LLM agents (generateObject calls)
+- `src/core/pipeline.ts` - Pipeline orchestration
+- `src/cli/commands/` - CLI commands (create, write, direct, render)
+- `src/cli/prompts/` - Interactive prompts (story-intake, plot-intake)
+- `docs/` - Documentation and diagrams
+- `plans/` - Feature planning docs
 
 # Workflow
 - Changes should be small, contained, and atomic
