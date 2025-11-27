@@ -7,10 +7,16 @@ import type {
   RenderedBook,
   BookFormatKey,
   RenderedPage,
+  ProsePage,
+  IllustratedPage,
 } from './schemas';
 import {
   proseAgent,
   visualsAgent,
+  proseSetupAgent,
+  prosePageAgent,
+  styleGuideAgent,
+  pageVisualsAgent,
   renderPage,
   renderPageMock,
   createBook,
@@ -37,70 +43,114 @@ export interface PipelineOptions {
   stopAfter?: 'prose' | 'visuals' | 'book';
   /** Output manager - if provided, saves artifacts at each stage */
   outputManager?: StoryOutputManager;
+  /** Callback after each page completes (prose + visuals + render) */
+  onPageComplete?: (pageNumber: number, page: RenderedPage) => void;
 }
 
 /**
  * Execute the pipeline from StoryWithPlot to rendered book
  *
- * Pipeline flow (functional composition):
- *   StoryWithPlot → proseAgent → Prose
- *   StoryWithProse → visualsAgent → VisualDirection
- *   ComposedStory → Renderer → RenderedBook
+ * Incremental pipeline flow (page-by-page):
+ *   1. StyleGuide + ProseSetup generated upfront (once)
+ *   2. For each page: prose → visuals → render
+ *   3. Assemble final ComposedStory and RenderedBook
  */
 export async function executePipeline(
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
-  const { onProgress, stopAfter, outputManager } = options;
+  const { onProgress, stopAfter, outputManager, onPageComplete } = options;
 
-  // Step 1: Write prose from story with plot
-  onProgress?.('prose', 'start');
-  const prose = await proseAgent(storyWithPlot);
-  onProgress?.('prose', 'complete', prose);
+  // Step 1: Generate style guide and prose setup upfront (once)
+  onProgress?.('setup', 'start');
+  const [styleGuide, proseSetup] = await Promise.all([
+    styleGuideAgent(storyWithPlot),
+    proseSetupAgent(storyWithPlot),
+  ]);
+  onProgress?.('setup', 'complete', { styleGuide, proseSetup });
 
-  // Compose StoryWithProse
-  const storyWithProse: StoryWithProse = { ...storyWithPlot, prose };
-
-  // Save prose stage
-  if (outputManager) {
-    await outputManager.saveProse(storyWithProse);
+  // Step 2: Generate all prose pages
+  const prosePages: ProsePage[] = [];
+  for (let i = 0; i < storyWithPlot.pageCount; i++) {
+    const pageNumber = i + 1;
+    const prosePage = await prosePageAgent({
+      story: storyWithPlot,
+      proseSetup,
+      pageNumber,
+      previousPages: [...prosePages],
+    });
+    prosePages.push(prosePage);
   }
 
+  // Assemble Prose
+  const prose: Prose = {
+    logline: proseSetup.logline,
+    theme: proseSetup.theme,
+    styleNotes: proseSetup.styleNotes,
+    pages: prosePages,
+  };
+  const storyWithProse: StoryWithProse = { ...storyWithPlot, prose };
+
+  // Check stopAfter for prose
   if (stopAfter === 'prose') {
+    if (outputManager) {
+      await outputManager.saveProse(storyWithProse);
+    }
+    onProgress?.('prose', 'complete', prose);
     return { stage: 'prose', storyWithPlot, prose };
   }
 
-  // Step 2: Create visual direction from story with prose
-  onProgress?.('visuals', 'start');
-  const visuals = await visualsAgent(storyWithProse);
-  onProgress?.('visuals', 'complete', visuals);
-
-  // Compose full Story
-  const story: ComposedStory = { ...storyWithProse, visuals };
-
-  // Save story stage
-  if (outputManager) {
-    await outputManager.saveStory(story);
+  // Step 3: Generate all illustrated pages
+  const illustratedPages: IllustratedPage[] = [];
+  for (let i = 0; i < storyWithPlot.pageCount; i++) {
+    const pageNumber = i + 1;
+    const illustratedPage = await pageVisualsAgent({
+      story: storyWithPlot,
+      styleGuide,
+      pageNumber,
+      prosePage: prosePages[i]!,
+    });
+    illustratedPages.push(illustratedPage);
   }
 
+  // Assemble VisualDirection
+  const visuals: VisualDirection = { style: styleGuide, illustratedPages };
+
+  // Check stopAfter for visuals
   if (stopAfter === 'visuals') {
+    if (outputManager) {
+      await outputManager.saveStory({ ...storyWithProse, visuals });
+    }
+    onProgress?.('visuals', 'complete', visuals);
     return { stage: 'visuals', storyWithProse, visuals };
   }
 
-  // Step 3: Render book from story (generate all page images)
-  onProgress?.('renderer', 'start');
-  const pages: RenderedPage[] = [];
-  for (const storyPage of story.visuals.illustratedPages) {
-    const page = await renderPage(story, storyPage.pageNumber);
-    pages.push(page);
-  }
-  const book = createBook(story, pages);
-  onProgress?.('renderer', 'complete', book);
+  // Step 4: Render each page
+  const renderedPages: RenderedPage[] = [];
+  const story: ComposedStory = { ...storyWithProse, visuals };
 
-  // Save book stage
+  for (let i = 0; i < storyWithPlot.pageCount; i++) {
+    const pageNumber = i + 1;
+    onProgress?.(`page-${pageNumber}`, 'start');
+
+    const renderedPage = await renderPage(story, pageNumber);
+    renderedPages.push(renderedPage);
+
+    onProgress?.(`page-${pageNumber}`, 'complete', renderedPage);
+    onPageComplete?.(pageNumber, renderedPage);
+  }
+
+  // Step 5: Assemble final book
+  const book = createBook(story, renderedPages);
+
+  // Save final artifacts
   if (outputManager) {
+    await outputManager.saveProse(storyWithProse);
+    await outputManager.saveStory(story);
     await outputManager.saveBook(book);
   }
+
+  onProgress?.('complete', 'complete', book);
 
   return { stage: 'book', story, book };
 }

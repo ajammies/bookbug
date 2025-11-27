@@ -1,5 +1,15 @@
 import { generateObject } from 'ai';
-import { VisualDirectionSchema, type StoryWithProse, type VisualDirection } from '../schemas';
+import {
+  VisualDirectionSchema,
+  VisualStyleGuideSchema,
+  IllustratedPageSchema,
+  type StoryWithPlot,
+  type StoryWithProse,
+  type VisualDirection,
+  type VisualStyleGuide,
+  type IllustratedPage,
+  type ProsePage,
+} from '../schemas';
 import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `You are an illustrator for children's picture books. Given a story with prose, create visual direction for each page.
@@ -36,6 +46,96 @@ export const visualsAgent = async (story: StoryWithProse): Promise<VisualDirecti
     schema: VisualDirectionSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(story, null, 2),
+  });
+
+  return object;
+};
+
+/**
+ * Per-page agents for incremental pipeline
+ */
+
+const STYLE_GUIDE_PROMPT = `Design a cohesive visual style guide for a children's picture book.
+
+Given a story with plot, establish:
+- art_direction: Genre, medium, technique (e.g., watercolor, digital, gouache)
+- setting: Default environment, time of day, season, landmarks
+- lighting: Scheme, direction, quality, color temperature
+- color_script: Palette, harmony, saturation, accent colors
+- mood_narrative: Overall emotional tone
+- atmosphere_fx: Fog, particles, bloom effects
+- constraints: Things to avoid (scary imagery, inappropriate content)
+
+Visual style should complement:
+- The story's emotional arc
+- Target age range (simpler for younger, more detail for older)
+- Setting and genre expectations`;
+
+/**
+ * StyleGuideAgent: Generates global visual style (once, upfront)
+ */
+export const styleGuideAgent = async (story: StoryWithPlot): Promise<VisualStyleGuide> => {
+  const { object } = await generateObject({
+    model: getModel(),
+    schema: VisualStyleGuideSchema,
+    system: STYLE_GUIDE_PROMPT,
+    prompt: JSON.stringify(story, null, 2),
+  });
+
+  return object;
+};
+
+/**
+ * Input for pageVisualsAgent
+ */
+export interface PageVisualsInput {
+  story: StoryWithPlot;
+  styleGuide: VisualStyleGuide;
+  pageNumber: number;
+  prosePage: ProsePage;
+}
+
+const PAGE_VISUALS_PROMPT = `Create illustration beats for a single page of a children's picture book.
+
+You receive:
+- Story context (plot, characters, setting)
+- Visual style guide (established art direction, colors, mood)
+- Page number
+- Prose page (text and imageConcept to illustrate)
+
+For this page, create one or more IllustrationBeats:
+- order: Sequence number (1, 2, 3...)
+- purpose: setup, build, twist, climax, payoff, or button
+- summary: What is happening visually
+- emotion: Emotional tone to convey
+- characters: Who appears, their expression, pose, focus level
+- shot: Composition (size, angle, POV, layout, staging)
+
+Shot composition principles:
+- Vary shot sizes (wide for establishing, close for emotion)
+- Use child's eye level for relatability
+- Match composition to emotional beat
+- Consider page layout (full bleed, framed, spot illustration)`;
+
+/**
+ * PageVisualsAgent: Generates illustration beats for a single page
+ */
+export const pageVisualsAgent = async (input: PageVisualsInput): Promise<IllustratedPage> => {
+  const { story, styleGuide, pageNumber, prosePage } = input;
+
+  const context = {
+    story,
+    styleGuide,
+    pageNumber,
+    totalPages: story.pageCount,
+    prosePage,
+  };
+
+  const { object } = await generateObject({
+    model: getModel(),
+    schema: IllustratedPageSchema,
+    system: PAGE_VISUALS_PROMPT,
+    prompt: JSON.stringify(context, null, 2),
   });
 
   return object;

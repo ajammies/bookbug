@@ -34,8 +34,10 @@ export {
 
 // Stage 3: Prose (proseAgent)
 export {
+  ProseSetupSchema,
   ProsePageSchema,
   ProseSchema,
+  type ProseSetup,
   type ProsePage,
   type Prose,
 } from './prose';

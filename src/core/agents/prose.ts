@@ -1,5 +1,13 @@
 import { generateObject } from 'ai';
-import { ProseSchema, type StoryWithPlot, type Prose } from '../schemas';
+import {
+  ProseSchema,
+  ProseSetupSchema,
+  ProsePageSchema,
+  type StoryWithPlot,
+  type Prose,
+  type ProseSetup,
+  type ProsePage,
+} from '../schemas';
 import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `Write prose content from a story with plot beats.
@@ -36,6 +44,89 @@ export const proseAgent = async (story: StoryWithPlot): Promise<Prose> => {
     schema: ProseSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(story, null, 2),
+  });
+
+  return object;
+};
+
+/**
+ * Per-page agents for incremental pipeline
+ */
+
+const SETUP_PROMPT = `Establish the story's voice and narrative direction.
+
+Given a story with plot structure, define:
+- logline: One-sentence hook that captures the adventure
+- theme: Central message or emotional truth
+- styleNotes: Writing voice (warm, playful, lyrical, etc.)
+
+Writing voice by age:
+- Ages 2-5: Simple, rhythmic, repetitive patterns
+- Ages 6-9: More complex sentences, richer vocabulary`;
+
+/**
+ * ProseSetupAgent: Generates story-wide prose metadata (once, upfront)
+ */
+export const proseSetupAgent = async (story: StoryWithPlot): Promise<ProseSetup> => {
+  const { object } = await generateObject({
+    model: getModel(),
+    schema: ProseSetupSchema,
+    system: SETUP_PROMPT,
+    prompt: JSON.stringify(story, null, 2),
+  });
+
+  return object;
+};
+
+/**
+ * Input for prosePageAgent - provides context for coherent page generation
+ */
+export interface ProsePageInput {
+  story: StoryWithPlot;
+  proseSetup: ProseSetup;
+  pageNumber: number;
+  previousPages: ProsePage[];
+}
+
+const PAGE_PROMPT = `Write prose for a single page of a children's book.
+
+You receive:
+- Story context (plot, characters, setting)
+- Prose setup (logline, theme, styleNotes)
+- Page number and total page count
+- Previous pages (for continuity)
+
+Guidelines:
+- Follow the established voice from styleNotes
+- Maintain narrative continuity with previous pages
+- Pace according to page position (early = setup, middle = action, late = resolution)
+- Ages 2-5: 1-2 sentences per page
+- Ages 6-9: Up to a paragraph
+
+Output a single page with:
+- summary: Brief description of what happens
+- text: The actual prose for the page
+- imageConcept: Description of the illustration`;
+
+/**
+ * ProsePageAgent: Generates prose for a single page
+ */
+export const prosePageAgent = async (input: ProsePageInput): Promise<ProsePage> => {
+  const { story, proseSetup, pageNumber, previousPages } = input;
+
+  const context = {
+    story,
+    proseSetup,
+    pageNumber,
+    totalPages: story.pageCount,
+    previousPages,
+  };
+
+  const { object } = await generateObject({
+    model: getModel(),
+    schema: ProsePageSchema,
+    system: PAGE_PROMPT,
+    prompt: JSON.stringify(context, null, 2),
   });
 
   return object;

@@ -22,8 +22,8 @@ export type VisualsAgentType = Agent<StoryWithProse, VisualDirection>;
 export type OnStepProgress = (step: string, status: 'start' | 'complete' | 'error', data?: unknown) => void;
 
 // Re-export agents (named after their output)
-export { proseAgent } from './prose';
-export { visualsAgent } from './visuals';
+export { proseAgent, proseSetupAgent, prosePageAgent, type ProsePageInput } from './prose';
+export { visualsAgent, styleGuideAgent, pageVisualsAgent, type PageVisualsInput } from './visuals';
 export { renderPage, renderPageMock, createBook, filterStoryForPage } from './renderer';
 
 // Chat intake agents (StoryBrief)
