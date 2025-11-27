@@ -1,15 +1,15 @@
-import type { Story, RenderedBook, RenderedPage, BookFormatKey, StorySlice } from '../schemas';
+import type { ComposedStory, RenderedBook, RenderedPage, BookFormatKey, StorySlice, StoryCharacter } from '../schemas';
 import { BOOK_FORMATS } from '../schemas';
 import { generatePageImage } from '../services/image-generation';
 
 /**
- * Render a single page image from a Story
+ * Render a single page image from a ComposedStory
  *
  * Returns a RenderedPage with a temporary URL from Replicate.
  * Call this for each page to have full control over the generation process.
  */
 export const renderPage = async (
-  story: Story,
+  story: ComposedStory,
   pageNumber: number,
   format: BookFormatKey = 'square-large'
 ): Promise<RenderedPage> => {
@@ -38,11 +38,11 @@ export const renderPageMock = (pageNumber: number): RenderedPage => ({
  * Pages should already be rendered via renderPage/renderPageMock.
  */
 export const createBook = (
-  story: Story,
+  story: ComposedStory,
   pages: RenderedPage[],
   format: BookFormatKey = 'square-large'
 ): RenderedBook => ({
-  storyTitle: story.storyTitle,
+  storyTitle: story.title,
   ageRange: story.ageRange,
   format,
   pages,
@@ -50,33 +50,45 @@ export const createBook = (
 });
 
 /**
- * Filter a Story to include only data relevant to a specific page.
+ * Convert character array to lookup map by name (used as ID)
+ */
+const toCharacterMap = (characters: StoryCharacter[]): Record<string, StoryCharacter> =>
+  characters.reduce<Record<string, StoryCharacter>>((acc, char) => {
+    acc[char.name] = char;
+    return acc;
+  }, {});
+
+/**
+ * Filter a ComposedStory to include only data relevant to a specific page.
  * This creates a minimal payload for image generation.
  */
-export const filterStoryForPage = (story: Story, pageNumber: number): StorySlice => {
-  const storyPage = story.pages[pageNumber - 1]; // Pages are 1-indexed
-  const manuscriptPage = story.manuscript.pages[String(pageNumber)];
+export const filterStoryForPage = (story: ComposedStory, pageNumber: number): StorySlice => {
+  const illustratedPage = story.visuals.illustratedPages[pageNumber - 1]; // Pages are 1-indexed
+  const prosePage = story.prose.pages[pageNumber - 1];
+
+  // Create character lookup map from array
+  const allCharacters = toCharacterMap(story.characters);
 
   // Extract character IDs from beats, then pick matching characters
-  const characterIds = (storyPage?.beats ?? [])
+  const characterIds = (illustratedPage?.beats ?? [])
     .flatMap(beat => beat.characters)
     .map(char => char.id);
 
   const relevantCharacters = [...new Set(characterIds)]
-    .filter(id => id in story.characters)
+    .filter(id => id in allCharacters)
     .reduce<StorySlice['characters']>((acc, id) => {
-      acc[id] = story.characters[id]!;
+      acc[id] = allCharacters[id]!;
       return acc;
     }, {});
 
   return {
-    storyTitle: story.storyTitle,
-    style: story.style,
+    storyTitle: story.title,
+    style: story.visuals.style,
     characters: relevantCharacters,
     page: {
       pageNumber,
-      text: manuscriptPage?.text,
-      beats: storyPage?.beats,
+      text: prosePage?.text,
+      beats: illustratedPage?.beats,
     },
   };
 };

@@ -427,12 +427,12 @@ export const ComposedStorySchema = StoryWithProseSchema.extend({
 export type ComposedStory = z.infer<typeof ComposedStorySchema>;
 
 // ============================================================
-// LEGACY: Story (old self-contained blob) - to be replaced
+// LEGACY: Story (old self-contained blob) - kept for reference
 // ============================================================
 
 /**
- * LEGACY Story: complete story ready for rendering
- * To be replaced by composed Story type after migration.
+ * LEGACY Story: old self-contained blob structure.
+ * Use ComposedStory instead.
  */
 export const LegacyStorySchema = z.object({
   storyTitle: z.string().min(1),
@@ -448,9 +448,9 @@ export const LegacyStorySchema = z.object({
 
 export type LegacyStory = z.infer<typeof LegacyStorySchema>;
 
-// Keep StorySchema as alias for backwards compatibility during migration
-export const StorySchema = LegacyStorySchema;
-export type Story = LegacyStory;
+// Story now refers to the composed type
+export const StorySchema = ComposedStorySchema;
+export type Story = ComposedStory;
 
 // ============================================================
 // 5. RENDERER → RenderedBook (final rendered book)

@@ -5,7 +5,7 @@ import {
   renderPageMock,
   createBook,
 } from './renderer';
-import type { Story, RenderedPage } from '../schemas';
+import type { ComposedStory, RenderedPage } from '../schemas';
 
 // Mock image-generation module
 vi.mock('../services/image-generation', () => ({
@@ -14,69 +14,86 @@ vi.mock('../services/image-generation', () => ({
 
 import { generatePageImage } from '../services/image-generation';
 
-const createMinimalStory = (overrides?: Partial<Story>): Story => ({
-  storyTitle: 'The Magic Garden',
+const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory => ({
+  // StoryBrief fields
+  title: 'The Magic Garden',
+  storyArc: 'A rabbit discovers a hidden garden',
+  setting: 'A hidden garden in the woods',
   ageRange: { min: 4, max: 8 },
-  characters: {
-    luna: { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] },
-    pip: { name: 'Pip', description: 'A friendly bird', traits: [], notes: [] },
-  },
-  manuscript: {
-    meta: {
-      title: 'The Magic Garden',
-      logline: 'A rabbit discovers wonder',
-      theme: 'Curiosity',
-      setting: 'A hidden garden',
-    },
-    pages: {
-      '1': { summary: 'Intro', text: 'Luna found a gate.', imageConcept: 'Gate scene' },
-      '2': { summary: 'Discovery', text: 'She entered the garden.', imageConcept: 'Garden' },
-    },
-  },
-  style: {
-    art_direction: {
-      genre: ['whimsical'],
-      medium: ['watercolor'],
-      technique: ['soft edges'],
-    },
-    setting: {
-      landmarks: ['old oak tree'],
-      diegetic_lights: ['sunbeams'],
-    },
-  },
-  pages: [
-    {
-      pageNumber: 1,
-      beats: [
-        {
-          order: 1,
-          purpose: 'setup',
-          summary: 'Luna finds the gate',
-          emotion: 'curious',
-          characters: [
-            { id: 'luna', expression: 'curious', pose: 'looking up', focus: 'primary' },
-          ],
-          shot: { size: 'wide', angle: 'eye_level' },
-        },
-      ],
-    },
-    {
-      pageNumber: 2,
-      beats: [
-        {
-          order: 1,
-          purpose: 'build',
-          summary: 'Luna and Pip explore',
-          emotion: 'excited',
-          characters: [
-            { id: 'luna', expression: 'happy', pose: 'walking', focus: 'primary' },
-            { id: 'pip', expression: 'cheerful', pose: 'flying', focus: 'secondary' },
-          ],
-          shot: { size: 'medium', angle: 'eye_level' },
-        },
-      ],
-    },
+  pageCount: 2,
+  characters: [
+    { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] },
+    { name: 'Pip', description: 'A friendly bird', traits: [], notes: [] },
   ],
+  interests: [],
+  customInstructions: [],
+  // PlotStructure
+  plot: {
+    storyArcSummary: 'A rabbit discovers wonder in a hidden garden',
+    plotBeats: [
+      { purpose: 'setup', description: 'Luna finds the gate' },
+      { purpose: 'conflict', description: 'She hesitates' },
+      { purpose: 'climax', description: 'She enters' },
+      { purpose: 'resolution', description: 'She finds a friend' },
+    ],
+    allowCreativeLiberty: true,
+  },
+  // Prose
+  prose: {
+    logline: 'A rabbit discovers wonder',
+    theme: 'Curiosity',
+    pages: [
+      { summary: 'Intro', text: 'Luna found a gate.', imageConcept: 'Gate scene' },
+      { summary: 'Discovery', text: 'She entered the garden.', imageConcept: 'Garden' },
+    ],
+  },
+  // VisualDirection
+  visuals: {
+    style: {
+      art_direction: {
+        genre: ['whimsical'],
+        medium: ['watercolor'],
+        technique: ['soft edges'],
+      },
+      setting: {
+        landmarks: ['old oak tree'],
+        diegetic_lights: ['sunbeams'],
+      },
+    },
+    illustratedPages: [
+      {
+        pageNumber: 1,
+        beats: [
+          {
+            order: 1,
+            purpose: 'setup',
+            summary: 'Luna finds the gate',
+            emotion: 'curious',
+            characters: [
+              { id: 'Luna', expression: 'curious', pose: 'looking up', focus: 'primary' },
+            ],
+            shot: { size: 'wide', angle: 'eye_level' },
+          },
+        ],
+      },
+      {
+        pageNumber: 2,
+        beats: [
+          {
+            order: 1,
+            purpose: 'build',
+            summary: 'Luna and Pip explore',
+            emotion: 'excited',
+            characters: [
+              { id: 'Luna', expression: 'happy', pose: 'walking', focus: 'primary' },
+              { id: 'Pip', expression: 'cheerful', pose: 'flying', focus: 'secondary' },
+            ],
+            shot: { size: 'medium', angle: 'eye_level' },
+          },
+        ],
+      },
+    ],
+  },
   ...overrides,
 });
 
@@ -111,20 +128,19 @@ describe('filterStoryForPage', () => {
   it('extracts only referenced characters', () => {
     const story = createMinimalStory();
 
-    // Page 1 only references 'luna'
+    // Page 1 only references 'Luna'
     const slice1 = filterStoryForPage(story, 1);
-    expect(Object.keys(slice1.characters)).toEqual(['luna']);
-    expect(slice1.characters.luna?.name).toBe('Luna');
+    expect(Object.keys(slice1.characters)).toEqual(['Luna']);
+    expect(slice1.characters.Luna?.name).toBe('Luna');
 
-    // Page 2 references both 'luna' and 'pip'
+    // Page 2 references both 'Luna' and 'Pip'
     const slice2 = filterStoryForPage(story, 2);
-    expect(Object.keys(slice2.characters).sort()).toEqual(['luna', 'pip']);
+    expect(Object.keys(slice2.characters).sort()).toEqual(['Luna', 'Pip']);
   });
 
   it('handles page with no beats gracefully', () => {
-    const story = createMinimalStory({
-      pages: [{ pageNumber: 1, beats: [] }],
-    });
+    const story = createMinimalStory();
+    story.visuals.illustratedPages = [{ pageNumber: 1, beats: [] }];
 
     const slice = filterStoryForPage(story, 1);
 
@@ -132,10 +148,10 @@ describe('filterStoryForPage', () => {
     expect(slice.page.beats).toEqual([]);
   });
 
-  it('handles missing manuscript page gracefully', () => {
+  it('handles missing prose page gracefully', () => {
     const story = createMinimalStory();
-    // Request page 3 which doesn't exist in manuscript
-    story.pages.push({
+    // Request page 3 which doesn't exist in prose
+    story.visuals.illustratedPages.push({
       pageNumber: 3,
       beats: [
         {
@@ -156,53 +172,51 @@ describe('filterStoryForPage', () => {
   });
 
   it('handles duplicate character IDs in beats', () => {
-    const story = createMinimalStory({
-      pages: [
-        {
-          pageNumber: 1,
-          beats: [
-            {
-              order: 1,
-              purpose: 'setup',
-              summary: 'Luna appears twice',
-              emotion: 'curious',
-              characters: [
-                { id: 'luna', expression: 'curious', pose: 'sitting', focus: 'primary' },
-                { id: 'luna', expression: 'happy', pose: 'standing', focus: 'secondary' },
-              ],
-              shot: { size: 'wide', angle: 'eye_level' },
-            },
-          ],
-        },
-      ],
-    });
+    const story = createMinimalStory();
+    story.visuals.illustratedPages = [
+      {
+        pageNumber: 1,
+        beats: [
+          {
+            order: 1,
+            purpose: 'setup',
+            summary: 'Luna appears twice',
+            emotion: 'curious',
+            characters: [
+              { id: 'Luna', expression: 'curious', pose: 'sitting', focus: 'primary' },
+              { id: 'Luna', expression: 'happy', pose: 'standing', focus: 'secondary' },
+            ],
+            shot: { size: 'wide', angle: 'eye_level' },
+          },
+        ],
+      },
+    ];
 
     const slice = filterStoryForPage(story, 1);
 
-    // Should only have one 'luna' entry despite duplicate references
-    expect(Object.keys(slice.characters)).toEqual(['luna']);
+    // Should only have one 'Luna' entry despite duplicate references
+    expect(Object.keys(slice.characters)).toEqual(['Luna']);
   });
 
   it('handles non-existent character ID gracefully', () => {
-    const story = createMinimalStory({
-      pages: [
-        {
-          pageNumber: 1,
-          beats: [
-            {
-              order: 1,
-              purpose: 'setup',
-              summary: 'Unknown character',
-              emotion: 'curious',
-              characters: [
-                { id: 'unknown', expression: 'neutral', pose: 'standing', focus: 'primary' },
-              ],
-              shot: { size: 'wide', angle: 'eye_level' },
-            },
-          ],
-        },
-      ],
-    });
+    const story = createMinimalStory();
+    story.visuals.illustratedPages = [
+      {
+        pageNumber: 1,
+        beats: [
+          {
+            order: 1,
+            purpose: 'setup',
+            summary: 'Unknown character',
+            emotion: 'curious',
+            characters: [
+              { id: 'unknown', expression: 'neutral', pose: 'standing', focus: 'primary' },
+            ],
+            shot: { size: 'wide', angle: 'eye_level' },
+          },
+        ],
+      },
+    ];
 
     const slice = filterStoryForPage(story, 1);
 

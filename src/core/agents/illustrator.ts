@@ -1,13 +1,12 @@
 import { generateObject } from 'ai';
-import { StorySchema, type Manuscript, type Story } from '../schemas';
+import { VisualDirectionSchema, type StoryWithProse, type VisualDirection } from '../schemas';
 import { getModel } from '../config';
-import type { IllustratorAgent } from './index';
 
-const SYSTEM_PROMPT = `You are an illustrator for children's picture books. Given a Manuscript, create a complete visual Story with detailed shot compositions for each beat.
+const SYSTEM_PROMPT = `You are an illustrator for children's picture books. Given a story with prose, create visual direction for each page.
 
 Your responsibilities:
 1. Define a cohesive VisualStyleGuide (art direction, setting, lighting, colors, mood)
-2. Break each manuscript page into one or more StoryBeats
+2. Break each page into one or more IllustrationBeats
 3. For each beat, specify:
    - Shot composition (size, angle, POV, layout)
    - Character positions, expressions, poses
@@ -21,17 +20,22 @@ Visual principles:
 - Use color and lighting to reinforce mood
 - Ensure visual continuity across pages
 
-Output a complete Story ready for illustration.`;
+Output only the visual direction fields:
+- style: VisualStyleGuide with art direction, setting, lighting, colors
+- illustratedPages: Array of pages, each with pageNumber and beats`;
 
 /**
- * IllustratorAgent: Takes a Manuscript and produces a visual Story
+ * IllustratorAgent: Takes a StoryWithProse and produces VisualDirection
+ *
+ * Output contains ONLY the new fields (style, illustratedPages).
+ * Caller composes the result: ComposedStory = { ...story, visuals: result }
  */
-export const illustratorAgent: IllustratorAgent = async (manuscript: Manuscript): Promise<Story> => {
+export const illustratorAgent = async (story: StoryWithProse): Promise<VisualDirection> => {
   const { object } = await generateObject({
     model: getModel(),
-    schema: StorySchema,
+    schema: VisualDirectionSchema,
     system: SYSTEM_PROMPT,
-    prompt: JSON.stringify(manuscript, null, 2),
+    prompt: JSON.stringify(story, null, 2),
   });
 
   return object;

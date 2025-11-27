@@ -1,11 +1,13 @@
 import { Command } from 'commander';
 import { executePipeline } from '../../core/pipeline';
-import type { Manuscript, Story, RenderedBook, StoryWithPlot, StoryBlurb } from '../../core/schemas';
+import type { StoryWithPlot, StoryBlurb } from '../../core/schemas';
 import { runStoryIntake } from '../prompts/story-intake';
 import { runBlurbIntake } from '../prompts/blurb-intake';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 /**
  * TEMPORARY ADAPTER: Convert StoryWithPlot to StoryBlurb for pipeline compatibility.
@@ -57,8 +59,11 @@ export const createCommand = new Command('create')
       if (result.stage !== 'book') {
         throw new Error('Pipeline did not complete');
       }
-      await outputManager.saveManuscript(result.manuscript);
-      await outputManager.saveStory(result.story);
+      // Save the composed story
+      await fs.writeFile(
+        path.join(outputManager.folder, 'story.json'),
+        JSON.stringify(result.story, null, 2)
+      );
       await outputManager.saveBook(result.book);
 
       displayBook(result.book);

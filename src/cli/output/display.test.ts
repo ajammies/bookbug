@@ -176,51 +176,68 @@ describe('displayManuscript', () => {
 
 describe('displayStory', () => {
   const minimalStory: Story = {
-    storyTitle: 'The Magic Garden',
+    // StoryBrief fields
+    title: 'The Magic Garden',
+    storyArc: 'A rabbit discovers a hidden garden',
+    setting: 'Garden',
     ageRange: { min: 4, max: 8 },
-    characters: {
-      luna: { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] },
-    },
-    manuscript: {
-      meta: {
-        title: 'The Magic Garden',
-        logline: 'A rabbit finds wonder',
-        theme: 'Curiosity',
-        setting: 'Garden',
-      },
-      pages: {
-        '1': { summary: 'Intro', text: 'Luna found a gate.', imageConcept: 'Gate' },
-      },
-    },
-    style: {
-      art_direction: {
-        genre: ['fantasy', 'childrens'],
-        medium: ['digital illustration'],
-        technique: ['soft shading'],
-      },
-      setting: {
-        landmarks: [],
-        diegetic_lights: [],
-      },
-    },
-    pages: [
-      {
-        pageNumber: 1,
-        beats: [
-          {
-            order: 1,
-            purpose: 'setup',
-            summary: 'Luna discovers the garden gate',
-            emotion: 'curious',
-            characters: [],
-            shot: {
-              size: 'wide',
-              angle: 'eye_level',
-            },
-          },
-        ],
-      },
+    pageCount: 1,
+    characters: [
+      { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] },
     ],
+    interests: [],
+    customInstructions: [],
+    // PlotStructure
+    plot: {
+      storyArcSummary: 'A rabbit discovers wonder',
+      plotBeats: [
+        { purpose: 'setup', description: 'Luna finds the gate' },
+        { purpose: 'conflict', description: 'She hesitates' },
+        { purpose: 'climax', description: 'She enters' },
+        { purpose: 'resolution', description: 'She finds a friend' },
+      ],
+      allowCreativeLiberty: true,
+    },
+    // Prose
+    prose: {
+      logline: 'A rabbit finds wonder',
+      theme: 'Curiosity',
+      pages: [
+        { summary: 'Intro', text: 'Luna found a gate.', imageConcept: 'Gate' },
+      ],
+    },
+    // VisualDirection
+    visuals: {
+      style: {
+        art_direction: {
+          genre: ['fantasy', 'childrens'],
+          medium: ['digital illustration'],
+          technique: ['soft shading'],
+        },
+        setting: {
+          landmarks: [],
+          diegetic_lights: [],
+        },
+      },
+      illustratedPages: [
+        {
+          pageNumber: 1,
+          beats: [
+            {
+              order: 1,
+              purpose: 'setup',
+              summary: 'Luna discovers the garden gate',
+              emotion: 'curious',
+              characters: [],
+              shot: {
+                size: 'wide',
+                angle: 'eye_level',
+              },
+            },
+          ],
+        },
+      ],
+    },
   };
 
   it('displays story title', () => {

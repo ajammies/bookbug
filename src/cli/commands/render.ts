@@ -32,19 +32,19 @@ export const renderCommand = new Command('render')
 
       // Set up output manager (custom path takes precedence)
       const outputManager = options.output
-        ? await createOutputManager(story.storyTitle, options.output)
-        : await getOrCreateOutputManager(storyFile, story.storyTitle);
+        ? await createOutputManager(story.title, options.output)
+        : await getOrCreateOutputManager(storyFile, story.title);
 
       // Ensure assets folder exists
       const assetsFolder = path.join(outputManager.folder, 'assets');
       await fs.mkdir(assetsFolder, { recursive: true });
 
       // Render pages one at a time (images have temporary URLs from Replicate)
-      const totalPages = story.pages.length;
+      const totalPages = story.visuals.illustratedPages.length;
       const format = options.format ?? 'square-large';
       const pages: RenderedPage[] = [];
 
-      for (const storyPage of story.pages) {
+      for (const storyPage of story.visuals.illustratedPages) {
         spinner.start(`Rendering page ${storyPage.pageNumber}/${totalPages}${options.mock ? ' (mock)' : ''}...`);
 
         const page = options.mock

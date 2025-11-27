@@ -1,4 +1,15 @@
-import type { StoryBrief, StoryBlurb, Manuscript, Story, RenderedBook } from '../schemas';
+import type {
+  StoryBrief,
+  StoryWithPlot,
+  StoryWithProse,
+  Prose,
+  VisualDirection,
+  Story,
+  RenderedBook,
+  // Legacy types (to be removed)
+  StoryBlurb,
+  Manuscript,
+} from '../schemas';
 
 /**
  * Generic agent type: async function from Input to Output
@@ -6,7 +17,13 @@ import type { StoryBrief, StoryBlurb, Manuscript, Story, RenderedBook } from '..
 export type Agent<Input, Output> = (input: Input) => Promise<Output>;
 
 /**
- * Pipeline agent types with concrete input/output
+ * Pipeline agent types with concrete input/output (NEW composed types)
+ */
+export type AuthorAgentType = Agent<StoryWithPlot, Prose>;
+export type IllustratorAgentType = Agent<StoryWithProse, VisualDirection>;
+
+/**
+ * LEGACY agent types (to be removed after full migration)
  */
 export type AuthorAgent = Agent<StoryBlurb, Manuscript>;
 export type IllustratorAgent = Agent<Manuscript, Story>;
