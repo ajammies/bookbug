@@ -16,6 +16,7 @@ import {
   createBook,
   type OnStepProgress,
 } from './agents';
+import type { StoryOutputManager } from '../cli/utils/output';
 
 /**
  * Pipeline result - discriminated union based on completion stage
@@ -34,6 +35,8 @@ export interface PipelineOptions {
   onProgress?: OnStepProgress;
   /** Stop after a specific step (for partial runs) */
   stopAfter?: 'prose' | 'visuals' | 'book';
+  /** Output manager - if provided, saves artifacts at each stage */
+  outputManager?: StoryOutputManager;
 }
 
 /**
@@ -48,31 +51,41 @@ export async function executePipeline(
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
-  const { onProgress, stopAfter } = options;
+  const { onProgress, stopAfter, outputManager } = options;
 
   // Step 1: Write prose from story with plot
   onProgress?.('prose', 'start');
   const prose = await proseAgent(storyWithPlot);
   onProgress?.('prose', 'complete', prose);
 
+  // Compose StoryWithProse
+  const storyWithProse: StoryWithProse = { ...storyWithPlot, prose };
+
+  // Save prose stage
+  if (outputManager) {
+    await outputManager.saveProse(storyWithProse);
+  }
+
   if (stopAfter === 'prose') {
     return { stage: 'prose', storyWithPlot, prose };
   }
-
-  // Compose StoryWithProse
-  const storyWithProse: StoryWithProse = { ...storyWithPlot, prose };
 
   // Step 2: Create visual direction from story with prose
   onProgress?.('visuals', 'start');
   const visuals = await visualsAgent(storyWithProse);
   onProgress?.('visuals', 'complete', visuals);
 
+  // Compose full Story
+  const story: ComposedStory = { ...storyWithProse, visuals };
+
+  // Save story stage
+  if (outputManager) {
+    await outputManager.saveStory(story);
+  }
+
   if (stopAfter === 'visuals') {
     return { stage: 'visuals', storyWithProse, visuals };
   }
-
-  // Compose full Story
-  const story: ComposedStory = { ...storyWithProse, visuals };
 
   // Step 3: Render book from story (generate all page images)
   onProgress?.('renderer', 'start');
@@ -83,6 +96,11 @@ export async function executePipeline(
   }
   const book = createBook(story, pages);
   onProgress?.('renderer', 'complete', book);
+
+  // Save book stage
+  if (outputManager) {
+    await outputManager.saveBook(book);
+  }
 
   return { stage: 'book', story, book };
 }
