@@ -235,7 +235,7 @@ erDiagram
 
 ## Incremental Pipeline (executePipeline)
 
-The main pipeline uses incremental page-by-page execution for better progress tracking:
+The main pipeline processes each page completely before moving to the next:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────────┐
@@ -248,31 +248,24 @@ The main pipeline uses incremental page-by-page execution for better progress tr
 │  │  → VisualStyleGuide │    │  → ProseSetup       │                              │
 │  └─────────────────────┘    └─────────────────────┘                              │
 │                                                                                   │
-│  Step 2: Generate prose pages (sequential, with context)                          │
+│  Step 2: Process each page (prose → visuals → render)                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐        │
 │  │  for each page:                                                       │        │
-│  │    prosePageAgent({ story, proseSetup, pageNumber, previousPages })   │        │
-│  │    → ProsePage                                                        │        │
+│  │    1. prosePageAgent({ story, proseSetup, pageNumber, previousPages })│        │
+│  │       → ProsePage                                                     │        │
+│  │    2. pageVisualsAgent({ story, styleGuide, pageNumber, prosePage })  │        │
+│  │       → IllustratedPage                                               │        │
+│  │    3. renderPage(composedStory, pageNumber)                           │        │
+│  │       → RenderedPage                                                  │        │
+│  │    4. onPageComplete(pageNumber, renderedPage)                        │        │
 │  └──────────────────────────────────────────────────────────────────────┘        │
 │                                                                                   │
-│  Step 3: Generate illustrated pages (sequential)                                  │
-│  ┌──────────────────────────────────────────────────────────────────────┐        │
-│  │  for each page:                                                       │        │
-│  │    pageVisualsAgent({ story, styleGuide, pageNumber, prosePage })     │        │
-│  │    → IllustratedPage                                                  │        │
-│  └──────────────────────────────────────────────────────────────────────┘        │
-│                                                                                   │
-│  Step 4: Render pages (sequential, with onPageComplete callback)                  │
-│  ┌──────────────────────────────────────────────────────────────────────┐        │
-│  │  for each page:                                                       │        │
-│  │    renderPage(composedStory, pageNumber)                              │        │
-│  │    → RenderedPage                                                     │        │
-│  │    onPageComplete(pageNumber, renderedPage)                           │        │
-│  └──────────────────────────────────────────────────────────────────────┘        │
-│                                                                                   │
-│  Step 5: Assemble → RenderedBook                                                  │
+│  Step 3: Assemble → RenderedBook                                                  │
 └───────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+This allows each page to be fully generated before moving to the next, enabling
+real-time progress updates and fail-fast behavior.
 
 ### Composition at Each Stage
 

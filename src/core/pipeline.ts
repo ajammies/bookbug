@@ -69,10 +69,16 @@ export async function executePipeline(
   ]);
   onProgress?.('setup', 'complete', { styleGuide, proseSetup });
 
-  // Step 2: Generate all prose pages
+  // Step 2: Process each page incrementally (prose → visuals → render)
   const prosePages: ProsePage[] = [];
+  const illustratedPages: IllustratedPage[] = [];
+  const renderedPages: RenderedPage[] = [];
+
   for (let i = 0; i < storyWithPlot.pageCount; i++) {
     const pageNumber = i + 1;
+    onProgress?.(`page-${pageNumber}`, 'start');
+
+    // Generate prose for this page
     const prosePage = await prosePageAgent({
       story: storyWithPlot,
       proseSetup,
@@ -80,64 +86,70 @@ export async function executePipeline(
       previousPages: [...prosePages],
     });
     prosePages.push(prosePage);
+
+    // Skip visuals and render if stopAfter is 'prose'
+    if (stopAfter === 'prose') {
+      onProgress?.(`page-${pageNumber}`, 'complete', { prosePage });
+      continue;
+    }
+
+    // Generate visuals for this page
+    const illustratedPage = await pageVisualsAgent({
+      story: storyWithPlot,
+      styleGuide,
+      pageNumber,
+      prosePage,
+    });
+    illustratedPages.push(illustratedPage);
+
+    // Skip render if stopAfter is 'visuals'
+    if (stopAfter === 'visuals') {
+      onProgress?.(`page-${pageNumber}`, 'complete', { prosePage, illustratedPage });
+      continue;
+    }
+
+    // Build composed story for rendering (with pages so far)
+    const currentProse: Prose = {
+      logline: proseSetup.logline,
+      theme: proseSetup.theme,
+      styleNotes: proseSetup.styleNotes,
+      pages: prosePages,
+    };
+    const currentVisuals: VisualDirection = { style: styleGuide, illustratedPages };
+    const currentStory: ComposedStory = { ...storyWithPlot, prose: currentProse, visuals: currentVisuals };
+
+    // Render this page
+    const renderedPage = await renderPage(currentStory, pageNumber);
+    renderedPages.push(renderedPage);
+
+    onProgress?.(`page-${pageNumber}`, 'complete', { prosePage, illustratedPage, renderedPage });
+    onPageComplete?.(pageNumber, renderedPage);
   }
 
-  // Assemble Prose
+  // Assemble final outputs
   const prose: Prose = {
     logline: proseSetup.logline,
     theme: proseSetup.theme,
     styleNotes: proseSetup.styleNotes,
     pages: prosePages,
   };
+  const visuals: VisualDirection = { style: styleGuide, illustratedPages };
   const storyWithProse: StoryWithProse = { ...storyWithPlot, prose };
+  const story: ComposedStory = { ...storyWithProse, visuals };
 
-  // Check stopAfter for prose
+  // Return early for partial runs
   if (stopAfter === 'prose') {
     if (outputManager) {
       await outputManager.saveProse(storyWithProse);
     }
-    onProgress?.('prose', 'complete', prose);
     return { stage: 'prose', storyWithPlot, prose };
   }
 
-  // Step 3: Generate all illustrated pages
-  const illustratedPages: IllustratedPage[] = [];
-  for (let i = 0; i < storyWithPlot.pageCount; i++) {
-    const pageNumber = i + 1;
-    const illustratedPage = await pageVisualsAgent({
-      story: storyWithPlot,
-      styleGuide,
-      pageNumber,
-      prosePage: prosePages[i]!,
-    });
-    illustratedPages.push(illustratedPage);
-  }
-
-  // Assemble VisualDirection
-  const visuals: VisualDirection = { style: styleGuide, illustratedPages };
-
-  // Check stopAfter for visuals
   if (stopAfter === 'visuals') {
     if (outputManager) {
-      await outputManager.saveStory({ ...storyWithProse, visuals });
+      await outputManager.saveStory(story);
     }
-    onProgress?.('visuals', 'complete', visuals);
     return { stage: 'visuals', storyWithProse, visuals };
-  }
-
-  // Step 4: Render each page
-  const renderedPages: RenderedPage[] = [];
-  const story: ComposedStory = { ...storyWithProse, visuals };
-
-  for (let i = 0; i < storyWithPlot.pageCount; i++) {
-    const pageNumber = i + 1;
-    onProgress?.(`page-${pageNumber}`, 'start');
-
-    const renderedPage = await renderPage(story, pageNumber);
-    renderedPages.push(renderedPage);
-
-    onProgress?.(`page-${pageNumber}`, 'complete', renderedPage);
-    onPageComplete?.(pageNumber, renderedPage);
   }
 
   // Step 5: Assemble final book
