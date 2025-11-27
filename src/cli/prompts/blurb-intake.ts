@@ -1,6 +1,6 @@
 import { input, select, Separator } from '@inquirer/prompts';
 import ora from 'ora';
-import type { StoryBrief, StoryBlurb } from '../../core/schemas';
+import type { StoryBrief, StoryWithPlot } from '../../core/schemas';
 import { blurbGeneratorAgent } from '../../core/agents/blurb-generator';
 import {
   blurbConversationAgent,
@@ -13,28 +13,32 @@ import { detectApproval } from '../../core/agents/approval-detector';
  * LLM-driven blurb iteration flow
  *
  * 1. Generate initial plot beats from StoryBrief
- * 2. Present to user with chips for improvements
- * 3. Apply changes and iterate until approved
+ * 2. Compose StoryWithPlot = { ...brief, plot: PlotStructure }
+ * 3. Present to user with chips for improvements
+ * 4. Apply changes and iterate until approved
  */
-export async function runBlurbIntake(brief: StoryBrief): Promise<StoryBlurb> {
+export async function runBlurbIntake(brief: StoryBrief): Promise<StoryWithPlot> {
   console.log('\nLet\'s plan your story\'s plot beats!\n');
 
-  // Step 1: Generate initial blurb
+  // Step 1: Generate initial plot structure
   const spinner = ora('Creating plot outline...').start();
-  let currentBlurb = await blurbGeneratorAgent(brief);
+  const plot = await blurbGeneratorAgent(brief);
   spinner.stop();
+
+  // Step 2: Compose StoryWithPlot
+  let currentStory: StoryWithPlot = { ...brief, plot };
 
   const history: BlurbMessage[] = [];
 
-  // Step 2: Iterate until approved
+  // Step 3: Iterate until approved
   while (true) {
     const responseSpinner = ora('Preparing...').start();
-    const response = await blurbConversationAgent(currentBlurb, history);
+    const response = await blurbConversationAgent(currentStory, history);
     responseSpinner.stop();
 
     if (response.isApproved) {
       console.log('\nPlot approved! Moving on to writing...\n');
-      return currentBlurb;
+      return currentStory;
     }
 
     // Display message and chips
@@ -62,12 +66,13 @@ export async function runBlurbIntake(brief: StoryBrief): Promise<StoryBlurb> {
 
     if (isApproval) {
       console.log('\nPlot approved! Moving on to writing...\n');
-      return currentBlurb;
+      return currentStory;
     }
 
-    // Apply changes
+    // Apply changes - interpreter returns new PlotStructure
     const updateSpinner = ora('Updating plot...').start();
-    currentBlurb = await blurbInterpreterAgent(finalAnswer, currentBlurb);
+    const updatedPlot = await blurbInterpreterAgent(finalAnswer, currentStory);
+    currentStory = { ...currentStory, plot: updatedPlot };
     updateSpinner.stop();
 
     // Update history

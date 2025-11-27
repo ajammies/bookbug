@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type {
   StoryBrief,
-  StoryBlurb,
+  StoryWithPlot,
   Manuscript,
   Story,
   RenderedBook,
@@ -23,8 +23,8 @@ export interface StoryOutputManager {
   folder: string;
   /** Save StoryBrief to brief.json */
   saveBrief(brief: StoryBrief): Promise<void>;
-  /** Save StoryBlurb to blurb.json */
-  saveBlurb(blurb: StoryBlurb): Promise<void>;
+  /** Save StoryWithPlot to blurb.json (composed brief + plot) */
+  saveBlurb(story: StoryWithPlot): Promise<void>;
   /** Save Manuscript to manuscript.json */
   saveManuscript(manuscript: Manuscript): Promise<void>;
   /** Save Story to story.json */

@@ -1,11 +1,23 @@
 import { Command } from 'commander';
 import { executePipeline } from '../../core/pipeline';
-import type { Manuscript, Story, RenderedBook } from '../../core/schemas';
+import type { Manuscript, Story, RenderedBook, StoryWithPlot, StoryBlurb } from '../../core/schemas';
 import { runStoryIntake } from '../prompts/story-intake';
 import { runBlurbIntake } from '../prompts/blurb-intake';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
+
+/**
+ * TEMPORARY ADAPTER: Convert StoryWithPlot to StoryBlurb for pipeline compatibility.
+ * This will be removed once the full pipeline is migrated to composed types.
+ */
+const toStoryBlurb = (story: StoryWithPlot): StoryBlurb => {
+  const { plot, ...brief } = story;
+  return {
+    brief,
+    ...plot,
+  };
+};
 
 export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
@@ -24,11 +36,13 @@ export const createCommand = new Command('create')
       await outputManager.saveBrief(brief);
       console.log(`\nStory folder created: ${outputManager.folder}`);
 
-      // Step 2: Get StoryBlurb via plot iteration
-      const blurb = await runBlurbIntake(brief);
-      await outputManager.saveBlurb(blurb);
+      // Step 2: Get StoryWithPlot via plot iteration
+      const storyWithPlot = await runBlurbIntake(brief);
+      await outputManager.saveBlurb(storyWithPlot);
 
       // Step 3: Run pipeline from blurb to book
+      // TEMPORARY: Convert to StoryBlurb until pipeline is fully migrated
+      const blurb = toStoryBlurb(storyWithPlot);
       const result = await executePipeline(blurb, {
         onProgress: (step, status) => {
           if (status === 'start') {

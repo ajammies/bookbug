@@ -2,7 +2,7 @@ import { generateObject } from 'ai';
 import {
   BlurbConversationResponseSchema,
   type BlurbConversationResponse,
-  type StoryBlurb,
+  type StoryWithPlot,
 } from '../schemas';
 import { getModel } from '../config';
 
@@ -28,19 +28,21 @@ export type BlurbMessage = {
 
 /**
  * BlurbConversationAgent: Presents plot beats and gathers feedback
+ *
+ * Takes StoryWithPlot (composed type) which includes both the brief and plot structure.
  */
 export const blurbConversationAgent = async (
-  currentBlurb: StoryBlurb,
+  story: StoryWithPlot,
   history: BlurbMessage[]
 ): Promise<BlurbConversationResponse> => {
-  const blurbContext = `Current StoryBlurb:\n${JSON.stringify(currentBlurb, null, 2)}`;
+  const storyContext = `Current Story:\n${JSON.stringify(story, null, 2)}`;
 
   const { object } = await generateObject({
     model: getModel(),
     schema: BlurbConversationResponseSchema,
     system: SYSTEM_PROMPT,
     messages: [
-      { role: 'user', content: blurbContext },
+      { role: 'user', content: storyContext },
       ...history,
     ],
   });
