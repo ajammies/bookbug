@@ -54,14 +54,17 @@
 
 # Agent design
 - Never hardcode what an LLM can decide - use `generateObject`, not `if (text.includes(...))`
-- Agent, should be like pure functions - single transformation, no side effects, small scope.
+- Agent, should be like pure functions - single transformation, no side effects, small scope
+- Name agents after their OUTPUT type (e.g., `proseAgent` outputs `Prose`)
 - Schema-first - define Zod schema before prompt, schema IS the contract
 - Add .describe() to Zod Schemas as a way of concisely prompting the AI to fill the field correctly
 - Trust the model - don't over-prescribe what it already understands (approval, extraction, conversation)
 - Provide domain knowledge, not step-by-step instructions - the model knows how to converse
 
 # Skills
-- use the skill-creator skill when creating or updating skills
+- Use skill-creator skill when creating or updating skills
+- Use reflection skill at session end or after significant work
+- Use agent-design skill when implementing or reviewing agents
 
 # Schema descriptions (.describe())
 - `.describe()` is a mini-prompt to guide the model on ambiguous fields
@@ -74,6 +77,14 @@
 - Update tests when editing code, never leave stale
 - Run `npm run test:run` and `npm run typecheck` before PR
 
+# Documentation
+- Test Mermaid diagrams render before committing (GitHub preview or local tool)
+- Validate markdown links and formatting in docs/
+
+# Background processes
+- Kill stale background processes before trusting their output
+- Always run fresh typecheck/tests before committing
+
 # PR checklist
 - [ ] No global mutable state
 - [ ] Single-responsibility functions
@@ -82,3 +93,4 @@
 - [ ] Intuitive file organization
 - [ ] No premature abstractions
 - [ ] Code is easy to delete
+- [ ] Documentation renders correctly (Mermaid, markdown)
