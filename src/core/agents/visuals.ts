@@ -1,8 +1,9 @@
 import { generateObject } from 'ai';
+import { z } from 'zod';
 import {
   VisualDirectionSchema,
   VisualStyleGuideSchema,
-  IllustratedPageSchema,
+  IllustrationBeatSchema,
   type StoryWithPlot,
   type StoryWithProse,
   type VisualDirection,
@@ -117,6 +118,11 @@ Shot composition principles:
 - Match composition to emotional beat
 - Consider page layout (full bleed, framed, spot illustration)`;
 
+// Schema for just the beats (pageNumber is known input, not LLM output)
+const PageBeatsSchema = z.object({
+  beats: z.array(IllustrationBeatSchema).min(1).describe('Illustration beats for this page'),
+});
+
 /**
  * PageVisualsAgent: Generates illustration beats for a single page
  */
@@ -133,10 +139,14 @@ export const pageVisualsAgent = async (input: PageVisualsInput): Promise<Illustr
 
   const { object } = await generateObject({
     model: getModel(),
-    schema: IllustratedPageSchema,
+    schema: PageBeatsSchema,
     system: PAGE_VISUALS_PROMPT,
     prompt: JSON.stringify(context, null, 2),
   });
 
-  return object;
+  // Construct IllustratedPage with known pageNumber
+  return {
+    pageNumber,
+    beats: object.beats,
+  };
 };
