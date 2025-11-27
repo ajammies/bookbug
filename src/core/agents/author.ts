@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
 import { ManuscriptSchema, type StoryBlurb, type Manuscript } from '../schemas';
+import { getModel } from '../config';
 import type { AuthorAgent } from './index';
 
 const SYSTEM_PROMPT = `You are a children's book author. Given a StoryBlurb (with brief and plot beats), write a complete manuscript with text for each page.
@@ -31,7 +31,7 @@ Keep the tone consistent. Honor the plot beats. Make it magical.`;
  */
 export const authorAgent: AuthorAgent = async (blurb: StoryBlurb): Promise<Manuscript> => {
   const { object } = await generateObject({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: getModel(),
     schema: ManuscriptSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(blurb, null, 2),

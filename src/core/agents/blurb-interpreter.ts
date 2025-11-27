@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
 import { StoryBlurbSchema, type StoryBlurb } from '../schemas';
+import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `You modify a StoryBlurb's plot beats based on user feedback.
 
@@ -36,7 +36,7 @@ export const blurbInterpreterAgent = async (
   const contextualPrompt = `Current StoryBlurb:\n${JSON.stringify(currentBlurb, null, 2)}\n\nUser feedback:\n${userFeedback}`;
 
   const { object } = await generateObject({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: getModel(),
     schema: StoryBlurbSchema,
     system: SYSTEM_PROMPT,
     prompt: contextualPrompt,

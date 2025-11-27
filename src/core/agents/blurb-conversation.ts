@@ -1,10 +1,10 @@
 import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
 import {
   BlurbConversationResponseSchema,
   type BlurbConversationResponse,
   type StoryBlurb,
 } from '../schemas';
+import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `You help users refine their story's plot beats through conversation.
 
@@ -50,7 +50,7 @@ export const blurbConversationAgent = async (
   const blurbContext = `Current StoryBlurb:\n${JSON.stringify(currentBlurb, null, 2)}`;
 
   const { object } = await generateObject({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: getModel(),
     schema: BlurbConversationResponseSchema,
     system: SYSTEM_PROMPT,
     messages: [

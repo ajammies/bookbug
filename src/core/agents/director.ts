@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
 import { StorySchema, type Manuscript, type Story } from '../schemas';
+import { getModel } from '../config';
 import type { DirectorAgent } from './index';
 
 const SYSTEM_PROMPT = `You are an art director for children's picture books. Given a Manuscript, create a complete visual Story with detailed shot compositions for each beat.
@@ -28,7 +28,7 @@ Output a complete Story ready for illustration.`;
  */
 export const directorAgent: DirectorAgent = async (manuscript: Manuscript): Promise<Story> => {
   const { object } = await generateObject({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: getModel(),
     schema: StorySchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(manuscript, null, 2),

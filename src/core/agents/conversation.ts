@@ -1,10 +1,10 @@
 import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
 import {
   ConversationResponseSchema,
   type ConversationResponse,
   type StoryBrief,
 } from '../schemas';
+import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `You guide users through creating a StoryBrief by asking focused questions about what's missing.
 
@@ -61,7 +61,7 @@ export const conversationAgent = async (
   const briefContext = `Current StoryBrief state:\n${JSON.stringify(currentBrief, null, 2)}`;
 
   const { object } = await generateObject({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: getModel(),
     schema: ConversationResponseSchema,
     system: SYSTEM_PROMPT,
     messages: [

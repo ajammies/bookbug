@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
 import { StoryBlurbSchema, type StoryBrief, type StoryBlurb } from '../schemas';
+import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `You are a children's book story planner. Given a StoryBrief, expand it into a StoryBlurb with detailed plot beats.
 
@@ -27,7 +27,7 @@ Keep language simple - these will guide page-by-page writing.`;
  */
 export const blurbGeneratorAgent = async (brief: StoryBrief): Promise<StoryBlurb> => {
   const { object } = await generateObject({
-    model: anthropic('claude-sonnet-4-5-20250929'),
+    model: getModel(),
     schema: StoryBlurbSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(brief, null, 2),
