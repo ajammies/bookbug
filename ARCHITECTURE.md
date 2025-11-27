@@ -88,8 +88,8 @@ All types are defined in `src/core/schemas/index.ts`. Key schemas:
 | Schema | Description |
 |--------|-------------|
 | `Story` | Complete visual story (normalized blob) |
-| `StoryPage` | Page with visual beats |
-| `StoryBeat` | Single illustration: shot composition, characters, emotion |
+| `IllustratedPage` | Page with visual beats |
+| `IllustrationBeat` | Single illustration: shot composition, characters, emotion |
 | `VisualStyleGuide` | Global art direction, lighting, colors |
 | `ShotComposition` | Camera: size, angle, POV, staging, cinematography |
 
@@ -105,8 +105,8 @@ All types are defined in `src/core/schemas/index.ts`. Key schemas:
 ### Output Types
 | Schema | Description |
 |--------|-------------|
-| `Book` | Final rendered book with pages and images |
-| `BookPage` | Page with text and rendered images |
+| `RenderedBook` | Final rendered book with pages and images |
+| `RenderedPage` | Page with rendered image URL |
 | `RenderedImage` | Generated image: url, dimensions, metadata |
 
 ---
@@ -244,7 +244,7 @@ Story {
     pages: Record<pageNum, ManuscriptPage>  // Lookup table
   }
   style: VisualStyleGuide
-  pages: StoryPage[]                        // References lookups by ID
+  pages: IllustratedPage[]                  // References lookups by ID
 }
 ```
 
