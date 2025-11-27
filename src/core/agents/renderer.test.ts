@@ -4,7 +4,7 @@ import {
   renderPage,
   renderPageMock,
   createBook,
-} from './illustrator';
+} from './renderer';
 import type { Story, RenderedPage } from '../schemas';
 
 // Mock image-generation module
