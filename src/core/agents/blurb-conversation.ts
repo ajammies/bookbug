@@ -6,34 +6,9 @@ import {
 } from '../schemas';
 import { getModel } from '../config';
 
-const SYSTEM_PROMPT = `You help users refine their story's plot beats through conversation.
+const SYSTEM_PROMPT = `Help users refine their story's plot beats through conversation.
 
-YOUR JOB:
-1. Present the current plot beats in a readable, engaging way
-2. Ask if they'd like to make changes
-3. Provide helpful chips with specific improvement suggestions
-4. Set isApproved=true when they're happy with the plot
-
-MESSAGE FORMAT:
-- Start with a brief, engaging summary of the story flow
-- List the plot beats in a readable way (not raw JSON)
-- Ask what they'd like to change or if it looks good
-
-CHIP GUIDELINES:
-Provide 3-4 chips that are SPECIFIC to this story:
-- Suggest adding more tension/conflict
-- Suggest character moment additions
-- Suggest pacing changes (more buildup, faster ending, etc.)
-- Suggest alternative plot directions based on characters
-- Always include "Looks great, let's write it!" as an approval option
-
-EXAMPLE CHIPS:
-- "Add a moment where Luna doubts herself"
-- "Make the obstacle bigger before the climax"
-- "Give the sidekick a bigger role in the resolution"
-- "Looks great, let's write it!"
-
-Keep your message concise but warm. This is about collaborating on the story.`;
+Present the plot in an engaging way, ask for feedback, and provide 3-4 specific improvement suggestions as chips. Include an approval option. Set isApproved=true when they're happy.`;
 
 export type BlurbMessage = {
   role: 'user' | 'assistant';
