@@ -7,6 +7,7 @@ import {
   type BlurbMessage,
 } from '../../core/agents/blurb-conversation';
 import { blurbInterpreterAgent } from '../../core/agents/blurb-interpreter';
+import { isApprovalResponse } from '../../core/utils/approval';
 
 /**
  * LLM-driven blurb iteration flow
@@ -54,13 +55,8 @@ export async function runBlurbIntake(brief: StoryBrief): Promise<StoryBlurb> {
       ? await input({ message: 'Your feedback:' })
       : answer;
 
-    // Check if user approved
-    const approvalPhrases = ['looks great', 'looks good', 'let\'s write', 'let\'s go', 'approved', 'perfect'];
-    const isApproval = approvalPhrases.some(phrase =>
-      finalAnswer.toLowerCase().includes(phrase)
-    );
-
-    if (isApproval) {
+    // Check if user approved (skip interpreter call for efficiency)
+    if (isApprovalResponse(finalAnswer)) {
       console.log('\n✅ Plot approved! Moving on to writing...\n');
       return currentBlurb;
     }
