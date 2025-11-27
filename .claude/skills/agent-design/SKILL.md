@@ -1,20 +1,27 @@
 ---
 name: agent-design
-description: Guide for designing AI agents using Vercel AI SDK generateObject with Zod schemas. Use when creating or modifying any agent, writing generateObject calls, designing Zod schemas for LLM output, or debugging NoObjectGeneratedError.
+description: |
+  Design AI agents using Vercel AI SDK generateObject with Zod schemas.
+
+  Triggers: "create an agent", "new agent for X", "fix NoObjectGeneratedError", "agent isn't returning correct schema", "design a Zod schema for generateObject", "why is the model returning wrong values", "split this into smaller agents".
+
+  Covers: agent architecture, Zod schema patterns, .describe() usage, prompting for structured output, error handling.
 ---
 
 # Agent Design
 
-Design agents as pure functions: single transformation, no side effects, small scope.
+## Overview
 
-## Core Principles
+Agents are pure functions: one input → one transformation → one output.
 
-1. **Schema-first** - Define Zod schema before prompt; schema IS the contract
-2. **Never hardcode what an LLM can decide** - Use `generateObject`, not `if (text.includes(...))`
-3. **Trust the model** - Don't over-prescribe what it already understands
-4. **Provide domain knowledge, not step-by-step instructions**
+## Principles
 
-## Agent Structure
+- **Schema-first** — Define Zod schema before prompt; schema IS the contract
+- **Never hardcode LLM decisions** — Use `generateObject`, not `if (text.includes(...))`
+- **Trust the model** — Don't over-prescribe what it already understands
+- **Domain knowledge > instructions** — Tell it WHAT constraints exist, not HOW to think
+
+## Template
 
 ```typescript
 import { generateObject } from 'ai';
@@ -34,53 +41,45 @@ export const myAgent = async (input: Input): Promise<Output> => {
 };
 ```
 
-## When to Create an Agent
+## When to Use / Not Use
 
-**Create an agent when:**
-- Transforming unstructured input to structured output
-- Decisions require reasoning beyond if/else logic
-- Output requires creativity or domain understanding
+| Create Agent | Don't Create Agent |
+|--------------|-------------------|
+| Unstructured → structured | Simple validation |
+| Requires reasoning | Deterministic transforms |
+| Needs creativity | Pattern matching suffices |
 
-**Don't create an agent when:**
-- Simple validation or parsing
-- Deterministic transformations
-- Pattern matching suffices
+## References
 
-## Schema Design
+| Topic | File | When to Read |
+|-------|------|--------------|
+| Schema patterns | [zod-patterns.md](references/zod-patterns.md) | Designing schemas, using `.describe()` |
+| Prompting | [prompting-guide.md](references/prompting-guide.md) | Writing system prompts |
+| Errors | [error-handling.md](references/error-handling.md) | NoObjectGeneratedError, debugging |
 
-See [references/zod-patterns.md](references/zod-patterns.md) for detailed patterns.
+## Success Criteria
 
-**Quick rules:**
-- Use `.describe()` on ambiguous fields as mini-prompts
-- Prefer `.nullable()` over `.optional()` for LLM reliability
-- Keep top-level as object, not array
-- Enums need descriptive values or `.describe()`
-
-## Prompting
-
-See [references/prompting-guide.md](references/prompting-guide.md) for patterns.
-
-**Quick rules:**
-- Domain knowledge > step-by-step instructions
-- Concrete examples > verbose explanations
-- Age-appropriate context when relevant
-- System prompt for role/context, user prompt for input data
-
-## Error Handling
-
-See [references/error-handling.md](references/error-handling.md) for NoObjectGeneratedError patterns.
-
-**Quick fix:** Add `.describe()` to the failing field.
+A well-designed agent:
+- Has < 20 schema fields (split if larger)
+- System prompt < 500 words
+- Single return statement
+- All ambiguous fields have `.describe()`
+- Tests pass for valid input, edge cases, malformed input
 
 ## Checklist
 
-Before creating/modifying an agent:
-
 - [ ] Schema defined before prompt
-- [ ] `.describe()` on ambiguous or similar fields
+- [ ] `.describe()` on ambiguous/similar fields
 - [ ] System prompt provides domain knowledge, not steps
-- [ ] No hardcoded decisions that LLM could make
 - [ ] Single responsibility (one transformation)
 - [ ] Input/output types explicit
-- [ ] Tests cover valid input, edge cases, schema validation
+- [ ] Tests written
 
+## Limitations
+
+This skill does NOT cover:
+- Streaming responses (useChat, streamObject)
+- Tool calling / function calling
+- Multi-turn conversations (use conversation patterns instead)
+- Non-Vercel AI SDK implementations
+- Retry/resilience logic (consider Inngest for that)
