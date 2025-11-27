@@ -21,6 +21,27 @@ A user may ask you create, modify, fix, refactor or improve any agent code. An a
 - **LLMs interpret, not regex** — Never pattern match fuzzy text. Use a small agent instead.
 - **Domain knowledge > instructions** — Tell it WHAT constraints exist, not step-by-step HOW.
 
+## Functional Composition
+
+Large schemas fail. Split into focused agents, each producing one piece:
+
+```
+// Bad: one agent does everything
+StoryBrief → everythingAgent → Story ❌
+
+// Good: chain of focused agents
+StoryBrief → plotAgent → PlotStructure
+StoryWithPlot → proseAgent → Prose
+StoryWithProse → visualsAgent → VisualDirection
+
+// Types compose linearly:
+StoryWithPlot = StoryBrief & { plot: PlotStructure }
+StoryWithProse = StoryWithPlot & { prose: Prose }
+ComposedStory = StoryWithProse & { visuals: VisualDirection }
+```
+
+**Each agent:** ~10-20 fields max, single transformation, independently testable.
+
 ## Template
 
 ```typescript

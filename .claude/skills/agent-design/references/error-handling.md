@@ -21,30 +21,9 @@ if (NoObjectGeneratedError.isInstance(error)) {
 2. **Split into smaller agents** - One agent per logical sub-schema (architectural fix)
 3. **Simplify schema** - Remove nesting, flatten structure
 
-## Pattern: Functional Composition
+## Splitting Agents
 
-Large schemas fail more often. Use pure functional composition with agents named after their output:
-
-```
-// Instead of one agent producing everything:
-StoryBrief → EverythingAgent → Story ❌ Unreliable
-
-// Chain agents, each named after what it outputs:
-StoryBrief → plotAgent → PlotStructure
-StoryWithPlot → proseAgent → Prose
-StoryWithProse → visualsAgent → VisualDirection
-
-// Types compose linearly:
-StoryWithPlot = StoryBrief & { plot: PlotStructure }
-StoryWithProse = StoryWithPlot & { prose: Prose }
-ComposedStory = StoryWithProse & { visuals: VisualDirection }
-```
-
-**Each agent:**
-- Named after its OUTPUT type (`proseAgent` → `Prose`)
-- Has a focused schema (~10-20 fields max)
-- Does one transformation
-- Is independently testable
+Large schemas fail more often. See "Functional Composition" in SKILL.md for the pattern.
 
 ## Common Errors
 
