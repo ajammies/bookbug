@@ -41,16 +41,16 @@ export type StoryCharacter = z.infer<typeof StoryCharacterSchema>;
 // ============================================================
 
 export const StoryBriefSchema = z.object({
-  title: z.string().min(1),
-  storyArc: z.string().min(1),
-  setting: z.string().min(1),
+  title: z.string().min(1).describe('Working title for the story'),
+  storyArc: z.string().min(1).describe('The narrative arc or journey (e.g., "hero overcomes fear")'),
+  setting: z.string().min(1).describe('Where and when the story takes place'),
   ageRange: AgeRangeSchema,
   pageCount: z.number().int().min(8).max(32).default(24),
   characters: z.array(StoryCharacterSchema).min(1),
-  tone: z.string().optional(),
-  moral: z.string().optional(),
-  interests: z.array(z.string().min(1)).default([]),
-  customInstructions: z.array(z.string().min(1)).default([]),
+  tone: z.string().optional().describe('Emotional tone (e.g., "whimsical", "heartfelt")'),
+  moral: z.string().optional().describe('Lesson or takeaway for the reader'),
+  interests: z.array(z.string().min(1)).default([]).describe('Topics the child enjoys'),
+  customInstructions: z.array(z.string().min(1)).default([]).describe('Special requests from the user'),
 });
 
 export type StoryBrief = z.infer<typeof StoryBriefSchema>;
@@ -60,17 +60,17 @@ export type StoryBrief = z.infer<typeof StoryBriefSchema>;
 // ============================================================
 
 export const ConversationResponseSchema = z.object({
-  question: z.string().min(1),
-  chips: z.array(z.string().min(1)),
-  isComplete: z.boolean(),
+  question: z.string().min(1).describe('The next question to ask the user'),
+  chips: z.array(z.string().min(1)).describe('3-4 quick-reply suggestions for the user'),
+  isComplete: z.boolean().describe('True when all required StoryBrief fields are filled'),
 });
 
 export type ConversationResponse = z.infer<typeof ConversationResponseSchema>;
 
 export const StoryBlurbSchema = z.object({
   brief: StoryBriefSchema,
-  plotBeats: z.array(z.string().min(1)).default([]),
-  allowCreativeLiberty: z.boolean().default(true),
+  plotBeats: z.array(z.string().min(1)).default([]).describe('Story outline as one beat per page'),
+  allowCreativeLiberty: z.boolean().default(true).describe('Whether the author can embellish beyond the beats'),
 });
 
 export type StoryBlurb = z.infer<typeof StoryBlurbSchema>;
@@ -80,9 +80,9 @@ export type StoryBlurb = z.infer<typeof StoryBlurbSchema>;
 // ============================================================
 
 export const BlurbConversationResponseSchema = z.object({
-  message: z.string().min(1),
-  chips: z.array(z.string().min(1)),
-  isApproved: z.boolean(),
+  message: z.string().min(1).describe('Response to the user about their story plot'),
+  chips: z.array(z.string().min(1)).describe('3-4 suggestions including an approval option'),
+  isApproved: z.boolean().describe('True when the user approves the plot beats'),
 });
 
 export type BlurbConversationResponse = z.infer<typeof BlurbConversationResponseSchema>;
@@ -92,9 +92,9 @@ export type BlurbConversationResponse = z.infer<typeof BlurbConversationResponse
 // ============================================================
 
 export const ManuscriptPageSchema = z.object({
-  summary: z.string().min(1),
-  text: z.string().min(1),
-  imageConcept: z.string().min(1),
+  summary: z.string().min(1).describe('Brief description of what happens on this page'),
+  text: z.string().min(1).describe('The prose that will appear on the page'),
+  imageConcept: z.string().min(1).describe('Description of the illustration for this page'),
 });
 
 export type ManuscriptPage = z.infer<typeof ManuscriptPageSchema>;
@@ -102,12 +102,12 @@ export type ManuscriptPage = z.infer<typeof ManuscriptPageSchema>;
 // Manuscript metadata (without pages, for embedding in Story)
 export const ManuscriptMetaSchema = z.object({
   title: z.string().min(1),
-  logline: z.string().min(1),
-  theme: z.string().min(1),
+  logline: z.string().min(1).describe('One-sentence story summary'),
+  theme: z.string().min(1).describe('Central theme or message'),
   setting: z.string().min(1),
   moral: z.string().optional(),
   tone: z.string().optional(),
-  styleNotes: z.string().optional(),
+  styleNotes: z.string().optional().describe('Notes on writing style for this story'),
 });
 
 export type ManuscriptMeta = z.infer<typeof ManuscriptMetaSchema>;
@@ -117,15 +117,15 @@ export type ManuscriptMeta = z.infer<typeof ManuscriptMetaSchema>;
 export const ManuscriptSchema = z.object({
   blurb: StoryBlurbSchema,
   title: z.string().min(1),
-  logline: z.string().min(1),
-  theme: z.string().min(1),
+  logline: z.string().min(1).describe('One-sentence story summary'),
+  theme: z.string().min(1).describe('Central theme or message'),
   setting: z.string().min(1),
   moral: z.string().optional(),
   ageRange: AgeRangeSchema,
   tone: z.string().optional(),
-  styleNotes: z.string().optional(),
+  styleNotes: z.string().optional().describe('Notes on writing style for this story'),
   characters: z.array(StoryCharacterSchema).min(1),
-  pages: z.array(ManuscriptPageSchema).min(1),
+  pages: z.array(ManuscriptPageSchema).min(1).describe('One ManuscriptPage per page of the book'),
   pageCount: z.number().int().min(8).max(32),
 })
 .refine((manuscript) => manuscript.pages.length === manuscript.pageCount, {
@@ -274,22 +274,22 @@ export type ShotComposition = z.infer<typeof ShotCompositionSchema>;
 // BeatCharacter: concise character reference within a beat.
 // References characters by id (key in Story.characters lookup table).
 export const BeatCharacterSchema = z.object({
-  id: z.string().min(1),
-  expression: z.string().min(1),
-  pose: z.string().min(1),
-  focus: z.enum(['primary', 'secondary', 'background']),
+  id: z.string().min(1).describe('Character ID from Story.characters'),
+  expression: z.string().min(1).describe('Facial expression (e.g., "wide-eyed wonder")'),
+  pose: z.string().min(1).describe('Body posture and action'),
+  focus: z.enum(['primary', 'secondary', 'background']).describe('Visual prominence in the shot'),
 });
 
 export type BeatCharacter = z.infer<typeof BeatCharacterSchema>;
 
 // IllustrationBeat: one visual moment with shot composition
 export const IllustrationBeatSchema = z.object({
-  order: z.number().int().min(1),
-  purpose: z.enum(["setup", "build", "twist", "climax", "payoff", "button"]),
-  summary: z.string().min(1),
-  emotion: z.string().min(1),
+  order: z.number().int().min(1).describe('Sequence within the page (1, 2, 3...)'),
+  purpose: z.enum(["setup", "build", "twist", "climax", "payoff", "button"]).describe('Narrative function of this beat'),
+  summary: z.string().min(1).describe('What is happening visually'),
+  emotion: z.string().min(1).describe('The emotional tone to convey'),
   characters: z.array(BeatCharacterSchema).default([]),
-  setting: SettingPartialSchema.optional(),
+  setting: SettingPartialSchema.optional().describe('Override the global setting for this beat'),
   shot: ShotCompositionSchema,
 });
 
