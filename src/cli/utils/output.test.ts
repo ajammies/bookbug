@@ -64,18 +64,6 @@ describe('createOutputManager', () => {
     );
   });
 
-  it('saveManuscript writes to manuscript.json', async () => {
-    const manager = await createOutputManager('Test Story');
-    const manuscript = { title: 'Test' } as any;
-
-    await manager.saveManuscript(manuscript);
-
-    expect(mockedFs.writeFile).toHaveBeenCalledWith(
-      'output/test-story-20241126-143052/manuscript.json',
-      JSON.stringify(manuscript, null, 2)
-    );
-  });
-
   it('saveStory writes to story.json', async () => {
     const manager = await createOutputManager('Test Story');
     const story = { storyTitle: 'Test' } as any;

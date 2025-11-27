@@ -30,12 +30,12 @@ export const PlotStructureSchema = z.object({
 export type PlotStructure = z.infer<typeof PlotStructureSchema>;
 
 /**
- * BlurbConversationResponse: Output of plotConversationAgent during plot refinement
+ * PlotConversationResponse: Output of plotConversationAgent during plot refinement
  */
-export const BlurbConversationResponseSchema = z.object({
+export const PlotConversationResponseSchema = z.object({
   message: z.string().min(1).describe('Response to the user about their story plot'),
   chips: z.array(z.string().min(1)).describe('3-4 suggestions including an approval option'),
   isApproved: z.boolean().describe('True when the user approves the plot beats'),
 });
 
-export type BlurbConversationResponse = z.infer<typeof BlurbConversationResponseSchema>;
+export type PlotConversationResponse = z.infer<typeof PlotConversationResponseSchema>;

@@ -1,12 +1,9 @@
 import type {
-  StoryBlurb,
   StoryWithPlot,
   StoryWithProse,
   ComposedStory,
   Prose,
   VisualDirection,
-  Manuscript,
-  Story,
   RenderedBook,
   BookFormatKey,
   RenderedPage,
@@ -27,10 +24,7 @@ import {
 export type PipelineResult =
   | { stage: 'prose'; storyWithPlot: StoryWithPlot; prose: Prose }
   | { stage: 'visuals'; storyWithProse: StoryWithProse; visuals: VisualDirection }
-  | { stage: 'book'; story: ComposedStory; book: RenderedBook }
-  // LEGACY: Keep old result shape for backward compatibility during migration
-  | { stage: 'manuscript'; blurb: StoryBlurb; manuscript: Manuscript }
-  | { stage: 'story'; blurb: StoryBlurb; manuscript: Manuscript; story: Story };
+  | { stage: 'book'; story: ComposedStory; book: RenderedBook };
 
 /**
  * Pipeline options
@@ -43,19 +37,7 @@ export interface PipelineOptions {
 }
 
 /**
- * Convert StoryBlurb (legacy) to StoryWithPlot (composed)
- */
-const toStoryWithPlot = (blurb: StoryBlurb): StoryWithPlot => ({
-  ...blurb.brief,
-  plot: {
-    storyArcSummary: blurb.storyArcSummary,
-    plotBeats: blurb.plotBeats,
-    allowCreativeLiberty: blurb.allowCreativeLiberty,
-  },
-});
-
-/**
- * Execute the pipeline from StoryBlurb to rendered book
+ * Execute the pipeline from StoryWithPlot to rendered book
  *
  * Pipeline flow (functional composition):
  *   StoryWithPlot → proseAgent → Prose
@@ -63,13 +45,10 @@ const toStoryWithPlot = (blurb: StoryBlurb): StoryWithPlot => ({
  *   ComposedStory → Renderer → RenderedBook
  */
 export async function executePipeline(
-  blurb: StoryBlurb,
+  storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
   const { onProgress, stopAfter } = options;
-
-  // Convert legacy StoryBlurb to composed StoryWithPlot
-  const storyWithPlot = toStoryWithPlot(blurb);
 
   // Step 1: Write prose from story with plot
   onProgress?.('prose', 'start');

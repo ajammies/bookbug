@@ -59,10 +59,10 @@ erDiagram
         string logline
         string theme
         string styleNotes "optional"
-        ManuscriptPage[] pages
+        ProsePage[] pages
     }
 
-    ManuscriptPage {
+    ProsePage {
         string summary
         string text
         string imageConcept
@@ -170,7 +170,7 @@ erDiagram
         string url
     }
 
-    StorySlice {
+    PageRenderContext {
         string storyTitle
         VisualStyleGuide style
         Record_StoryCharacter characters
@@ -190,7 +190,7 @@ erDiagram
     StoryBrief ||--|| AgeRange : contains
     StoryBrief ||--|{ StoryCharacter : has
     PlotStructure ||--|{ PlotBeat : has
-    Prose ||--|{ ManuscriptPage : has
+    Prose ||--|{ ProsePage : has
     VisualDirection ||--|| VisualStyleGuide : has
     VisualDirection ||--|{ IllustratedPage : has
     IllustratedPage ||--|{ IllustrationBeat : contains
@@ -201,9 +201,9 @@ erDiagram
     VisualStyleGuide ||--|| Setting : contains
     RenderedBook ||--|| AgeRange : contains
     RenderedBook ||--|{ RenderedPage : has
-    StorySlice ||--|| VisualStyleGuide : contains
-    StorySlice ||--|{ StoryCharacter : "filtered characters"
-    StorySlice ||--|| PageSlice : contains
+    PageRenderContext ||--|| VisualStyleGuide : contains
+    PageRenderContext ||--|{ StoryCharacter : "filtered characters"
+    PageRenderContext ||--|| PageSlice : contains
     StoryWithPlot ||--|| StoryBrief : extends
     StoryWithPlot ||--|| PlotStructure : "plot"
     StoryWithProse ||--|| StoryWithPlot : extends
@@ -254,7 +254,7 @@ Agents are named after their output for clarity.
 | `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
 | `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
 | `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
-| `plotConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `BlurbConversationResponse` | Guide plot refinement |
+| `plotConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `PlotConversationResponse` | Guide plot refinement |
 | `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
 | `proseAgent` | `StoryWithPlot` | `Prose` | Write prose from plot |
 | `visualsAgent` | `StoryWithProse` | `VisualDirection` | Create visual direction from prose |
@@ -271,7 +271,7 @@ ConversationResponse {
     isComplete: boolean
 }
 
-BlurbConversationResponse {
+PlotConversationResponse {
     message: string
     chips: string[]
     isApproved: boolean
@@ -285,13 +285,6 @@ BlurbConversationResponse {
 3. **Linear Flow**: Each type extends the previous, building up the story
 4. **Zero Duplication**: Fields exist in exactly one place
 5. **Type Safety**: Zod schemas enforce structure at each stage
-
-## Legacy Types (for reference)
-
-The following types are marked as LEGACY in the codebase and will be removed:
-- `StoryBlurb` - replaced by `StoryWithPlot`
-- `Manuscript` - replaced by `StoryWithProse`
-- `LegacyStory` - replaced by `ComposedStory`
 
 ## Book Formats
 

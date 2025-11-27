@@ -25,18 +25,18 @@ export {
   PlotBeatPurposeSchema,
   PlotBeatSchema,
   PlotStructureSchema,
-  BlurbConversationResponseSchema,
+  PlotConversationResponseSchema,
   type PlotBeatPurpose,
   type PlotBeat,
   type PlotStructure,
-  type BlurbConversationResponse,
+  type PlotConversationResponse,
 } from './plot';
 
 // Stage 3: Prose (proseAgent)
 export {
-  ManuscriptPageSchema,
+  ProsePageSchema,
   ProseSchema,
-  type ManuscriptPage,
+  type ProsePage,
   type Prose,
 } from './prose';
 
@@ -96,11 +96,11 @@ export {
 export {
   RenderedPageSchema,
   RenderedBookSchema,
-  StorySliceSchema,
+  PageRenderContextSchema,
   ImageGenerationResultSchema,
   type RenderedPage,
   type RenderedBook,
-  type StorySlice,
+  type PageRenderContext,
   type ImageGenerationResult,
 } from './render';
 
@@ -113,15 +113,3 @@ export {
   type BookFormatKey,
   type AspectRatio,
 } from './formats';
-
-// Legacy (to be removed)
-export {
-  StoryBlurbSchema,
-  ManuscriptMetaSchema,
-  ManuscriptSchema,
-  LegacyStorySchema,
-  type StoryBlurb,
-  type ManuscriptMeta,
-  type Manuscript,
-  type LegacyStory,
-} from './legacy';

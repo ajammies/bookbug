@@ -1,4 +1,4 @@
-import type { ComposedStory, RenderedBook, RenderedPage, BookFormatKey, StorySlice, StoryCharacter } from '../schemas';
+import type { ComposedStory, RenderedBook, RenderedPage, BookFormatKey, PageRenderContext, StoryCharacter } from '../schemas';
 import { BOOK_FORMATS } from '../schemas';
 import { generatePageImage } from '../services/image-generation';
 
@@ -62,7 +62,7 @@ const toCharacterMap = (characters: StoryCharacter[]): Record<string, StoryChara
  * Filter a ComposedStory to include only data relevant to a specific page.
  * This creates a minimal payload for image generation.
  */
-export const filterStoryForPage = (story: ComposedStory, pageNumber: number): StorySlice => {
+export const filterStoryForPage = (story: ComposedStory, pageNumber: number): PageRenderContext => {
   const illustratedPage = story.visuals.illustratedPages[pageNumber - 1]; // Pages are 1-indexed
   const prosePage = story.prose.pages[pageNumber - 1];
 
@@ -76,7 +76,7 @@ export const filterStoryForPage = (story: ComposedStory, pageNumber: number): St
 
   const relevantCharacters = [...new Set(characterIds)]
     .filter(id => id in allCharacters)
-    .reduce<StorySlice['characters']>((acc, id) => {
+    .reduce<PageRenderContext['characters']>((acc, id) => {
       acc[id] = allCharacters[id]!;
       return acc;
     }, {});

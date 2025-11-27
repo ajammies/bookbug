@@ -1,5 +1,5 @@
 import Replicate from 'replicate';
-import type { StorySlice, BookFormat } from '../schemas';
+import type { PageRenderContext, BookFormat } from '../schemas';
 import { getAspectRatio } from '../schemas';
 
 /**
@@ -54,14 +54,14 @@ const extractImageUrl = (output: unknown): string => {
  * Accepts optional client for dependency injection (useful for testing).
  */
 export const generatePageImage = async (
-  storySlice: StorySlice,
+  context: PageRenderContext,
   format: BookFormat,
   client: Replicate = createReplicateClient()
 ): Promise<GeneratedPage> => {
   try {
     const output = await client.run('google/imagen-3', {
       input: {
-        prompt: JSON.stringify(storySlice),
+        prompt: JSON.stringify(context),
         aspect_ratio: getAspectRatio(format),
       },
     });

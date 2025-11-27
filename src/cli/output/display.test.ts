@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { displayBrief, displayManuscript, displayStory, displayBook } from './display';
-import type { StoryBrief, Manuscript, Story, RenderedBook } from '../../core/schemas';
+import { displayBrief, displayStory, displayBook } from './display';
+import type { StoryBrief, Story, RenderedBook } from '../../core/schemas';
 
 // Mock console.log to capture output
 const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -83,94 +83,6 @@ describe('displayBrief', () => {
 
     const output = consoleSpy.mock.calls.flat().join(' ');
     expect(output).toContain('protagonist');
-  });
-});
-
-describe('displayManuscript', () => {
-  const minimalBlurb = {
-    brief: {
-      title: 'Test',
-      storyArc: 'Test arc',
-      setting: 'Test setting',
-      ageRange: { min: 4, max: 8 },
-      pageCount: 8,
-      characters: [{ name: 'Test', description: 'Test char', traits: [], notes: [] }],
-      interests: [],
-      customInstructions: [],
-    },
-    storyArcSummary: 'A test story about testing',
-    plotBeats: [
-      { purpose: 'setup' as const, description: 'Setup beat' },
-      { purpose: 'conflict' as const, description: 'Conflict beat' },
-      { purpose: 'climax' as const, description: 'Climax beat' },
-      { purpose: 'resolution' as const, description: 'Resolution beat' },
-    ],
-    allowCreativeLiberty: true,
-  };
-
-  const minimalManuscript: Manuscript = {
-    blurb: minimalBlurb,
-    title: 'The Magic Garden',
-    logline: 'A rabbit finds wonder in unexpected places',
-    theme: 'Curiosity and discovery',
-    setting: 'A hidden garden',
-    ageRange: { min: 4, max: 8 },
-    pageCount: 8,
-    characters: [{ name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] }],
-    pages: [
-      { summary: 'Luna finds the gate', text: 'Luna found an old gate.', imageConcept: 'Rabbit at gate' },
-      { summary: 'Luna enters garden', text: 'She pushed it open.', imageConcept: 'Garden entrance' },
-      { summary: 'Luna meets friend', text: 'A butterfly appeared.', imageConcept: 'Butterfly meeting' },
-      { summary: 'They explore', text: 'Together they explored.', imageConcept: 'Exploration' },
-      { summary: 'Discovery', text: 'They found a pond.', imageConcept: 'Pond scene' },
-      { summary: 'Playing', text: 'They played all day.', imageConcept: 'Playing' },
-      { summary: 'Sunset', text: 'The sun began to set.', imageConcept: 'Sunset' },
-      { summary: 'Home', text: 'Luna went home happy.', imageConcept: 'Happy ending' },
-    ],
-  };
-
-  it('displays manuscript title', () => {
-    displayManuscript(minimalManuscript);
-
-    const output = consoleSpy.mock.calls.flat().join(' ');
-    expect(output).toContain('The Magic Garden');
-  });
-
-  it('displays logline', () => {
-    displayManuscript(minimalManuscript);
-
-    const output = consoleSpy.mock.calls.flat().join(' ');
-    expect(output).toContain('A rabbit finds wonder in unexpected places');
-  });
-
-  it('displays first 5 page summaries', () => {
-    displayManuscript(minimalManuscript);
-
-    const output = consoleSpy.mock.calls.flat().join(' ');
-    expect(output).toContain('Luna finds the gate');
-    expect(output).toContain('Luna enters garden');
-    expect(output).toContain('Luna meets friend');
-    expect(output).toContain('They explore');
-    expect(output).toContain('Discovery');
-  });
-
-  it('shows remaining page count when more than 5 pages', () => {
-    displayManuscript(minimalManuscript);
-
-    const output = consoleSpy.mock.calls.flat().join(' ');
-    expect(output).toContain('3 more pages');
-  });
-
-  it('does not show remaining count for 5 or fewer pages', () => {
-    const shortManuscript: Manuscript = {
-      ...minimalManuscript,
-      pageCount: 5,
-      pages: minimalManuscript.pages.slice(0, 5),
-    };
-    displayManuscript(shortManuscript);
-
-    const output = consoleSpy.mock.calls.flat().join(' ');
-    expect(output).not.toContain('more pages');
   });
 });
 

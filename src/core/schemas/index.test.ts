@@ -3,9 +3,7 @@ import {
   AgeRangeSchema,
   StoryCharacterSchema,
   StoryBriefSchema,
-  ManuscriptPageSchema,
-  ManuscriptSchema,
-  StoryBlurbSchema,
+  ProsePageSchema,
   PlotBeatSchema,
   PlotBeatPurposeSchema,
 } from './index';
@@ -143,9 +141,9 @@ describe('StoryBriefSchema', () => {
   });
 });
 
-describe('ManuscriptPageSchema', () => {
+describe('ProsePageSchema', () => {
   it('accepts valid page', () => {
-    const result = ManuscriptPageSchema.safeParse({
+    const result = ProsePageSchema.safeParse({
       summary: 'Luna enters the garden',
       text: 'Luna pushed open the rusty gate.',
       imageConcept: 'A rabbit opening a garden gate',
@@ -154,7 +152,7 @@ describe('ManuscriptPageSchema', () => {
   });
 
   it('rejects empty summary', () => {
-    const result = ManuscriptPageSchema.safeParse({
+    const result = ProsePageSchema.safeParse({
       summary: '',
       text: 'Some text',
       imageConcept: 'Some concept',
@@ -163,7 +161,7 @@ describe('ManuscriptPageSchema', () => {
   });
 
   it('rejects empty text', () => {
-    const result = ManuscriptPageSchema.safeParse({
+    const result = ProsePageSchema.safeParse({
       summary: 'Summary',
       text: '',
       imageConcept: 'Some concept',
@@ -172,79 +170,12 @@ describe('ManuscriptPageSchema', () => {
   });
 
   it('rejects empty imageConcept', () => {
-    const result = ManuscriptPageSchema.safeParse({
+    const result = ProsePageSchema.safeParse({
       summary: 'Summary',
       text: 'Some text',
       imageConcept: '',
     });
     expect(result.success).toBe(false);
-  });
-});
-
-describe('ManuscriptSchema', () => {
-  const validBlurb = {
-    brief: {
-      title: 'The Magic Garden',
-      storyArc: 'Luna discovers a magical garden',
-      setting: 'A hidden garden',
-      ageRange: { min: 4, max: 8 },
-      characters: [{ name: 'Luna', description: 'A curious rabbit' }],
-    },
-    storyArcSummary: 'Luna discovers a magical garden and makes a new friend',
-    plotBeats: [
-      { purpose: 'setup', description: 'Luna finds the garden' },
-      { purpose: 'conflict', description: 'The garden seems abandoned' },
-      { purpose: 'rising_action', description: 'Luna explores deeper' },
-      { purpose: 'climax', description: 'Luna meets a magical creature' },
-      { purpose: 'resolution', description: 'Luna makes a friend' },
-    ],
-    allowCreativeLiberty: true,
-  };
-
-  const validPage = {
-    summary: 'Luna enters',
-    text: 'Luna entered the garden.',
-    imageConcept: 'Rabbit in garden',
-  };
-
-  const validManuscript = {
-    blurb: validBlurb,
-    title: 'The Magic Garden',
-    logline: 'A rabbit discovers magic',
-    theme: 'Curiosity and friendship',
-    setting: 'A magical garden',
-    ageRange: { min: 4, max: 8 },
-    characters: [{ name: 'Luna', description: 'A curious rabbit' }],
-    pages: [validPage, validPage, validPage, validPage, validPage, validPage, validPage, validPage],
-    pageCount: 8,
-  };
-
-  it('accepts valid manuscript', () => {
-    const result = ManuscriptSchema.safeParse(validManuscript);
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects when pages.length !== pageCount', () => {
-    const result = ManuscriptSchema.safeParse({
-      ...validManuscript,
-      pageCount: 10,
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0]?.message).toBe(
-        'pages.length must equal pageCount'
-      );
-    }
-  });
-
-  it('accepts optional fields', () => {
-    const result = ManuscriptSchema.safeParse({
-      ...validManuscript,
-      moral: 'Be curious',
-      tone: 'Whimsical',
-      styleNotes: 'Soft colors',
-    });
-    expect(result.success).toBe(true);
   });
 });
 
@@ -279,84 +210,5 @@ describe('PlotBeatSchema', () => {
       description: '',
     });
     expect(result.success).toBe(false);
-  });
-});
-
-describe('StoryBlurbSchema', () => {
-  const validBrief = {
-    title: 'The Magic Garden',
-    storyArc: 'Luna discovers a magical garden',
-    setting: 'A hidden garden',
-    ageRange: { min: 4, max: 8 },
-    characters: [{ name: 'Luna', description: 'A curious rabbit' }],
-  };
-
-  const validPlotBeats = [
-    { purpose: 'setup', description: 'Luna finds the garden' },
-    { purpose: 'conflict', description: 'The garden seems abandoned' },
-    { purpose: 'rising_action', description: 'Luna explores deeper' },
-    { purpose: 'climax', description: 'Luna meets a magical creature' },
-    { purpose: 'resolution', description: 'Luna makes a friend' },
-  ];
-
-  it('accepts valid blurb with structured beats', () => {
-    const result = StoryBlurbSchema.safeParse({
-      brief: validBrief,
-      storyArcSummary: 'Luna discovers a magical garden and makes a friend',
-      plotBeats: validPlotBeats,
-      allowCreativeLiberty: true,
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts minimum 4 beats', () => {
-    const result = StoryBlurbSchema.safeParse({
-      brief: validBrief,
-      storyArcSummary: 'A story',
-      plotBeats: validPlotBeats.slice(0, 4),
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects fewer than 4 beats', () => {
-    const result = StoryBlurbSchema.safeParse({
-      brief: validBrief,
-      storyArcSummary: 'A story',
-      plotBeats: validPlotBeats.slice(0, 3),
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects more than 6 beats', () => {
-    const result = StoryBlurbSchema.safeParse({
-      brief: validBrief,
-      storyArcSummary: 'A story',
-      plotBeats: [
-        ...validPlotBeats,
-        { purpose: 'rising_action', description: 'Extra beat 1' },
-        { purpose: 'rising_action', description: 'Extra beat 2' },
-      ],
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('requires storyArcSummary', () => {
-    const result = StoryBlurbSchema.safeParse({
-      brief: validBrief,
-      plotBeats: validPlotBeats,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('applies default allowCreativeLiberty', () => {
-    const result = StoryBlurbSchema.safeParse({
-      brief: validBrief,
-      storyArcSummary: 'A story',
-      plotBeats: validPlotBeats,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.allowCreativeLiberty).toBe(true);
-    }
   });
 });

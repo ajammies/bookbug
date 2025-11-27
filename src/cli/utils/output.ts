@@ -3,7 +3,6 @@ import * as path from 'path';
 import type {
   StoryBrief,
   StoryWithPlot,
-  Manuscript,
   Story,
   RenderedBook,
 } from '../../core/schemas';
@@ -25,8 +24,6 @@ export interface StoryOutputManager {
   saveBrief(brief: StoryBrief): Promise<void>;
   /** Save StoryWithPlot to blurb.json (composed brief + plot) */
   saveBlurb(story: StoryWithPlot): Promise<void>;
-  /** Save Manuscript to manuscript.json */
-  saveManuscript(manuscript: Manuscript): Promise<void>;
   /** Save Story to story.json */
   saveStory(story: Story): Promise<void>;
   /** Save RenderedBook to book.json */
@@ -82,7 +79,6 @@ const createManager = (folder: string): StoryOutputManager => ({
   folder,
   saveBrief: (brief) => saveJson(folder, 'brief.json', brief),
   saveBlurb: (blurb) => saveJson(folder, 'blurb.json', blurb),
-  saveManuscript: (manuscript) => saveJson(folder, 'manuscript.json', manuscript),
   saveStory: (story) => saveJson(folder, 'story.json', story),
   saveBook: (book) => saveJson(folder, 'book.json', book),
 });

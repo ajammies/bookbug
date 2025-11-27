@@ -25,10 +25,9 @@ export const RenderedBookSchema = z.object({
 export type RenderedBook = z.infer<typeof RenderedBookSchema>;
 
 /**
- * StorySlice: filtered Story data for a single page
- * Contains only the information needed to generate one illustration
+ * PageRenderContext: Context needed to render a single page illustration
  */
-export const StorySliceSchema = z.object({
+export const PageRenderContextSchema = z.object({
   storyTitle: z.string().min(1),
   style: VisualStyleGuideSchema,
   characters: z.record(z.string(), StoryCharacterSchema),
@@ -39,7 +38,7 @@ export const StorySliceSchema = z.object({
   }),
 });
 
-export type StorySlice = z.infer<typeof StorySliceSchema>;
+export type PageRenderContext = z.infer<typeof PageRenderContextSchema>;
 
 /**
  * ImageGenerationResult: raw output from image generation API

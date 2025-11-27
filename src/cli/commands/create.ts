@@ -1,6 +1,5 @@
 import { Command } from 'commander';
 import { executePipeline } from '../../core/pipeline';
-import type { StoryWithPlot, StoryBlurb } from '../../core/schemas';
 import { runStoryIntake } from '../prompts/story-intake';
 import { runPlotIntake } from '../prompts/plot-intake';
 import { createSpinner, formatStep } from '../output/progress';
@@ -8,18 +7,6 @@ import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-
-/**
- * TEMPORARY ADAPTER: Convert StoryWithPlot to StoryBlurb for pipeline compatibility.
- * This will be removed once the full pipeline is migrated to composed types.
- */
-const toStoryBlurb = (story: StoryWithPlot): StoryBlurb => {
-  const { plot, ...brief } = story;
-  return {
-    brief,
-    ...plot,
-  };
-};
 
 export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
@@ -42,10 +29,8 @@ export const createCommand = new Command('create')
       const storyWithPlot = await runPlotIntake(brief);
       await outputManager.saveBlurb(storyWithPlot);
 
-      // Step 3: Run pipeline from blurb to book
-      // TEMPORARY: Convert to StoryBlurb until pipeline is fully migrated
-      const blurb = toStoryBlurb(storyWithPlot);
-      const result = await executePipeline(blurb, {
+      // Step 3: Run pipeline from StoryWithPlot to book
+      const result = await executePipeline(storyWithPlot, {
         onProgress: (step, status) => {
           if (status === 'start') {
             spinner.start(formatStep(step));

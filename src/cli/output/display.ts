@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { StoryBrief, Manuscript, Story, RenderedBook } from '../../core/schemas';
+import type { StoryBrief, Story, RenderedBook } from '../../core/schemas';
 
 /**
  * Display a StoryBrief summary
@@ -19,27 +19,6 @@ export function displayBrief(brief: StoryBrief): void {
   for (const char of brief.characters) {
     console.log(`  • ${chalk.cyan(char.name)} (${char.role || 'character'})`);
     console.log(`    ${chalk.gray(char.description)}`);
-  }
-}
-
-/**
- * Display a Manuscript summary
- */
-export function displayManuscript(manuscript: Manuscript): void {
-  console.log('\n' + chalk.bold.green('Manuscript'));
-  console.log(chalk.gray('─'.repeat(50)));
-  console.log(chalk.bold('Title:'), manuscript.title);
-  console.log(chalk.bold('Logline:'), manuscript.logline);
-  console.log(chalk.bold('Theme:'), manuscript.theme);
-  console.log(chalk.bold('Pages:'), manuscript.pageCount);
-
-  console.log(chalk.bold('\nPage Summaries:'));
-  for (let i = 0; i < Math.min(5, manuscript.pages.length); i++) {
-    const page = manuscript.pages[i]!;
-    console.log(`  ${chalk.yellow(`Page ${i + 1}:`)} ${page.summary}`);
-  }
-  if (manuscript.pages.length > 5) {
-    console.log(chalk.gray(`  ... and ${manuscript.pages.length - 5} more pages`));
   }
 }
 

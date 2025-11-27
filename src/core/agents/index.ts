@@ -1,14 +1,8 @@
 import type {
-  StoryBrief,
   StoryWithPlot,
   StoryWithProse,
   Prose,
   VisualDirection,
-  Story,
-  RenderedBook,
-  // Legacy types (to be removed)
-  StoryBlurb,
-  Manuscript,
 } from '../schemas';
 
 /**
@@ -21,12 +15,6 @@ export type Agent<Input, Output> = (input: Input) => Promise<Output>;
  */
 export type ProseAgentType = Agent<StoryWithPlot, Prose>;
 export type VisualsAgentType = Agent<StoryWithProse, VisualDirection>;
-
-/**
- * LEGACY agent types (to be removed after full migration)
- */
-export type LegacyAuthorAgent = Agent<StoryBlurb, Manuscript>;
-export type LegacyIllustratorAgent = Agent<Manuscript, Story>;
 
 /**
  * Progress callback for pipeline steps
