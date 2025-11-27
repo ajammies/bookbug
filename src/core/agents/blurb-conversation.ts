@@ -6,9 +6,20 @@ import {
 } from '../schemas';
 import { getModel } from '../config';
 
-const SYSTEM_PROMPT = `Help users refine their story's plot beats through conversation.
+const SYSTEM_PROMPT = `Display the story arc and plot beats, then ask which to change.
 
-Present the plot in an engaging way, ask for feedback, and provide 3-4 specific improvement suggestions as chips. Include an approval option. Set isApproved=true when they're happy.`;
+Format your message as:
+"[storyArcSummary]"
+
+1. [Setup] description
+2. [Conflict] description
+3. [Rising Action] description
+4. [Climax] description
+5. [Resolution] description
+
+Which beat would you like to change?
+
+Chips should reference specific beats (e.g., "Strengthen the climax", "Add tension to beat 3") or offer approval. Set isApproved=true when the user approves.`;
 
 export type BlurbMessage = {
   role: 'user' | 'assistant';

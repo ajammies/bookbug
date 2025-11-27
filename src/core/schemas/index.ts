@@ -67,9 +67,27 @@ export const ConversationResponseSchema = z.object({
 
 export type ConversationResponse = z.infer<typeof ConversationResponseSchema>;
 
+export const PlotBeatPurposeSchema = z.enum([
+  'setup',
+  'conflict',
+  'rising_action',
+  'climax',
+  'resolution',
+]);
+
+export type PlotBeatPurpose = z.infer<typeof PlotBeatPurposeSchema>;
+
+export const PlotBeatSchema = z.object({
+  purpose: PlotBeatPurposeSchema.describe('Narrative function of this beat'),
+  description: z.string().min(1).describe('What happens in this beat'),
+});
+
+export type PlotBeat = z.infer<typeof PlotBeatSchema>;
+
 export const StoryBlurbSchema = z.object({
   brief: StoryBriefSchema,
-  plotBeats: z.array(z.string().min(1)).default([]).describe('Story outline as one beat per page'),
+  storyArcSummary: z.string().min(1).describe('1-2 sentence story arc summary'),
+  plotBeats: z.array(PlotBeatSchema).min(4).max(6).describe('Key story structure beats'),
   allowCreativeLiberty: z.boolean().default(true).describe('Whether the author can embellish beyond the beats'),
 });
 

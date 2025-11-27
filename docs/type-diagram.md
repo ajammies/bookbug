@@ -32,9 +32,15 @@ erDiagram
         string[] notes
     }
 
+    PlotBeat {
+        enum purpose "setup|conflict|rising_action|climax|resolution"
+        string description
+    }
+
     StoryBlurb {
         StoryBrief brief
-        string[] plotBeats
+        string storyArcSummary
+        PlotBeat[] plotBeats "4-6 beats"
         boolean allowCreativeLiberty
     }
 
@@ -175,6 +181,7 @@ erDiagram
     StoryBrief ||--|| AgeRange : contains
     StoryBrief ||--|{ StoryCharacter : has
     StoryBlurb ||--|| StoryBrief : contains
+    StoryBlurb ||--|{ PlotBeat : has
     Manuscript ||--|| StoryBlurb : contains
     Manuscript ||--|| AgeRange : contains
     Manuscript ||--|{ StoryCharacter : has
