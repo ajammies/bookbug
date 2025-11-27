@@ -17,7 +17,7 @@ import { detectApproval } from '../../core/agents/approval-detector';
  * 3. Apply changes and iterate until approved
  */
 export async function runBlurbIntake(brief: StoryBrief): Promise<StoryBlurb> {
-  console.log('\n📝 Let\'s plan your story\'s plot beats!\n');
+  console.log('\nLet\'s plan your story\'s plot beats!\n');
 
   // Step 1: Generate initial blurb
   const spinner = ora('Creating plot outline...').start();
@@ -33,7 +33,7 @@ export async function runBlurbIntake(brief: StoryBrief): Promise<StoryBlurb> {
     responseSpinner.stop();
 
     if (response.isApproved) {
-      console.log('\n✅ Plot approved! Moving on to writing...\n');
+      console.log('\nPlot approved! Moving on to writing...\n');
       return currentBlurb;
     }
 
@@ -61,7 +61,7 @@ export async function runBlurbIntake(brief: StoryBrief): Promise<StoryBlurb> {
     approvalSpinner.stop();
 
     if (isApproval) {
-      console.log('\n✅ Plot approved! Moving on to writing...\n');
+      console.log('\nPlot approved! Moving on to writing...\n');
       return currentBlurb;
     }
 

@@ -1,12 +1,8 @@
 /**
- * Utility functions for generating story folder names
- */
-
-/**
- * Convert a title to a URL-friendly slug
+ * Convert a title to a file-safe name
  * - Lowercase, hyphenated, max 50 chars
  */
-export const titleToSlug = (title: string): string => {
+export const titleToFileSafeName = (title: string): string => {
   return title
     .toLowerCase()
     .trim()
@@ -18,20 +14,20 @@ export const titleToSlug = (title: string): string => {
 };
 
 /**
- * Generate timestamp in YYYYMMDD-HHmmss format
+ * Format timestamp as YYYYMMDD-HHmmss
  */
-export const getTimestamp = (): string => {
+export const formatTimestamp = (): string => {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 };
 
 /**
- * Generate a story folder name from a title
- * Format: {slug}-{timestamp}
+ * Create a story folder name from a title
+ * Format: {name}-{timestamp}
  * Example: "the-magic-garden-20241126-143052"
  */
-export const generateStoryFolder = (title: string): string => {
-  const slug = titleToSlug(title) || 'untitled-story';
-  return `${slug}-${getTimestamp()}`;
+export const createStoryFolderName = (title: string): string => {
+  const name = titleToFileSafeName(title) || 'untitled-story';
+  return `${name}-${formatTimestamp()}`;
 };

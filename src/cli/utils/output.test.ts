@@ -9,7 +9,7 @@ import {
 
 vi.mock('fs/promises');
 vi.mock('./naming', () => ({
-  generateStoryFolder: vi.fn(() => 'test-story-20241126-143052'),
+  createStoryFolderName: vi.fn(() => 'test-story-20241126-143052'),
 }));
 
 const mockedFs = vi.mocked(fs);
