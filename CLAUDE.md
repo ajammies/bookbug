@@ -14,36 +14,43 @@
 
 # Workflow
 - Changes should be small, contained, and atomic
-- New features: plan first → branch from main → atomic commits → run tests → create PR
+- New features: 
+  - Enter Planning mode to create plan, write to `/plans/plan-<feature-name>.md` and wait for user approval
+    - plan includes goals, approach, files to change, test strategy   
+  - branch from main
+  - implement features
+    - atomic commit
+    - clear git message to explain to user
+    - wait for user feedback
+    - repeat
+  - evaluate changes according to CLAUDE.md and suggest improvements
+  - run tests and fix issues
+  - create PR and send link to user for approval 
+  - merge pr
+  - reflect on user feedback, and suggest new skills or claude.md changes
 
-# Planning
-- Create plan in `/plans/plan-<feature-name>.md` and wait for user approval before implementing
-- Plans include: goals, approach, files to change, test strategy
-
-# Branch naming
-- `feat/` new features, `fix/` bug fixes, `refactor/` no behavior change, `docs/` documentation, `chore/` maintenance
 
 # Philosophy (Carmack-inspired)
 - Make it as simple as possible, but not simpler
+- Code that is easy to follow and read
 - Write code that is easy to delete - loose coupling, no tentacles across files
 - Keep functions small enough to fit in your head
 - Don't abstract until you see the pattern three times
 - Prefer explicit over implicit - no magic
 
 # Code style
-- Pure functions, immutability, no side effects
+- Pure functions, immutability, no side effects, simple
+- Explicit types for data flowing between functions
+- think: can I simply make the first expression of this function return? 
 - Standalone exported functions, not classes
 - Data flows through parameters, not global state
 - Intuitive file organization - things live where you'd expect
-
-# Function design
 - 2-3 params: direct arguments; 4+: options object
-- One function, one job - if name has "and", split it
 - External services injectable via optional params with factory defaults
-
-# Types
-- Explicit types for data flowing between functions
 - Zod schemas for external API responses
+
+# Branch naming
+- `feat/` new features, `fix/` bug fixes, `refactor/` no behavior change, `docs/` documentation, 
 
 # Agent design
 - Never hardcode what an LLM can decide - use `generateObject`, not `if (text.includes(...))`
