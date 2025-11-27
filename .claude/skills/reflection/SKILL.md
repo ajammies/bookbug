@@ -1,95 +1,40 @@
 ---
 name: reflection
-description: End-of-session reflection for continuous improvement. Use when the user asks to reflect on work done, proposes improvements, or at natural session endpoints after significant work. Triggers on "reflect", "what did we learn", "improve CLAUDE.md", or session wrap-up requests.
+description: End-of-session reflection for continuous improvement. Use when user asks to reflect, after merging PRs, or at session end. Outputs improvement recommendations table.
 ---
 
 # Reflection
 
-Structured end-of-session analysis to capture learnings and improve future work.
+Analyze session and recommend improvements.
 
-## When to Reflect
+## Steps
 
-- User explicitly asks for reflection
-- After merging a significant PR
-- After completing a multi-step feature
-- When patterns or anti-patterns emerge during work
+1. Review full chat history for user feedback (corrections, preferences, frustrations)
+2. Note what was accomplished and what caused friction
+3. Output recommendations table
 
-## Reflection Framework
+## Output
 
-### 1. What Was Accomplished
+### Session Summary
 
-List concrete deliverables:
-- Files changed/created
-- Features implemented
-- Bugs fixed
-- PRs merged
+Brief recap: what was done, what worked, what didn't.
 
-### 2. What Went Well
+### Recommendations
 
-Identify effective patterns:
-- Approaches that worked
-- Tools used effectively
-- Communication that helped
+| Type | Priority | Change | Why |
+|------|----------|--------|-----|
+| `claude.md` | high | Add X | User corrected this twice |
+| `skill` | medium | Update Y | Missing pattern |
+| `new-skill` | low | Create Z | Repeated workflow |
 
-### 3. What Could Be Improved
+## Reference
 
-Identify friction points:
-- Mistakes made (and root cause)
-- Time wasted on preventable issues
-- Missing context or tools
+**Types:**
+- `claude.md` — Project conventions
+- `skill` — Update existing skill
+- `new-skill` — New repeatable workflow
 
-### 4. Proposed Improvements
-
-For each improvement, specify the target:
-
-| Target | When to Use |
-|--------|-------------|
-| CLAUDE.md | Project-wide conventions, workflows, commands |
-| Existing skill | Domain-specific guidance that needs updating |
-| New skill | Repeatable workflow not yet captured |
-| User feedback | Behavioral changes for future sessions |
-
-### 5. Format Proposals
-
-**CLAUDE.md additions** - Use this format:
-```markdown
-# Section Name
-- One line per concept
-- Be concise
-```
-
-**Skill updates** - Use skill-creator skill to modify
-
-**New skills** - Use skill-creator skill to create
-
-## Output Structure
-
-Present reflection as a table + proposals:
-
-```markdown
-## Session Reflection
-
-| Category | Details |
-|----------|---------|
-| Accomplished | [bulleted list] |
-| Went well | [patterns] |
-| Could improve | [friction points] |
-
-## Proposed Improvements
-
-### CLAUDE.md
-[specific additions in markdown format]
-
-### Skills
-[updates or new skills needed]
-
-### For Next Time
-[behavioral changes to remember]
-```
-
-## Anti-Patterns to Avoid
-
-- Vague reflections ("things went well")
-- Improvements without specific targets
-- Proposals that duplicate existing guidance
-- Over-engineering simple observations
+**Priority:**
+- `high` — Caused errors or user corrections
+- `medium` — Would help efficiency
+- `low` — Nice to have
