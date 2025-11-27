@@ -1,3 +1,8 @@
+# Editing CLAUDE.md
+- One concept = one line (be concise, represent entire concept in a single line)
+- Never remove lines without explicit instruction
+- Add new lines, don't rewrite existing ones
+
 # MCP instructions
 Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask.
 
@@ -79,30 +84,10 @@ Always use context7 when I need code generation, setup or configuration steps, o
 - Extract complex type manipulation into separate helper functions when it aids clarity
 
 # Agent design
-Best practices for LLM-powered agents using `generateObject`.
-
-## Never hardcode what an LLM can decide
-- **Bad:** Hardcoded phrase matching for user intent (`if (text.includes('looks good'))`)
-- **Good:** Small focused agent that uses `generateObject` to determine intent
-- LLMs handle natural language variations, typos, and context that regex/includes never will
-- When in doubt, let the model decide - that's what it's for
-
-## One agent, one job
-- Each agent should do exactly one thing well
-- `detectApproval()` returns `{ isApproval: boolean }` - nothing else
-- `blurbInterpreterAgent()` modifies plot beats - doesn't also detect approval
-- Compose small agents rather than building monolithic ones
-
-## Schema-first design
-- Define the output schema before writing the prompt
-- Use Zod schemas with `generateObject` for type-safe responses
-- The schema IS the contract - make it explicit and minimal
-
-## Prompt structure
-- System prompt defines the agent's role and rules
-- User prompt provides the specific input to process
-- Keep system prompts focused - don't overload with edge cases
-- Let the schema constrain outputs, not verbose prompt instructions
+- Never hardcode what an LLM can decide - use `generateObject` for intent detection, not `if (text.includes(...))`
+- One agent, one job - `detectApproval()` returns `{ isApproval: boolean }`, nothing else
+- Schema-first design - define Zod output schema before writing the prompt, schema IS the contract
+- System prompt = role/rules, user prompt = input to process, let schema constrain outputs
 
 # Testing
 Tests are co-located with source files (`file.ts` → `file.test.ts`).
