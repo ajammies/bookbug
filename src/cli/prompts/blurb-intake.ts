@@ -7,6 +7,7 @@ import {
   type BlurbMessage,
 } from '../../core/agents/blurb-conversation';
 import { blurbInterpreterAgent } from '../../core/agents/blurb-interpreter';
+import { detectApproval } from '../../core/agents/approval-detector';
 
 /**
  * LLM-driven blurb iteration flow
@@ -54,11 +55,10 @@ export async function runBlurbIntake(brief: StoryBrief): Promise<StoryBlurb> {
       ? await input({ message: 'Your feedback:' })
       : answer;
 
-    // Check if user approved
-    const approvalPhrases = ['looks great', 'looks good', 'let\'s write', 'let\'s go', 'approved', 'perfect'];
-    const isApproval = approvalPhrases.some(phrase =>
-      finalAnswer.toLowerCase().includes(phrase)
-    );
+    // Use LLM to detect if user approved (handles natural language variations)
+    const approvalSpinner = ora('Processing...').start();
+    const isApproval = await detectApproval(finalAnswer);
+    approvalSpinner.stop();
 
     if (isApproval) {
       console.log('\n✅ Plot approved! Moving on to writing...\n');
