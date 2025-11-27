@@ -56,7 +56,9 @@
 - Never hardcode what an LLM can decide - use `generateObject`, not `if (text.includes(...))`
 - One agent, one job - `detectApproval()` returns `{ isApproval: boolean }`, nothing else
 - Schema-first - define Zod schema before prompt, schema IS the contract
-- Prompts should be simple and clear, don't over-explain
+- Trust the model - don't over-prescribe what it already understands (approval, extraction, conversation)
+- Provide domain knowledge, not step-by-step instructions - the model knows how to converse
+- Over-prescription causes overfitting - model follows rules rigidly instead of using intelligence
 
 # Testing
 - Tests co-located: `file.ts` → `file.test.ts`
