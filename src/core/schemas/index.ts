@@ -392,6 +392,41 @@ export const VisualDirectionSchema = z.object({
 export type VisualDirection = z.infer<typeof VisualDirectionSchema>;
 
 // ============================================================
+// COMPOSED TYPES: Linear pipeline composition
+// ============================================================
+
+/**
+ * StoryWithPlot: StoryBrief + PlotStructure
+ * Result of running blurb generator on a StoryBrief.
+ */
+export const StoryWithPlotSchema = StoryBriefSchema.extend({
+  plot: PlotStructureSchema,
+});
+
+export type StoryWithPlot = z.infer<typeof StoryWithPlotSchema>;
+
+/**
+ * StoryWithProse: StoryWithPlot + Prose
+ * Result of running author agent on a StoryWithPlot.
+ */
+export const StoryWithProseSchema = StoryWithPlotSchema.extend({
+  prose: ProseSchema,
+});
+
+export type StoryWithProse = z.infer<typeof StoryWithProseSchema>;
+
+/**
+ * ComposedStory: StoryWithProse + VisualDirection
+ * The complete story ready for rendering.
+ * This is the NEW Story type that will replace LegacyStory.
+ */
+export const ComposedStorySchema = StoryWithProseSchema.extend({
+  visuals: VisualDirectionSchema,
+});
+
+export type ComposedStory = z.infer<typeof ComposedStorySchema>;
+
+// ============================================================
 // LEGACY: Story (old self-contained blob) - to be replaced
 // ============================================================
 
