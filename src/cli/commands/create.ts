@@ -6,7 +6,7 @@ import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
 import { createLogger } from '../../core/utils/logger';
-import { tailLogFile, getLogPath } from '../utils/log-tailer';
+import { getLogPath } from '../utils/log-tailer';
 
 export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
@@ -17,11 +17,10 @@ export const createCommand = new Command('create')
     const spinner = createSpinner();
     let outputManager: StoryOutputManager;
 
-    // Create logger and log tailer for real-time status
+    // Create logger for file logging
     const logger = createLogger();
     const runId = logger.bindings()?.runId as string | undefined;
     const logPath = runId ? getLogPath(runId) : null;
-    const tailer = logPath ? tailLogFile(logPath, (msg) => spinner.text = msg) : null;
 
     try {
       // Step 1: Get StoryBrief via chat intake
@@ -49,6 +48,9 @@ export const createCommand = new Command('create')
             spinner.succeed(formatStep(step, true));
           }
         },
+        onThinking: (msg) => {
+          spinner.text = msg;
+        },
         outputManager: options.save !== false ? outputManager : undefined,
       });
 
@@ -58,7 +60,5 @@ export const createCommand = new Command('create')
       spinner.fail('Pipeline failed');
       console.error(error);
       process.exit(1);
-    } finally {
-      tailer?.stop();
     }
   });
