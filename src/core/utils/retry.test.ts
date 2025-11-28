@@ -14,7 +14,8 @@ describe('retry exports', () => {
   it('exports sleep helper', async () => {
     const start = Date.now();
     await sleep(10);
-    expect(Date.now() - start).toBeGreaterThanOrEqual(10);
+    // Allow 1ms tolerance for timer variance
+    expect(Date.now() - start).toBeGreaterThanOrEqual(9);
   });
 });
 

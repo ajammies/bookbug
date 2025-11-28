@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { runProse } from '../../core/pipeline';
+import { generateProse } from '../../core/pipeline';
 import { StoryWithPlotSchema, type Prose } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { getOrCreateOutputManager } from '../utils/output';
@@ -30,21 +30,14 @@ export const writeCommand = new Command('write')
 
       // Generate prose
       spinner.start('Writing prose...');
-      const prose = await runProse(storyWithPlot);
+      const storyWithProse = await generateProse(storyWithPlot);
       spinner.succeed('Prose written');
 
-      displayProse(prose);
+      displayProse(storyWithProse.prose);
 
       // Save prose to story folder
       const outputManager = await getOrCreateOutputManager(storyFile, storyWithPlot.title);
-      // Save the full StoryWithProse
-      const storyWithProse = { ...storyWithPlot, prose };
-      const proseFs = await import('fs/promises');
-      const path = await import('path');
-      await proseFs.writeFile(
-        path.join(outputManager.folder, 'prose.json'),
-        JSON.stringify(storyWithProse, null, 2)
-      );
+      await outputManager.saveProse(storyWithProse);
       console.log(`\nProse saved to: ${outputManager.folder}/prose.json`);
     } catch (error) {
       spinner.fail('Failed to write prose');

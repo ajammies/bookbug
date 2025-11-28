@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { runVisuals } from '../../core/pipeline';
+import { generateVisuals } from '../../core/pipeline';
 import { StoryWithProseSchema, type VisualDirection } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { getOrCreateOutputManager } from '../utils/output';
@@ -31,15 +31,13 @@ export const directCommand = new Command('direct')
 
       // Generate visual direction
       spinner.start('Creating visual direction...');
-      const visuals = await runVisuals(storyWithProse);
+      const composedStory = await generateVisuals(storyWithProse);
       spinner.succeed('Visual direction complete');
 
-      displayVisuals(visuals);
+      displayVisuals(composedStory.visuals);
 
       // Save to story folder
       const outputManager = await getOrCreateOutputManager(proseFile, storyWithProse.title);
-      // Save the full ComposedStory
-      const composedStory = { ...storyWithProse, visuals };
       await outputManager.saveStory(composedStory);
       console.log(`\nStory saved to: ${outputManager.folder}/story.json`);
     } catch (error) {

@@ -29,7 +29,7 @@ export const createCommand = new Command('create')
       await outputManager.saveBlurb(storyWithPlot);
 
       // Step 3: Run pipeline from StoryWithPlot to book
-      const result = await executePipeline(storyWithPlot, {
+      const { book } = await executePipeline(storyWithPlot, {
         onProgress: (step, status) => {
           if (status === 'start') {
             spinner.start(formatStep(step));
@@ -40,12 +40,7 @@ export const createCommand = new Command('create')
         outputManager: options.save !== false ? outputManager : undefined,
       });
 
-      // Pipeline always completes to 'book' stage here
-      if (result.stage !== 'book') {
-        throw new Error('Pipeline did not complete');
-      }
-
-      displayBook(result.book);
+      displayBook(book);
       console.log(`\nAll files saved to: ${outputManager.folder}`);
     } catch (error) {
       spinner.fail('Pipeline failed');

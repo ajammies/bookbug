@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { executePipeline, runVisuals, runBook } from '../../core/pipeline';
+import { executeIncrementalPipeline, generateVisuals, renderBook } from '../../core/pipeline';
 import {
   StoryWithPlotSchema,
   StoryWithProseSchema,
@@ -113,13 +113,10 @@ export const resumeCommand = new Command('resume')
           const story = StorySchema.parse(await loadJson(info.latestFile));
 
           spinner.start('Rendering book...');
-          const book = await runBook(story, {
+          const book = await renderBook(story, {
             mock: options.mock,
             format: options.format,
             outputManager,
-            onPageRendered: (page) => {
-              spinner.text = `Rendered page ${page.pageNumber}/${story.visuals.illustratedPages.length}`;
-            },
           });
           spinner.succeed('Book rendered');
 
@@ -135,20 +132,16 @@ export const resumeCommand = new Command('resume')
           const storyWithProse = StoryWithProseSchema.parse(await loadJson(info.latestFile));
 
           spinner.start('Creating visual direction...');
-          const visuals = await runVisuals(storyWithProse);
+          const story = await generateVisuals(storyWithProse);
           spinner.succeed('Visual direction complete');
 
-          const story = { ...storyWithProse, visuals };
           await outputManager.saveStory(story);
 
           spinner.start('Rendering book...');
-          const book = await runBook(story, {
+          const book = await renderBook(story, {
             mock: options.mock,
             format: options.format,
             outputManager,
-            onPageRendered: (page) => {
-              spinner.text = `Rendered page ${page.pageNumber}/${story.visuals.illustratedPages.length}`;
-            },
           });
           spinner.succeed('Book rendered');
 
@@ -163,7 +156,7 @@ export const resumeCommand = new Command('resume')
           console.log('\n📍 Resuming from: blurb.json (prose + visuals + rendering)');
           const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(info.latestFile));
 
-          const result = await executePipeline(storyWithPlot, {
+          const result = await executeIncrementalPipeline(storyWithPlot, {
             onProgress: (step, status) => {
               if (status === 'start') {
                 spinner.start(formatStep(step));
@@ -172,14 +165,8 @@ export const resumeCommand = new Command('resume')
               }
             },
             outputManager,
-            onPageComplete: (pageNumber) => {
-              console.log(`  ✓ Page ${pageNumber} complete`);
-            },
+            format: options.format,
           });
-
-          if (result.stage !== 'book') {
-            throw new Error('Pipeline did not complete');
-          }
 
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);
