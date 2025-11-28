@@ -154,7 +154,7 @@ export type BeatCharacter = z.infer<typeof BeatCharacterSchema>;
 // IllustrationBeat: one visual moment with shot composition
 export const IllustrationBeatSchema = z.object({
   order: z.number().int().min(1).describe('Sequence within the page (1, 2, 3...)'),
-  purpose: z.enum(['setup', 'build', 'twist', 'climax', 'payoff', 'button']).describe('Narrative function of this beat'),
+  purpose: z.enum(['setup', 'build', 'twist', 'climax', 'payoff', 'button']).describe('Visual narrative beat: setup (establish), build (develop tension), twist (surprise), climax (peak moment), payoff (reward), button (final punctuation). Use payoff for resolution moments.'),
   summary: z.string().min(1).describe('What is happening visually'),
   emotion: z.string().min(1).describe('The emotional tone to convey'),
   characters: z.array(BeatCharacterSchema).default([]),
