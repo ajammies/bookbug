@@ -13,6 +13,12 @@ import { sleep } from '../utils/retry';
 const IMAGE_MODEL = 'google/nano-banana-pro';
 const DEFAULT_RESOLUTION = '2K'; // Options: '1K', '2K', '4K'
 
+const RENDER_INSTRUCTIONS = `Generate the image pricesly as described below.
+
+IMPORTANT: Render the page text directly on the image. Choose a font that befits the scene. You may make comic book onomonpia too where appropriate. Position the text in a clear area that doesn't obscure key visual elements.
+
+Page context:`;
+
 export interface GeneratedPage {
   /** Temporary URL from Replicate (expires after ~24h) */
   url: string;
@@ -127,10 +133,14 @@ const runWithRateLimit = async (
   }
 };
 
+/** Build the full prompt with rendering instructions */
+const buildPrompt = (context: PageRenderContext): string =>
+  `${RENDER_INSTRUCTIONS}\n${JSON.stringify(context, null, 2)}`;
+
 /**
  * Generate a page image using Google Nano Banana Pro via Replicate
  *
- * Passes the filtered Story JSON directly as the prompt.
+ * Passes rendering instructions plus filtered Story JSON as the prompt.
  * Handles rate limits internally with retry-after.
  */
 export const generatePageImage = async (
@@ -139,7 +149,7 @@ export const generatePageImage = async (
   client: Replicate = createReplicateClient()
 ): Promise<GeneratedPage> => {
   const output = await runWithRateLimit(client, {
-    prompt: JSON.stringify(context),
+    prompt: buildPrompt(context),
     aspect_ratio: getAspectRatio(format),
     resolution: DEFAULT_RESOLUTION,
     output_format: 'png',

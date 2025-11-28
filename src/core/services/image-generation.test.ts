@@ -117,7 +117,7 @@ describe('generatePageImage', () => {
     ).rejects.toThrow('Unexpected output format from Replicate model');
   });
 
-  it('passes story slice as JSON string prompt', async () => {
+  it('passes render instructions and story context as prompt', async () => {
     const mockRun = vi.fn().mockResolvedValue(['https://example.com/image.png']);
     const mockClient = createMockClient(mockRun);
 
@@ -126,9 +126,10 @@ describe('generatePageImage', () => {
     const callArgs = mockRun.mock.calls[0]?.[1] as { input: { prompt: string } };
     const prompt = callArgs.input.prompt;
 
-    const parsed = JSON.parse(prompt);
-    expect(parsed.storyTitle).toBe('The Magic Garden');
-    expect(parsed.page.text).toBe('Luna found an old garden gate.');
+    // Prompt includes render instructions followed by JSON context
+    expect(prompt).toContain('Render the page text directly on the image');
+    expect(prompt).toContain('"storyTitle": "The Magic Garden"');
+    expect(prompt).toContain('"text": "Luna found an old garden gate."');
   });
 
   it('uses correct aspect ratio for square format', async () => {
