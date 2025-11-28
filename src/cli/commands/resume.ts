@@ -23,20 +23,30 @@ interface StoryFolderInfo {
 }
 
 /**
- * Find the latest story folder in output directory
+ * Find the latest story folder in output directory by modification time
  */
 const findLatestStoryFolder = async (): Promise<string | null> => {
   try {
     const entries = await fs.readdir(OUTPUT_DIR, { withFileTypes: true });
-    const folders = entries
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name)
-      .sort()
-      .reverse(); // Most recent first (timestamp in name)
+    const folders = entries.filter((e) => e.isDirectory()).map((e) => e.name);
 
-    const latest = folders[0];
+    if (folders.length === 0) return null;
+
+    // Get modification times for each folder
+    const foldersWithTimes = await Promise.all(
+      folders.map(async (name) => {
+        const folderPath = path.join(OUTPUT_DIR, name);
+        const stat = await fs.stat(folderPath);
+        return { name, mtime: stat.mtimeMs };
+      })
+    );
+
+    // Sort by modification time, most recent first
+    foldersWithTimes.sort((a, b) => b.mtime - a.mtime);
+
+    const latest = foldersWithTimes[0];
     if (!latest) return null;
-    return path.join(OUTPUT_DIR, latest);
+    return path.join(OUTPUT_DIR, latest.name);
   } catch {
     return null;
   }
