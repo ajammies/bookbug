@@ -12,6 +12,7 @@ import {
   type ProsePage,
 } from '../schemas';
 import { getModel } from '../config';
+import { createRepairFunction } from '../utils/repair';
 
 const SYSTEM_PROMPT = `You are an illustrator for children's picture books. Given a story with prose, create visual direction for each page.
 
@@ -47,6 +48,9 @@ export const visualsAgent = async (story: StoryWithProse): Promise<VisualDirecti
     schema: VisualDirectionSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(story, null, 2),
+    experimental_repairText: createRepairFunction(
+      'IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button'
+    ),
   });
 
   return object;
@@ -81,6 +85,7 @@ export const styleGuideAgent = async (story: StoryWithPlot): Promise<VisualStyle
     schema: VisualStyleGuideSchema,
     system: STYLE_GUIDE_PROMPT,
     prompt: JSON.stringify(story, null, 2),
+    experimental_repairText: createRepairFunction(),
   });
 
   return object;
@@ -142,6 +147,9 @@ export const pageVisualsAgent = async (input: PageVisualsInput): Promise<Illustr
     schema: PageBeatsSchema,
     system: PAGE_VISUALS_PROMPT,
     prompt: JSON.stringify(context, null, 2),
+    experimental_repairText: createRepairFunction(
+      'IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button'
+    ),
   });
 
   // Construct IllustratedPage with known pageNumber
