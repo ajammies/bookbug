@@ -23,7 +23,7 @@ import {
   type OnStepProgress,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
-import { withRetry, RateLimitError } from './utils/retry';
+import { pRetry, RateLimitError, sleep } from './utils/retry';
 
 /**
  * Pipeline result - discriminated union based on completion stage
@@ -124,12 +124,17 @@ export async function executePipeline(
     const currentStory: ComposedStory = { ...storyWithPlot, prose: currentProse, visuals: currentVisuals };
 
     // Render this page (with retry for rate limits)
-    const renderedPage = await withRetry(
+    const renderedPage = await pRetry(
       () => renderPage(currentStory, pageNumber),
       {
-        maxRetries,
-        onRetry: (attempt, error, delayMs) => {
-          onRetry?.(pageNumber, attempt, error, delayMs);
+        retries: maxRetries,
+        randomize: true,
+        onFailedAttempt: async ({ error, attemptNumber }) => {
+          const delayMs = error instanceof RateLimitError ? error.retryAfterMs : 0;
+          onRetry?.(pageNumber, attemptNumber, error, delayMs);
+          if (error instanceof RateLimitError) {
+            await sleep(error.retryAfterMs);
+          }
         },
       }
     );
@@ -220,12 +225,17 @@ export async function runBook(
   for (const storyPage of story.visuals.illustratedPages) {
     const page = mock
       ? renderPageMock(storyPage.pageNumber)
-      : await withRetry(
+      : await pRetry(
           () => renderPage(story, storyPage.pageNumber, format),
           {
-            maxRetries,
-            onRetry: (attempt, error, delayMs) => {
-              onRetry?.(storyPage.pageNumber, attempt, error, delayMs);
+            retries: maxRetries,
+            randomize: true,
+            onFailedAttempt: async ({ error, attemptNumber }) => {
+              const delayMs = error instanceof RateLimitError ? error.retryAfterMs : 0;
+              onRetry?.(storyPage.pageNumber, attemptNumber, error, delayMs);
+              if (error instanceof RateLimitError) {
+                await sleep(error.retryAfterMs);
+              }
             },
           }
         );
