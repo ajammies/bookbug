@@ -3,6 +3,7 @@ import { runProse } from '../../core/pipeline';
 import { StoryWithPlotSchema, type Prose } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { getOrCreateOutputManager } from '../utils/output';
+import { loadJson } from '../../utils';
 
 /**
  * Display prose summary
@@ -24,9 +25,7 @@ export const writeCommand = new Command('write')
     try {
       // Load and validate story with plot
       spinner.start('Loading story...');
-      const fs = await import('fs/promises');
-      const storyJson = await fs.readFile(storyFile, 'utf-8');
-      const storyWithPlot = StoryWithPlotSchema.parse(JSON.parse(storyJson));
+      const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(storyFile));
       spinner.succeed('Story loaded');
 
       // Generate prose

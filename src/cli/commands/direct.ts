@@ -3,6 +3,7 @@ import { runVisuals } from '../../core/pipeline';
 import { StoryWithProseSchema, type VisualDirection } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { getOrCreateOutputManager } from '../utils/output';
+import { loadJson } from '../../utils';
 
 /**
  * Display visual direction summary
@@ -25,9 +26,7 @@ export const directCommand = new Command('direct')
     try {
       // Load and validate story with prose
       spinner.start('Loading story...');
-      const fs = await import('fs/promises');
-      const storyJson = await fs.readFile(proseFile, 'utf-8');
-      const storyWithProse = StoryWithProseSchema.parse(JSON.parse(storyJson));
+      const storyWithProse = StoryWithProseSchema.parse(await loadJson(proseFile));
       spinner.succeed('Story loaded');
 
       // Generate visual direction

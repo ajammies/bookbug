@@ -9,7 +9,7 @@ import type {
   RenderedPage,
 } from '../../core/schemas';
 import { createStoryFolderName } from './naming';
-import { downloadImage } from '../../core/services/image-generation';
+import { downloadFile } from '../../utils';
 
 const OUTPUT_DIR = './output';
 const ARTIFACT_FILES = ['brief.json', 'blurb.json', 'prose.json', 'story.json', 'book.json'];
@@ -90,7 +90,7 @@ const createManager = (folder: string): StoryOutputManager => ({
   saveStory: (story) => saveJson(folder, 'story.json', story),
   saveBook: (book) => saveJson(folder, 'book.json', book),
   savePageImage: async (page: RenderedPage): Promise<string> => {
-    const imageBuffer = await downloadImage(page.url);
+    const imageBuffer = await downloadFile(page.url);
     const filename = `page-${page.pageNumber}.png`;
     const imagePath = path.join(folder, 'assets', filename);
     await fs.writeFile(imagePath, imageBuffer);

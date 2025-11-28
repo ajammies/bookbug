@@ -142,14 +142,3 @@ export const generatePageImage = async (
   }
 };
 
-/**
- * Download an image from a URL and return as Buffer
- */
-export const downloadImage = async (url: string): Promise<Buffer> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download image: ${response.statusText}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-};

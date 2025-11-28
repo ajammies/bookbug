@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  generatePageImage,
-  createReplicateClient,
-  downloadImage,
-} from './image-generation';
+import { generatePageImage, createReplicateClient } from './image-generation';
 import { BOOK_FORMATS } from '../schemas';
 import type { PageRenderContext } from '../schemas';
 import type Replicate from 'replicate';
@@ -219,59 +215,3 @@ describe('generatePageImage', () => {
   });
 });
 
-describe('downloadImage', () => {
-  const originalFetch = globalThis.fetch;
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
-  it('returns Buffer on successful download', async () => {
-    const imageData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]); // PNG magic bytes
-    const mockResponse = {
-      ok: true,
-      arrayBuffer: () => Promise.resolve(imageData.buffer),
-    };
-    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse);
-
-    const result = await downloadImage('https://example.com/image.png');
-
-    expect(Buffer.isBuffer(result)).toBe(true);
-    expect(result.length).toBe(4);
-    expect(result[0]).toBe(0x89);
-  });
-
-  it('throws error on HTTP error response', async () => {
-    const mockResponse = {
-      ok: false,
-      statusText: 'Not Found',
-    };
-    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse);
-
-    await expect(downloadImage('https://example.com/missing.png')).rejects.toThrow(
-      'Failed to download image: Not Found'
-    );
-  });
-
-  it('propagates network errors', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network timeout'));
-
-    await expect(downloadImage('https://example.com/image.png')).rejects.toThrow(
-      'Network timeout'
-    );
-  });
-
-  it('calls fetch with the provided URL', async () => {
-    const mockResponse = {
-      ok: true,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-    };
-    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse);
-
-    await downloadImage('https://replicate.delivery/abc123/image.png');
-
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://replicate.delivery/abc123/image.png'
-    );
-  });
-});
