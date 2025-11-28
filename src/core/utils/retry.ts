@@ -1,21 +1,12 @@
 /**
- * Retry utility with exponential backoff and rate limit handling
+ * Retry utilities - thin wrapper around p-retry with rate limit support
  */
+import pRetry, { AbortError, type RetryContext } from 'p-retry';
 
-export interface RetryOptions {
-  /** Maximum number of retry attempts (default: 3) */
-  maxRetries?: number;
-  /** Base delay in milliseconds for exponential backoff (default: 1000) */
-  baseDelayMs?: number;
-  /** Maximum delay in milliseconds (default: 60000) */
-  maxDelayMs?: number;
-  /** Callback invoked before each retry */
-  onRetry?: (attempt: number, error: Error, delayMs: number) => void;
-}
+export { AbortError };
 
 /**
- * Error thrown when a rate limit (429) is encountered.
- * Contains the delay to wait before retrying.
+ * Thrown on rate limit (429). Contains delay from retry-after header.
  */
 export class RateLimitError extends Error {
   constructor(
@@ -27,64 +18,59 @@ export class RateLimitError extends Error {
   }
 }
 
-/**
- * Sleep for the specified duration
- */
+export interface RetryOptions {
+  /** Number of retry attempts (default: 3) */
+  maxRetries?: number;
+  /** Minimum delay between retries in ms (default: 1000) */
+  minTimeout?: number;
+  /** Maximum delay between retries in ms (default: 60000) */
+  maxTimeout?: number;
+  /** Callback before each retry */
+  onRetry?: (attempt: number, error: Error, delayMs: number) => void;
+}
+
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Extract original error from p-retry's RetryContext */
+const getOriginalError = (context: RetryContext): Error => context.error;
+
+/** Check if error is a RateLimitError and return delay */
+const getRateLimitDelay = (error: Error): number | null => {
+  if (error instanceof RateLimitError) return error.retryAfterMs;
+  if ('retryAfterMs' in error && typeof error.retryAfterMs === 'number') {
+    return error.retryAfterMs;
+  }
+  return null;
+};
 
 /**
  * Execute a function with automatic retry and exponential backoff.
  *
- * - For RateLimitError, uses the specified retryAfterMs delay
- * - For other errors, uses exponential backoff: baseDelayMs * 2^attempt
- *
- * @example
- * const result = await withRetry(
- *   () => fetchData(),
- *   {
- *     maxRetries: 5,
- *     onRetry: (attempt, error, delayMs) => {
- *       console.log(`Retry ${attempt}: ${error.message}. Waiting ${delayMs}ms...`);
- *     }
- *   }
- * );
+ * Uses p-retry for exponential backoff with jitter.
+ * Adds custom handling for RateLimitError to respect retry-after delays.
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
   options: RetryOptions = {}
 ): Promise<T> {
-  const {
-    maxRetries = 3,
-    baseDelayMs = 1000,
-    maxDelayMs = 60000,
-    onRetry,
-  } = options;
+  const { maxRetries = 3, minTimeout = 1000, maxTimeout = 60000, onRetry } = options;
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      // If we've exhausted all retries, throw the error
-      if (attempt === maxRetries) {
-        throw error;
-      }
+  return pRetry(fn, {
+    retries: maxRetries,
+    minTimeout,
+    maxTimeout,
+    randomize: true,
+    onFailedAttempt: async (failedAttempt) => {
+      const originalError = getOriginalError(failedAttempt);
+      const rateLimitDelay = getRateLimitDelay(originalError);
 
-      let delayMs: number;
-
-      // Handle rate limit with retry-after
-      if (error instanceof RateLimitError) {
-        delayMs = error.retryAfterMs;
+      if (rateLimitDelay !== null) {
+        onRetry?.(failedAttempt.attemptNumber, originalError, rateLimitDelay);
+        await sleep(rateLimitDelay);
       } else {
-        // Exponential backoff: 1s, 2s, 4s, 8s...
-        delayMs = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+        onRetry?.(failedAttempt.attemptNumber, originalError, 0);
       }
-
-      onRetry?.(attempt + 1, error as Error, delayMs);
-      await sleep(delayMs);
-    }
-  }
-
-  // This should be unreachable, but TypeScript needs it
-  throw new Error('Unreachable');
+    },
+  });
 }
