@@ -1,9 +1,9 @@
-import Replicate from 'replicate';
+import Replicate, { type FileOutput } from 'replicate';
 import type { PageRenderContext, BookFormat } from '../schemas';
 import { getAspectRatio } from '../schemas';
 
 /**
- * Image generation service using Replicate API with Nano Banana Pro
+ * Image generation service using Replicate API with Google Imagen 3
  *
  * Generates images by passing filtered Story JSON directly as the prompt.
  * The model receives the full context about the story, style, characters, and specific page.
@@ -29,35 +29,65 @@ export const createReplicateClient = (): Replicate => {
 };
 
 /**
- * Extract URL from Replicate output (handles various formats)
+ * Type guard to check if a value is a FileOutput
  */
-const extractImageUrl = (output: unknown): string => {
-  // Array of strings
-  if (Array.isArray(output) && output.length > 0) {
-    const first = output[0];
-    if (typeof first === 'string') return first;
-    // FileOutput object with url() method
-    if (first && typeof first === 'object' && 'url' in first) {
-      const urlValue = (first as { url: string | (() => string) }).url;
-      return typeof urlValue === 'function' ? urlValue() : urlValue;
-    }
-  }
-  // Single string
-  if (typeof output === 'string') return output;
-
-  // Object with url property directly
-  if (output && typeof output === 'object' && 'url' in output) {
-    const urlValue = (output as { url: string | (() => string) }).url;
-    return typeof urlValue === 'function' ? urlValue() : urlValue;
-  }
-
-  // Log unexpected format for debugging
-  console.error('Unexpected Replicate output format:', JSON.stringify(output, null, 2));
-  throw new Error(`Unexpected output format from model: ${typeof output}`);
+const isFileOutput = (value: unknown): value is FileOutput => {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'url' in value &&
+    typeof (value as FileOutput).url === 'function'
+  );
 };
 
 /**
- * Generate a page image using Nano Banana Pro via Replicate
+ * Extract URL string from Replicate output
+ *
+ * Replicate returns FileOutput objects with a .url() method that returns a URL object.
+ * The output is typically an array of FileOutput for image models.
+ */
+const extractImageUrl = (output: unknown): string => {
+  // Array of FileOutput objects (most common for image models)
+  if (Array.isArray(output) && output.length > 0) {
+    const first = output[0];
+
+    // FileOutput with url() method returning URL object
+    if (isFileOutput(first)) {
+      const urlObj = first.url();
+      return urlObj.toString();
+    }
+
+    // Plain string URL (legacy or some models)
+    if (typeof first === 'string') {
+      return first;
+    }
+  }
+
+  // Single FileOutput (some models return just one)
+  if (isFileOutput(output)) {
+    return output.url().toString();
+  }
+
+  // Single string URL
+  if (typeof output === 'string') {
+    return output;
+  }
+
+  // Log the actual output for debugging
+  console.error('Unexpected Replicate output:', {
+    type: typeof output,
+    isArray: Array.isArray(output),
+    value: JSON.stringify(output, null, 2).substring(0, 500),
+  });
+
+  throw new Error(
+    `Unexpected output format from Replicate model. ` +
+    `Expected FileOutput[] or string[], got ${typeof output}`
+  );
+};
+
+/**
+ * Generate a page image using Google Imagen 3 via Replicate
  *
  * Passes the filtered Story JSON directly as the prompt.
  * Accepts optional client for dependency injection (useful for testing).

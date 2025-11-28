@@ -118,7 +118,7 @@ describe('generatePageImage', () => {
 
     await expect(
       generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
-    ).rejects.toThrow('Unexpected output format from model');
+    ).rejects.toThrow('Unexpected output format from Replicate model');
   });
 
   it('passes story slice as JSON string prompt', async () => {
