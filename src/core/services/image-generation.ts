@@ -38,13 +38,22 @@ const extractImageUrl = (output: unknown): string => {
     if (typeof first === 'string') return first;
     // FileOutput object with url() method
     if (first && typeof first === 'object' && 'url' in first) {
-      return (first as { url: () => string }).url();
+      const urlValue = (first as { url: string | (() => string) }).url;
+      return typeof urlValue === 'function' ? urlValue() : urlValue;
     }
   }
   // Single string
   if (typeof output === 'string') return output;
 
-  throw new Error('Unexpected output format from model');
+  // Object with url property directly
+  if (output && typeof output === 'object' && 'url' in output) {
+    const urlValue = (output as { url: string | (() => string) }).url;
+    return typeof urlValue === 'function' ? urlValue() : urlValue;
+  }
+
+  // Log unexpected format for debugging
+  console.error('Unexpected Replicate output format:', JSON.stringify(output, null, 2));
+  throw new Error(`Unexpected output format from model: ${typeof output}`);
 };
 
 /**
