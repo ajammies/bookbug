@@ -6,11 +6,13 @@ import {
   StoryWithPlotSchema,
   StoryWithProseSchema,
   StorySchema,
+  RenderedBookSchema,
   type BookFormatKey,
 } from '../../core/schemas';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
+import { loadJson } from '../../utils';
 
 const OUTPUT_DIR = './output';
 
@@ -100,8 +102,7 @@ export const resumeCommand = new Command('resume')
       switch (info.stage) {
         case 'complete': {
           console.log('\n✅ Story is already complete!');
-          const bookJson = await fs.readFile(path.join(folder, 'book.json'), 'utf-8');
-          const book = JSON.parse(bookJson);
+          const book = RenderedBookSchema.parse(await loadJson(path.join(folder, 'book.json')));
           displayBook(book);
           break;
         }
@@ -109,8 +110,7 @@ export const resumeCommand = new Command('resume')
         case 'story': {
           // Has story.json, just needs rendering
           console.log('\n📍 Resuming from: story.json (rendering images)');
-          const storyJson = await fs.readFile(info.latestFile, 'utf-8');
-          const story = StorySchema.parse(JSON.parse(storyJson));
+          const story = StorySchema.parse(await loadJson(info.latestFile));
 
           spinner.start('Rendering book...');
           const book = await runBook(story, {
@@ -132,8 +132,7 @@ export const resumeCommand = new Command('resume')
         case 'prose': {
           // Has prose.json, needs visuals + render
           console.log('\n📍 Resuming from: prose.json (visual direction + rendering)');
-          const proseJson = await fs.readFile(info.latestFile, 'utf-8');
-          const storyWithProse = StoryWithProseSchema.parse(JSON.parse(proseJson));
+          const storyWithProse = StoryWithProseSchema.parse(await loadJson(info.latestFile));
 
           spinner.start('Creating visual direction...');
           const visuals = await runVisuals(storyWithProse);
@@ -162,8 +161,7 @@ export const resumeCommand = new Command('resume')
         case 'blurb': {
           // Has blurb.json, run full incremental pipeline
           console.log('\n📍 Resuming from: blurb.json (prose + visuals + rendering)');
-          const blurbJson = await fs.readFile(info.latestFile, 'utf-8');
-          const storyWithPlot = StoryWithPlotSchema.parse(JSON.parse(blurbJson));
+          const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(info.latestFile));
 
           const result = await executePipeline(storyWithPlot, {
             onProgress: (step, status) => {

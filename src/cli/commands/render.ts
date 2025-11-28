@@ -6,7 +6,7 @@ import { StorySchema, type BookFormatKey, type RenderedBook, type RenderedPage }
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, getOrCreateOutputManager } from '../utils/output';
-import { downloadImage } from '../../core/services/image-generation';
+import { loadJson, downloadFile } from '../../utils';
 
 interface RenderOptions {
   output?: string;
@@ -26,8 +26,7 @@ export const renderCommand = new Command('render')
     try {
       // Load and validate story
       spinner.start('Loading story...');
-      const storyJson = await fs.readFile(storyFile, 'utf-8');
-      const story = StorySchema.parse(JSON.parse(storyJson));
+      const story = StorySchema.parse(await loadJson(storyFile));
       spinner.succeed('Story loaded');
 
       // Set up output manager (custom path takes precedence)
@@ -102,7 +101,7 @@ async function downloadAndSaveImages(
 
     try {
       // Download from temporary URL
-      const imageBuffer = await downloadImage(page.url);
+      const imageBuffer = await downloadFile(page.url);
       await fs.writeFile(localPath, imageBuffer);
 
       // Update page with relative path
