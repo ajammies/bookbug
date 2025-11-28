@@ -23,6 +23,7 @@ import {
   type OnStepProgress,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
+import type { Options as PRetryOptions } from 'p-retry';
 import { pRetry, RateLimitError, sleep } from './utils/retry';
 
 /**
@@ -217,9 +218,11 @@ export async function runBook(
     onPageRendered?: (page: RenderedPage) => void;
     onRetry?: (pageNumber: number, attempt: number, error: Error, delayMs: number) => void;
     maxRetries?: number;
+    /** If provided, saves each page image to disk immediately after rendering */
+    outputManager?: StoryOutputManager;
   }
 ): Promise<RenderedBook> {
-  const { mock = false, format = 'square-large', onPageRendered, onRetry, maxRetries = 5 } = config ?? {};
+  const { mock = false, format = 'square-large', onPageRendered, onRetry, maxRetries = 5, outputManager } = config ?? {};
 
   const pages: RenderedPage[] = [];
   for (const storyPage of story.visuals.illustratedPages) {
@@ -239,6 +242,12 @@ export async function runBook(
             },
           }
         );
+
+    // Save image to disk immediately
+    if (outputManager) {
+      await outputManager.savePageImage(page);
+    }
+
     pages.push(page);
     onPageRendered?.(page);
   }
