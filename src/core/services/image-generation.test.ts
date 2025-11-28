@@ -7,6 +7,7 @@ import {
 import { BOOK_FORMATS } from '../schemas';
 import type { PageRenderContext } from '../schemas';
 import type Replicate from 'replicate';
+import { RateLimitError } from '../utils/retry';
 
 describe('createReplicateClient', () => {
   const originalEnv = process.env;
@@ -165,7 +166,20 @@ describe('generatePageImage', () => {
     expect(callArgs.input.aspect_ratio).toBe('3:4');
   });
 
-  it('enhances error message for Replicate API errors', async () => {
+  it('throws RateLimitError for 429 responses', async () => {
+    const apiError = {
+      message: 'Rate limit exceeded',
+      response: { status: 429, headers: { get: () => '30' } },
+    };
+    const mockRun = vi.fn().mockRejectedValue(apiError);
+    const mockClient = createMockClient(mockRun);
+
+    await expect(
+      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
+    ).rejects.toThrow(RateLimitError);
+  });
+
+  it('uses default 60s delay when retry-after header is missing', async () => {
     const apiError = {
       message: 'Rate limit exceeded',
       response: { status: 429 },
@@ -173,9 +187,25 @@ describe('generatePageImage', () => {
     const mockRun = vi.fn().mockRejectedValue(apiError);
     const mockClient = createMockClient(mockRun);
 
+    try {
+      await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RateLimitError);
+      expect((error as RateLimitError).retryAfterMs).toBe(60000);
+    }
+  });
+
+  it('enhances error message for non-429 API errors', async () => {
+    const apiError = {
+      message: 'Server error',
+      response: { status: 500 },
+    };
+    const mockRun = vi.fn().mockRejectedValue(apiError);
+    const mockClient = createMockClient(mockRun);
+
     await expect(
       generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
-    ).rejects.toThrow('Image generation failed (429): Rate limit exceeded');
+    ).rejects.toThrow('Image generation failed (500): Server error');
   });
 
   it('re-throws non-API errors unchanged', async () => {

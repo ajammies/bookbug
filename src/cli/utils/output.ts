@@ -6,8 +6,10 @@ import type {
   StoryWithProse,
   Story,
   RenderedBook,
+  RenderedPage,
 } from '../../core/schemas';
 import { createStoryFolderName } from './naming';
+import { downloadImage } from '../../core/services/image-generation';
 
 const OUTPUT_DIR = './output';
 const ARTIFACT_FILES = ['brief.json', 'blurb.json', 'prose.json', 'story.json', 'book.json'];
@@ -31,6 +33,8 @@ export interface StoryOutputManager {
   saveStory(story: Story): Promise<void>;
   /** Save RenderedBook to book.json */
   saveBook(book: RenderedBook): Promise<void>;
+  /** Save a single page image to assets folder (downloads from URL) */
+  savePageImage(page: RenderedPage): Promise<string>;
 }
 
 /**
@@ -85,6 +89,13 @@ const createManager = (folder: string): StoryOutputManager => ({
   saveProse: (story) => saveJson(folder, 'prose.json', story),
   saveStory: (story) => saveJson(folder, 'story.json', story),
   saveBook: (book) => saveJson(folder, 'book.json', book),
+  savePageImage: async (page: RenderedPage): Promise<string> => {
+    const imageBuffer = await downloadImage(page.url);
+    const filename = `page-${page.pageNumber}.png`;
+    const imagePath = path.join(folder, 'assets', filename);
+    await fs.writeFile(imagePath, imageBuffer);
+    return imagePath;
+  },
 });
 
 /**

@@ -1,6 +1,7 @@
 import Replicate, { type FileOutput } from 'replicate';
 import type { PageRenderContext, BookFormat } from '../schemas';
 import { getAspectRatio } from '../schemas';
+import { RateLimitError } from '../utils/retry';
 
 /**
  * Image generation service using Replicate API with Google Imagen 3
@@ -107,9 +108,27 @@ export const generatePageImage = async (
 
     return { url: extractImageUrl(output) };
   } catch (error) {
-    // Enhance error message for Replicate API errors
+    // Handle Replicate API errors
     if (error && typeof error === 'object' && 'response' in error) {
-      const apiError = error as { response: { status: number }; message: string };
+      const apiError = error as {
+        response: { status: number; headers?: { get?: (key: string) => string | null } };
+        message: string;
+      };
+
+      // Detect rate limit (429) and throw RateLimitError
+      if (apiError.response.status === 429) {
+        const retryAfterHeader = apiError.response.headers?.get?.('retry-after');
+        // Parse retry-after: could be seconds or a date
+        const delayMs = retryAfterHeader
+          ? parseInt(retryAfterHeader, 10) * 1000
+          : 60000; // Default to 60 seconds
+
+        throw new RateLimitError(
+          isNaN(delayMs) ? 60000 : delayMs,
+          `Replicate rate limit exceeded. Retry after ${delayMs / 1000}s`
+        );
+      }
+
       throw new Error(
         `Image generation failed (${apiError.response.status}): ${apiError.message}`
       );

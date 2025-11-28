@@ -23,6 +23,7 @@ import {
   type OnStepProgress,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
+import { withRetry, RateLimitError } from './utils/retry';
 
 /**
  * Pipeline result - discriminated union based on completion stage
@@ -45,6 +46,10 @@ export interface PipelineOptions {
   outputManager?: StoryOutputManager;
   /** Callback after each page completes (prose + visuals + render) */
   onPageComplete?: (pageNumber: number, page: RenderedPage) => void;
+  /** Callback when a retry is about to happen */
+  onRetry?: (pageNumber: number, attempt: number, error: Error, delayMs: number) => void;
+  /** Maximum retry attempts for image rendering (default: 5) */
+  maxRetries?: number;
 }
 
 /**
@@ -59,7 +64,7 @@ export async function executePipeline(
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
-  const { onProgress, stopAfter, outputManager, onPageComplete } = options;
+  const { onProgress, stopAfter, outputManager, onPageComplete, onRetry, maxRetries = 5 } = options;
 
   // Step 1: Generate style guide and prose setup upfront (once)
   onProgress?.('setup', 'start');
@@ -118,9 +123,22 @@ export async function executePipeline(
     const currentVisuals: VisualDirection = { style: styleGuide, illustratedPages };
     const currentStory: ComposedStory = { ...storyWithPlot, prose: currentProse, visuals: currentVisuals };
 
-    // Render this page
-    const renderedPage = await renderPage(currentStory, pageNumber);
+    // Render this page (with retry for rate limits)
+    const renderedPage = await withRetry(
+      () => renderPage(currentStory, pageNumber),
+      {
+        maxRetries,
+        onRetry: (attempt, error, delayMs) => {
+          onRetry?.(pageNumber, attempt, error, delayMs);
+        },
+      }
+    );
     renderedPages.push(renderedPage);
+
+    // Save image to disk immediately (before continuing to next page)
+    if (outputManager) {
+      await outputManager.savePageImage(renderedPage);
+    }
 
     onProgress?.(`page-${pageNumber}`, 'complete', { prosePage, illustratedPage, renderedPage });
     onPageComplete?.(pageNumber, renderedPage);
@@ -188,15 +206,29 @@ export { renderPage, renderPageMock, createBook } from './agents';
  */
 export async function runBook(
   story: ComposedStory,
-  config?: { mock?: boolean; format?: BookFormatKey; onPageRendered?: (page: RenderedPage) => void }
+  config?: {
+    mock?: boolean;
+    format?: BookFormatKey;
+    onPageRendered?: (page: RenderedPage) => void;
+    onRetry?: (pageNumber: number, attempt: number, error: Error, delayMs: number) => void;
+    maxRetries?: number;
+  }
 ): Promise<RenderedBook> {
-  const { mock = false, format = 'square-large', onPageRendered } = config ?? {};
+  const { mock = false, format = 'square-large', onPageRendered, onRetry, maxRetries = 5 } = config ?? {};
 
   const pages: RenderedPage[] = [];
   for (const storyPage of story.visuals.illustratedPages) {
     const page = mock
       ? renderPageMock(storyPage.pageNumber)
-      : await renderPage(story, storyPage.pageNumber, format);
+      : await withRetry(
+          () => renderPage(story, storyPage.pageNumber, format),
+          {
+            maxRetries,
+            onRetry: (attempt, error, delayMs) => {
+              onRetry?.(storyPage.pageNumber, attempt, error, delayMs);
+            },
+          }
+        );
     pages.push(page);
     onPageRendered?.(page);
   }
