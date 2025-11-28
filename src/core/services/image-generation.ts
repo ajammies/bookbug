@@ -2,6 +2,7 @@ import Replicate, { type FileOutput } from 'replicate';
 import type { PageRenderContext, BookFormat } from '../schemas';
 import { getAspectRatio } from '../schemas';
 import { sleep } from '../utils/retry';
+import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
 
 /**
  * Image generation service using Replicate API with Google Nano Banana Pro
@@ -119,7 +120,8 @@ const getRetryAfterMs = (error: unknown): number | null => {
  */
 const runWithRateLimit = async (
   client: Replicate,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  logger?: Logger
 ): Promise<unknown> => {
   try {
     return await client.run(IMAGE_MODEL, { input });
@@ -127,7 +129,7 @@ const runWithRateLimit = async (
     const retryAfter = getRetryAfterMs(error);
     if (!retryAfter) throw error;
 
-    console.log(`Replicate rate limited. Waiting ${Math.ceil(retryAfter / 1000)}s...`);
+    logRateLimit(logger, 'replicate', Math.ceil(retryAfter / 1000));
     await sleep(retryAfter);
     return await client.run(IMAGE_MODEL, { input });
   }
@@ -146,14 +148,27 @@ const buildPrompt = (context: PageRenderContext): string =>
 export const generatePageImage = async (
   context: PageRenderContext,
   format: BookFormat,
-  client: Replicate = createReplicateClient()
+  client: Replicate = createReplicateClient(),
+  logger?: Logger
 ): Promise<GeneratedPage> => {
-  const output = await runWithRateLimit(client, {
-    prompt: buildPrompt(context),
-    aspect_ratio: getAspectRatio(format),
-    resolution: DEFAULT_RESOLUTION,
-    output_format: 'png',
-  });
+  const agent = 'imageGen';
 
-  return { url: extractImageUrl(output) };
+  try {
+    const output = await runWithRateLimit(
+      client,
+      {
+        prompt: buildPrompt(context),
+        aspect_ratio: getAspectRatio(format),
+        resolution: DEFAULT_RESOLUTION,
+        output_format: 'png',
+      },
+      logger
+    );
+
+    logApiSuccess(logger, agent);
+    return { url: extractImageUrl(output) };
+  } catch (error) {
+    logApiError(logger, agent, error instanceof Error ? error.message : String(error));
+    throw error;
+  }
 };

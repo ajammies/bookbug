@@ -5,6 +5,8 @@ import { runPlotIntake } from '../prompts/plot-intake';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
+import { createLogger } from '../../core/utils/logger';
+import { tailLogFile, getLogPath } from '../utils/log-tailer';
 
 export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
@@ -15,6 +17,12 @@ export const createCommand = new Command('create')
     const spinner = createSpinner();
     let outputManager: StoryOutputManager;
 
+    // Create logger and log tailer for real-time status
+    const logger = createLogger();
+    const runId = logger.bindings()?.runId as string | undefined;
+    const logPath = runId ? getLogPath(runId) : null;
+    const tailer = logPath ? tailLogFile(logPath, (msg) => spinner.text = msg) : null;
+
     try {
       // Step 1: Get StoryBrief via chat intake
       const brief = await runStoryIntake(prompt);
@@ -23,6 +31,9 @@ export const createCommand = new Command('create')
       outputManager = await createOutputManager(brief.title);
       await outputManager.saveBrief(brief);
       console.log(`\nStory folder created: ${outputManager.folder}`);
+      if (logPath) {
+        console.log(`Logging to: ${logPath}`);
+      }
 
       // Step 2: Get StoryWithPlot via plot iteration
       const storyWithPlot = await runPlotIntake(brief);
@@ -30,6 +41,7 @@ export const createCommand = new Command('create')
 
       // Step 3: Run pipeline from StoryWithPlot to book
       const { book } = await executePipeline(storyWithPlot, {
+        logger,
         onProgress: (step, status) => {
           if (status === 'start') {
             spinner.start(formatStep(step));
@@ -46,5 +58,7 @@ export const createCommand = new Command('create')
       spinner.fail('Pipeline failed');
       console.error(error);
       process.exit(1);
+    } finally {
+      tailer?.stop();
     }
   });

@@ -24,6 +24,7 @@ import {
   type OnStepProgress,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
+import { type Logger, logThinking } from './utils/logger';
 
 // ============================================================================
 // Types
@@ -33,6 +34,7 @@ export interface PipelineOptions {
   onProgress?: OnStepProgress;
   outputManager?: StoryOutputManager;
   format?: BookFormatKey;
+  logger?: Logger;
 }
 
 // ============================================================================
@@ -106,14 +108,16 @@ const processPages = async <T>(
  */
 export const generateProse = async (
   story: StoryWithPlot,
-  onProgress?: OnStepProgress
+  onProgress?: OnStepProgress,
+  logger?: Logger
 ): Promise<StoryWithProse> => {
-
+  logThinking(logger, 'Establishing story voice...');
   onProgress?.('prose-setup', 'start');
   const proseSetup = await proseSetupAgent(story);
   onProgress?.('prose-setup', 'complete');
 
   const prosePages = await processPages<ProsePage>(story.pageCount, async (pageNumber, previous) => {
+    logThinking(logger, `Writing page ${pageNumber} of ${story.pageCount}...`);
     onProgress?.(`prose-page-${pageNumber}`, 'start');
     const page = await generateProsePage(story, proseSetup, pageNumber, previous);
     onProgress?.(`prose-page-${pageNumber}`, 'complete');
@@ -131,8 +135,10 @@ export const generateProse = async (
  */
 export const generateVisuals = async (
   story: StoryWithProse,
-  onProgress?: OnStepProgress
+  onProgress?: OnStepProgress,
+  logger?: Logger
 ): Promise<ComposedStory> => {
+  logThinking(logger, 'Creating visual direction...');
   onProgress?.('visuals', 'start');
   const visuals = await visualsAgent(story);
   onProgress?.('visuals', 'complete');
@@ -150,11 +156,14 @@ export const renderBook = async (
     mock?: boolean;
     onProgress?: OnStepProgress;
     outputManager?: StoryOutputManager;
+    logger?: Logger;
   } = {}
 ): Promise<RenderedBook> => {
-  const { format = 'square-large', mock = false, onProgress, outputManager } = options;
+  const { format = 'square-large', mock = false, onProgress, outputManager, logger } = options;
+  const totalPages = story.visuals.illustratedPages.length;
 
-  const pages = await processPages<RenderedPage>(story.visuals.illustratedPages.length, async (pageNumber) => {
+  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber) => {
+    logThinking(logger, `Rendering page ${pageNumber} of ${totalPages}...`);
     onProgress?.(`render-page-${pageNumber}`, 'start');
 
     const page = mock
@@ -183,23 +192,25 @@ export const executePipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, outputManager, format } = options;
+  const { onProgress, outputManager, format, logger } = options;
+
+  logThinking(logger, `Starting pipeline for "${storyWithPlot.title}"...`);
 
   // Generate prose
   onProgress?.('prose', 'start');
-  const storyWithProse = await generateProse(storyWithPlot);
+  const storyWithProse = await generateProse(storyWithPlot, onProgress, logger);
   await outputManager?.saveProse(storyWithProse);
   onProgress?.('prose', 'complete');
 
   // Generate visuals
   onProgress?.('visuals', 'start');
-  const story = await generateVisuals(storyWithProse);
+  const story = await generateVisuals(storyWithProse, onProgress, logger);
   await outputManager?.saveStory(story);
   onProgress?.('visuals', 'complete');
 
   // Render book
   onProgress?.('render', 'start');
-  const book = await renderBook(story, { format, outputManager });
+  const book = await renderBook(story, { format, outputManager, onProgress, logger });
   await outputManager?.saveBook(book);
   onProgress?.('render', 'complete');
 
@@ -218,9 +229,12 @@ export const executeIncrementalPipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, outputManager, format = 'square-large' } = options;
+  const { onProgress, outputManager, format = 'square-large', logger } = options;
+
+  logThinking(logger, `Starting incremental pipeline for "${storyWithPlot.title}"...`);
 
   // Setup phase: style guide + prose setup sequentially to avoid rate limits
+  logThinking(logger, 'Setting up style guide and prose...');
   onProgress?.('setup', 'start');
   const styleGuide = await styleGuideAgent(storyWithPlot);
   const proseSetup = await proseSetupAgent(storyWithPlot);
@@ -233,13 +247,16 @@ export const executeIncrementalPipeline = async (
 
   for (let i = 0; i < storyWithPlot.pageCount; i++) {
     const pageNumber = i + 1;
+    const totalPages = storyWithPlot.pageCount;
     onProgress?.(`page-${pageNumber}`, 'start');
 
     // Prose for this page
+    logThinking(logger, `Writing prose for page ${pageNumber} of ${totalPages}...`);
     const prosePage = await generateProsePage(storyWithPlot, proseSetup, pageNumber, prosePages);
     prosePages.push(prosePage);
 
     // Visuals for this page
+    logThinking(logger, `Creating visuals for page ${pageNumber} of ${totalPages}...`);
     const illustratedPage = await generateIllustratedPage(storyWithPlot, styleGuide, pageNumber, prosePage);
     illustratedPages.push(illustratedPage);
 
@@ -251,6 +268,7 @@ export const executeIncrementalPipeline = async (
     };
 
     // Render this page
+    logThinking(logger, `Rendering page ${pageNumber} of ${totalPages}...`);
     const renderedPage = await renderPage(currentStory, pageNumber, format);
     renderedPages.push(renderedPage);
 

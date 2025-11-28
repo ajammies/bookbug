@@ -7,6 +7,7 @@
  */
 import { generateObject as aiGenerateObject, type GenerateObjectResult } from 'ai';
 import { sleep } from './retry';
+import { type Logger, logApiSuccess, logApiError, logRateLimit } from './logger';
 
 type GenerateObjectParams = Parameters<typeof aiGenerateObject>[0];
 
@@ -23,17 +24,28 @@ const getRetryAfterSeconds = (error: unknown): number | null => {
 };
 
 export async function generateObject<T>(
-  options: GenerateObjectParams & { schema: { parse: (data: unknown) => T } }
+  options: GenerateObjectParams & { schema: { parse: (data: unknown) => T } },
+  logger?: Logger
 ): Promise<GenerateObjectResult<T>> {
+  const agent = 'generateObject';
+
   try {
-    return await aiGenerateObject(options) as GenerateObjectResult<T>;
+    const result = await aiGenerateObject(options) as GenerateObjectResult<T>;
+    logApiSuccess(logger, agent);
+    return result;
   } catch (error) {
     const retryAfter = getRetryAfterSeconds(error);
-    if (retryAfter === null) throw error;
+
+    if (retryAfter === null) {
+      logApiError(logger, agent, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
 
     // Provider sent retry-after header - wait exact duration and retry once
-    console.log(`Rate limited. Waiting ${retryAfter}s (retry-after header)...`);
+    logRateLimit(logger, agent, retryAfter);
     await sleep(retryAfter * 1000);
-    return await aiGenerateObject({ ...options, maxRetries: 0 }) as GenerateObjectResult<T>;
+    const result = await aiGenerateObject({ ...options, maxRetries: 0 }) as GenerateObjectResult<T>;
+    logApiSuccess(logger, agent);
+    return result;
   }
 }
