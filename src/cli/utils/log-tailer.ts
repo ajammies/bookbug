@@ -5,6 +5,8 @@
  * Parses NDJSON log entries and extracts "thinking" messages.
  */
 import { spawn } from 'child_process';
+import { mkdirSync, writeFileSync, existsSync } from 'fs';
+import path from 'path';
 
 export interface TailHandle {
   stop: () => void;
@@ -30,16 +32,33 @@ const processLogData = (data: Buffer, onThinking: (msg: string) => void): void =
     .filter((msg): msg is string => msg !== null)
     .forEach(onThinking);
 
+/** Ensure log file exists (create directory and file if needed) */
+const ensureLogFile = (logPath: string): void => {
+  const dir = path.dirname(logPath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  if (!existsSync(logPath)) {
+    writeFileSync(logPath, '');
+  }
+};
+
 /** Start tailing a log file, returns handle to stop */
 export const tailLogFile = (
   logPath: string,
   onThinking: (msg: string) => void
 ): TailHandle => {
-  const tail = spawn('tail', ['-f', logPath]);
+  // Ensure file exists before tailing (pino creates lazily)
+  ensureLogFile(logPath);
+
+  // Use -F to follow by name (handles file recreation)
+  const tail = spawn('tail', ['-F', logPath]);
   tail.stdout.on('data', (data: Buffer) => processLogData(data, onThinking));
+  // Suppress stderr (tail -F emits warnings about file truncation)
+  tail.stderr.on('data', () => {});
   return { stop: () => tail.kill() };
 };
 
 /** Get log file path from runId */
 export const getLogPath = (runId: string): string =>
-  `logs/run-${runId}.log`;
+  path.join(process.cwd(), 'logs', `run-${runId}.log`);

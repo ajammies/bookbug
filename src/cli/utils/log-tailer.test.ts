@@ -1,14 +1,16 @@
 import { describe, it, expect } from 'vitest';
+import path from 'path';
 import { getLogPath } from './log-tailer';
 
 describe('getLogPath', () => {
   it('returns correct log path for runId', () => {
-    expect(getLogPath('abc123')).toBe('logs/run-abc123.log');
+    const expected = path.join(process.cwd(), 'logs', 'run-abc123.log');
+    expect(getLogPath('abc123')).toBe(expected);
   });
 
   it('handles various runId formats', () => {
-    expect(getLogPath('test')).toBe('logs/run-test.log');
-    expect(getLogPath('run-123-xyz')).toBe('logs/run-run-123-xyz.log');
+    expect(getLogPath('test')).toBe(path.join(process.cwd(), 'logs', 'run-test.log'));
+    expect(getLogPath('run-123-xyz')).toBe(path.join(process.cwd(), 'logs', 'run-run-123-xyz.log'));
   });
 });
 
