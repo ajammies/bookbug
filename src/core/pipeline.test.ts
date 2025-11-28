@@ -182,7 +182,7 @@ describe('generateProse', () => {
   it('calls onProgress for setup and each page', async () => {
     const onProgress = vi.fn();
 
-    await generateProse(mockStoryWithPlot, { onProgress });
+    await generateProse(mockStoryWithPlot, onProgress);
 
     expect(onProgress).toHaveBeenCalledWith('prose-setup', 'start');
     expect(onProgress).toHaveBeenCalledWith('prose-setup', 'complete');
@@ -234,7 +234,7 @@ describe('generateVisuals', () => {
   it('calls onProgress for style guide and each page', async () => {
     const onProgress = vi.fn();
 
-    await generateVisuals(mockStoryWithProse, { onProgress });
+    await generateVisuals(mockStoryWithProse, onProgress);
 
     expect(onProgress).toHaveBeenCalledWith('style-guide', 'start');
     expect(onProgress).toHaveBeenCalledWith('style-guide', 'complete');

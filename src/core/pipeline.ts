@@ -123,9 +123,8 @@ const processPages = async <T>(
  */
 export const generateProse = async (
   story: StoryWithPlot,
-  options: { onProgress?: OnStepProgress } = {}
+  onProgress?: OnStepProgress
 ): Promise<StoryWithProse> => {
-  const { onProgress } = options;
 
   onProgress?.('prose-setup', 'start');
   const proseSetup = await proseSetupAgent(story);
@@ -147,9 +146,8 @@ export const generateProse = async (
  */
 export const generateVisuals = async (
   story: StoryWithProse,
-  options: { onProgress?: OnStepProgress } = {}
+  onProgress?: OnStepProgress
 ): Promise<ComposedStory> => {
-  const { onProgress } = options;
 
   onProgress?.('style-guide', 'start');
   const styleGuide = await styleGuideAgent(story);
