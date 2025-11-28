@@ -39,16 +39,21 @@ export const createCommand = new Command('create')
       await outputManager.saveBlurb(storyWithPlot);
 
       // Step 3: Run pipeline from StoryWithPlot to book
+      // Only show checkmarks for major phases, not sub-steps
+      const majorPhases = ['prose', 'visuals', 'render'];
+
       const { book } = await executePipeline(storyWithPlot, {
         logger,
         onProgress: (step, status) => {
           if (status === 'start') {
             spinner.start(formatStep(step));
-          } else if (status === 'complete') {
+          } else if (status === 'complete' && majorPhases.includes(step)) {
             spinner.succeed(formatStep(step, true));
           }
         },
-        onThinking: (msg) => spinner.isSpinning ? spinner.text = msg : spinner.start(msg),
+        onThinking: (msg) => {
+          if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`;
+        },
         outputManager: options.save !== false ? outputManager : undefined,
       });
 

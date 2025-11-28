@@ -56,7 +56,8 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 # Code style
 - Pure functions, immutability, no side effects, simple
 - Explicit types for data flowing between functions
-- think: can I simply make the first expression of this function return? 
+- think: can I simply make the first expression of this function return?
+- Prefer ternary on one line where readable: `condition ? a : b`
 - Standalone exported functions, not classes
 - Data flows through parameters, not global state
 - Intuitive file organization - things live where you'd expect
