@@ -1,7 +1,7 @@
 import Replicate, { type FileOutput } from 'replicate';
 import type { PageRenderContext, BookFormat } from '../schemas';
 import { getAspectRatio } from '../schemas';
-import { RateLimitError } from '../utils/retry';
+import { sleep } from '../utils/retry';
 
 /**
  * Image generation service using Replicate API with Google Nano Banana Pro
@@ -91,54 +91,59 @@ const extractImageUrl = (output: unknown): string => {
 };
 
 /**
+ * Get retry-after delay from Replicate error response
+ */
+const getRetryAfterMs = (error: unknown): number | null => {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const apiError = error as {
+      response: { status: number; headers?: { get?: (key: string) => string | null } };
+    };
+
+    if (apiError.response.status === 429) {
+      const retryAfterHeader = apiError.response.headers?.get?.('retry-after');
+      const seconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 60;
+      return isNaN(seconds) ? 60000 : seconds * 1000;
+    }
+  }
+  return null;
+};
+
+/**
+ * Run Replicate model with rate limit handling
+ */
+const runWithRateLimit = async (
+  client: Replicate,
+  input: Record<string, unknown>
+): Promise<unknown> => {
+  try {
+    return await client.run(IMAGE_MODEL, { input });
+  } catch (error) {
+    const retryAfter = getRetryAfterMs(error);
+    if (!retryAfter) throw error;
+
+    console.log(`Replicate rate limited. Waiting ${Math.ceil(retryAfter / 1000)}s...`);
+    await sleep(retryAfter);
+    return await client.run(IMAGE_MODEL, { input });
+  }
+};
+
+/**
  * Generate a page image using Google Nano Banana Pro via Replicate
  *
  * Passes the filtered Story JSON directly as the prompt.
- * Accepts optional client for dependency injection (useful for testing).
+ * Handles rate limits internally with retry-after.
  */
 export const generatePageImage = async (
   context: PageRenderContext,
   format: BookFormat,
   client: Replicate = createReplicateClient()
 ): Promise<GeneratedPage> => {
-  try {
-    const output = await client.run(IMAGE_MODEL, {
-      input: {
-        prompt: JSON.stringify(context),
-        aspect_ratio: getAspectRatio(format),
-        resolution: DEFAULT_RESOLUTION,
-        output_format: 'png',
-      },
-    });
+  const output = await runWithRateLimit(client, {
+    prompt: JSON.stringify(context),
+    aspect_ratio: getAspectRatio(format),
+    resolution: DEFAULT_RESOLUTION,
+    output_format: 'png',
+  });
 
-    return { url: extractImageUrl(output) };
-  } catch (error) {
-    // Handle Replicate API errors
-    if (error && typeof error === 'object' && 'response' in error) {
-      const apiError = error as {
-        response: { status: number; headers?: { get?: (key: string) => string | null } };
-        message: string;
-      };
-
-      // Detect rate limit (429) and throw RateLimitError
-      if (apiError.response.status === 429) {
-        const retryAfterHeader = apiError.response.headers?.get?.('retry-after');
-        // Parse retry-after: could be seconds or a date
-        const delayMs = retryAfterHeader
-          ? parseInt(retryAfterHeader, 10) * 1000
-          : 60000; // Default to 60 seconds
-
-        throw new RateLimitError(
-          isNaN(delayMs) ? 60000 : delayMs,
-          `Replicate rate limit exceeded. Retry after ${delayMs / 1000}s`
-        );
-      }
-
-      throw new Error(
-        `Image generation failed (${apiError.response.status}): ${apiError.message}`
-      );
-    }
-    throw error;
-  }
+  return { url: extractImageUrl(output) };
 };
-

@@ -23,7 +23,6 @@ import {
   type OnStepProgress,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
-import { pRetry, RateLimitError, sleep } from './utils/retry';
 
 // ============================================================================
 // Types
@@ -33,7 +32,6 @@ export interface PipelineOptions {
   onProgress?: OnStepProgress;
   outputManager?: StoryOutputManager;
   format?: BookFormatKey;
-  maxRetries?: number;
 }
 
 // ============================================================================
@@ -81,22 +79,6 @@ const generateIllustratedPage = (
   prosePage: ProsePage
 ): Promise<IllustratedPage> =>
   pageVisualsAgent({ story, styleGuide, pageNumber, prosePage });
-
-const renderPageWithRetry = async (
-  story: ComposedStory,
-  pageNumber: number,
-  format: BookFormatKey,
-  maxRetries: number
-): Promise<RenderedPage> =>
-  pRetry(() => renderPage(story, pageNumber, format), {
-    retries: maxRetries,
-    randomize: true,
-    onFailedAttempt: async ({ error }) => {
-      if (error instanceof RateLimitError) {
-        await sleep(error.retryAfterMs);
-      }
-    },
-  });
 
 // ============================================================================
 // Sequential page accumulator
@@ -172,20 +154,19 @@ export const renderBook = async (
   story: ComposedStory,
   options: {
     format?: BookFormatKey;
-    maxRetries?: number;
     mock?: boolean;
     onProgress?: OnStepProgress;
     outputManager?: StoryOutputManager;
   } = {}
 ): Promise<RenderedBook> => {
-  const { format = 'square-large', maxRetries = 5, mock = false, onProgress, outputManager } = options;
+  const { format = 'square-large', mock = false, onProgress, outputManager } = options;
 
   const pages = await processPages<RenderedPage>(story.visuals.illustratedPages.length, async (pageNumber) => {
     onProgress?.(`render-page-${pageNumber}`, 'start');
 
     const page = mock
       ? renderPageMock(pageNumber)
-      : await renderPageWithRetry(story, pageNumber, format, maxRetries);
+      : await renderPage(story, pageNumber, format);
 
     if (outputManager) {
       await outputManager.savePageImage(page);
@@ -209,7 +190,7 @@ export const executePipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, outputManager, format, maxRetries } = options;
+  const { onProgress, outputManager, format } = options;
 
   // Generate prose
   onProgress?.('prose', 'start');
@@ -225,7 +206,7 @@ export const executePipeline = async (
 
   // Render book
   onProgress?.('render', 'start');
-  const book = await renderBook(story, { format, maxRetries, outputManager });
+  const book = await renderBook(story, { format, outputManager });
   await outputManager?.saveBook(book);
   onProgress?.('render', 'complete');
 
@@ -244,7 +225,7 @@ export const executeIncrementalPipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, outputManager, format = 'square-large', maxRetries = 5 } = options;
+  const { onProgress, outputManager, format = 'square-large' } = options;
 
   // Setup phase: style guide + prose setup in parallel
   onProgress?.('setup', 'start');
@@ -279,7 +260,7 @@ export const executeIncrementalPipeline = async (
     };
 
     // Render this page
-    const renderedPage = await renderPageWithRetry(currentStory, pageNumber, format, maxRetries);
+    const renderedPage = await renderPage(currentStory, pageNumber, format);
     renderedPages.push(renderedPage);
 
     // Save incrementally
