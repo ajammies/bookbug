@@ -23,7 +23,7 @@ export type PlotBeat = z.infer<typeof PlotBeatSchema>;
 
 export const PlotStructureSchema = z.object({
   storyArcSummary: z.string().min(1).describe('1-2 sentence story arc summary'),
-  plotBeats: z.array(PlotBeatSchema).min(4).max(6).describe('Key story structure beats'),
+  plotBeats: z.array(PlotBeatSchema).min(3).describe('Key story structure beats'),
   allowCreativeLiberty: z.boolean().default(true).describe('Whether the author can embellish beyond the beats'),
 });
 

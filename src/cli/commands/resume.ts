@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { executeIncrementalPipeline, generateVisuals, renderBook } from '../../core/pipeline';
 import {
+  StoryBriefSchema,
   StoryWithPlotSchema,
   StoryWithProseSchema,
   StorySchema,
@@ -13,10 +14,11 @@ import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
 import { loadJson } from '../../utils';
+import { runPlotIntake } from '../prompts/plot-intake';
 
 const OUTPUT_DIR = './output';
 
-type ResumeStage = 'blurb' | 'prose' | 'story' | 'complete';
+type ResumeStage = 'brief' | 'blurb' | 'prose' | 'story' | 'complete';
 
 interface StoryFolderInfo {
   folder: string;
@@ -71,6 +73,9 @@ const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
   }
   if (files.includes('blurb.json')) {
     return { folder, stage: 'blurb', latestFile: path.join(folder, 'blurb.json') };
+  }
+  if (files.includes('brief.json')) {
+    return { folder, stage: 'brief', latestFile: path.join(folder, 'brief.json') };
   }
 
   throw new Error(`No resumable artifacts found in ${folder}`);
@@ -155,6 +160,32 @@ export const resumeCommand = new Command('resume')
           // Has blurb.json, run full incremental pipeline
           console.log('\n📍 Resuming from: blurb.json (prose + visuals + rendering)');
           const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(info.latestFile));
+
+          const result = await executeIncrementalPipeline(storyWithPlot, {
+            onProgress: (step, status) => {
+              if (status === 'start') {
+                spinner.start(formatStep(step));
+              } else if (status === 'complete') {
+                spinner.succeed(formatStep(step, true));
+              }
+            },
+            outputManager,
+            format: options.format,
+          });
+
+          displayBook(result.book);
+          console.log(`\nAll files saved to: ${folder}`);
+          break;
+        }
+
+        case 'brief': {
+          // Has brief.json only, needs plot intake + full pipeline
+          console.log('\n📍 Resuming from: brief.json (plot iteration + prose + visuals + rendering)');
+          const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
+
+          // Run plot intake to create StoryWithPlot
+          const storyWithPlot = await runPlotIntake(brief);
+          await outputManager.saveBlurb(storyWithPlot);
 
           const result = await executeIncrementalPipeline(storyWithPlot, {
             onProgress: (step, status) => {
