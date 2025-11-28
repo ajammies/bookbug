@@ -68,7 +68,7 @@ describe('generatePageImage', () => {
 
     await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient);
 
-    expect(mockRun).toHaveBeenCalledWith('google/imagen-3', expect.any(Object));
+    expect(mockRun).toHaveBeenCalledWith('google/nano-banana-pro', expect.any(Object));
   });
 
   it('handles array output with string URL', async () => {

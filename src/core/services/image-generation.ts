@@ -4,11 +4,14 @@ import { getAspectRatio } from '../schemas';
 import { RateLimitError } from '../utils/retry';
 
 /**
- * Image generation service using Replicate API with Google Imagen 3
+ * Image generation service using Replicate API with Google Nano Banana Pro
  *
  * Generates images by passing filtered Story JSON directly as the prompt.
  * The model receives the full context about the story, style, characters, and specific page.
  */
+
+const IMAGE_MODEL = 'google/nano-banana-pro';
+const DEFAULT_RESOLUTION = '2K'; // Options: '1K', '2K', '4K'
 
 export interface GeneratedPage {
   /** Temporary URL from Replicate (expires after ~24h) */
@@ -88,7 +91,7 @@ const extractImageUrl = (output: unknown): string => {
 };
 
 /**
- * Generate a page image using Google Imagen 3 via Replicate
+ * Generate a page image using Google Nano Banana Pro via Replicate
  *
  * Passes the filtered Story JSON directly as the prompt.
  * Accepts optional client for dependency injection (useful for testing).
@@ -99,10 +102,12 @@ export const generatePageImage = async (
   client: Replicate = createReplicateClient()
 ): Promise<GeneratedPage> => {
   try {
-    const output = await client.run('google/imagen-3', {
+    const output = await client.run(IMAGE_MODEL, {
       input: {
         prompt: JSON.stringify(context),
         aspect_ratio: getAspectRatio(format),
+        resolution: DEFAULT_RESOLUTION,
+        output_format: 'png',
       },
     });
 
