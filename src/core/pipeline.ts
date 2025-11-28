@@ -15,6 +15,7 @@ import type {
 import {
   proseSetupAgent,
   prosePageAgent,
+  visualsAgent,
   styleGuideAgent,
   pageVisualsAgent,
   renderPage,
@@ -125,25 +126,17 @@ export const generateProse = async (
 
 /**
  * Generate visuals for a story (StoryWithProse → ComposedStory)
+ *
+ * Uses single-call visualsAgent to minimize API requests and avoid rate limits.
  */
 export const generateVisuals = async (
   story: StoryWithProse,
   onProgress?: OnStepProgress
 ): Promise<ComposedStory> => {
+  onProgress?.('visuals', 'start');
+  const visuals = await visualsAgent(story);
+  onProgress?.('visuals', 'complete');
 
-  onProgress?.('style-guide', 'start');
-  const styleGuide = await styleGuideAgent(story);
-  onProgress?.('style-guide', 'complete');
-
-  const illustratedPages = await processPages<IllustratedPage>(story.prose.pages.length, async (pageNumber) => {
-    onProgress?.(`visuals-page-${pageNumber}`, 'start');
-    const prosePage = story.prose.pages[pageNumber - 1]!;
-    const page = await generateIllustratedPage(story, styleGuide, pageNumber, prosePage);
-    onProgress?.(`visuals-page-${pageNumber}`, 'complete');
-    return page;
-  });
-
-  const visuals = assembleVisuals(styleGuide, illustratedPages);
   return assembleComposedStory(story, visuals);
 };
 
@@ -227,12 +220,10 @@ export const executeIncrementalPipeline = async (
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
   const { onProgress, outputManager, format = 'square-large' } = options;
 
-  // Setup phase: style guide + prose setup in parallel
+  // Setup phase: style guide + prose setup sequentially to avoid rate limits
   onProgress?.('setup', 'start');
-  const [styleGuide, proseSetup] = await Promise.all([
-    styleGuideAgent(storyWithPlot),
-    proseSetupAgent(storyWithPlot),
-  ]);
+  const styleGuide = await styleGuideAgent(storyWithPlot);
+  const proseSetup = await proseSetupAgent(storyWithPlot);
   onProgress?.('setup', 'complete');
 
   // Process each page completely before moving to next

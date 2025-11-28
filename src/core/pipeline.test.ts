@@ -25,8 +25,7 @@ vi.mock('./agents', async (importOriginal) => {
     ...actual,
     proseSetupAgent: vi.fn(),
     prosePageAgent: vi.fn(),
-    styleGuideAgent: vi.fn(),
-    pageVisualsAgent: vi.fn(),
+    visualsAgent: vi.fn(),
     renderPage: vi.fn(),
   };
 });
@@ -34,15 +33,13 @@ vi.mock('./agents', async (importOriginal) => {
 import {
   proseSetupAgent,
   prosePageAgent,
-  styleGuideAgent,
-  pageVisualsAgent,
+  visualsAgent,
   renderPage,
 } from './agents';
 
 const mockedProseSetupAgent = vi.mocked(proseSetupAgent);
 const mockedProsePageAgent = vi.mocked(prosePageAgent);
-const mockedStyleGuideAgent = vi.mocked(styleGuideAgent);
-const mockedPageVisualsAgent = vi.mocked(pageVisualsAgent);
+const mockedVisualsAgent = vi.mocked(visualsAgent);
 const mockedRenderPage = vi.mocked(renderPage);
 
 // Test fixtures
@@ -196,13 +193,10 @@ describe('generateProse', () => {
 describe('generateVisuals', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedStyleGuideAgent.mockResolvedValue(mockStyleGuide);
-    mockedPageVisualsAgent
-      .mockResolvedValueOnce(mockIllustratedPage1)
-      .mockResolvedValueOnce(mockIllustratedPage2);
+    mockedVisualsAgent.mockResolvedValue(mockVisuals);
   });
 
-  it('generates style guide then illustrated pages', async () => {
+  it('generates visuals in single call', async () => {
     const result = await generateVisuals(mockStoryWithProse);
 
     expect(result.title).toBe('Test Story');
@@ -210,38 +204,20 @@ describe('generateVisuals', () => {
     expect(result.visuals.illustratedPages).toHaveLength(2);
   });
 
-  it('calls style guide agent once', async () => {
+  it('calls visuals agent once with story', async () => {
     await generateVisuals(mockStoryWithProse);
 
-    expect(mockedStyleGuideAgent).toHaveBeenCalledTimes(1);
-    expect(mockedStyleGuideAgent).toHaveBeenCalledWith(mockStoryWithProse);
+    expect(mockedVisualsAgent).toHaveBeenCalledTimes(1);
+    expect(mockedVisualsAgent).toHaveBeenCalledWith(mockStoryWithProse);
   });
 
-  it('calls page visuals agent for each prose page', async () => {
-    await generateVisuals(mockStoryWithProse);
-
-    expect(mockedPageVisualsAgent).toHaveBeenCalledTimes(2);
-    expect(mockedPageVisualsAgent).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      pageNumber: 1,
-      prosePage: mockProsePage1,
-    }));
-    expect(mockedPageVisualsAgent).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      pageNumber: 2,
-      prosePage: mockProsePage2,
-    }));
-  });
-
-  it('calls onProgress for style guide and each page', async () => {
+  it('calls onProgress for visuals stage', async () => {
     const onProgress = vi.fn();
 
     await generateVisuals(mockStoryWithProse, onProgress);
 
-    expect(onProgress).toHaveBeenCalledWith('style-guide', 'start');
-    expect(onProgress).toHaveBeenCalledWith('style-guide', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('visuals-page-1', 'start');
-    expect(onProgress).toHaveBeenCalledWith('visuals-page-1', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('visuals-page-2', 'start');
-    expect(onProgress).toHaveBeenCalledWith('visuals-page-2', 'complete');
+    expect(onProgress).toHaveBeenCalledWith('visuals', 'start');
+    expect(onProgress).toHaveBeenCalledWith('visuals', 'complete');
   });
 });
 
@@ -315,13 +291,10 @@ describe('executePipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedProseSetupAgent.mockResolvedValue(mockProseSetup);
-    mockedStyleGuideAgent.mockResolvedValue(mockStyleGuide);
+    mockedVisualsAgent.mockResolvedValue(mockVisuals);
     mockedProsePageAgent
       .mockResolvedValueOnce(mockProsePage1)
       .mockResolvedValueOnce(mockProsePage2);
-    mockedPageVisualsAgent
-      .mockResolvedValueOnce(mockIllustratedPage1)
-      .mockResolvedValueOnce(mockIllustratedPage2);
     mockedRenderPage.mockImplementation(async (_story, pageNumber) => ({
       pageNumber,
       url: `https://example.com/page${pageNumber}.png`,
@@ -344,9 +317,8 @@ describe('executePipeline', () => {
     expect(mockedProseSetupAgent).toHaveBeenCalledTimes(1);
     expect(mockedProsePageAgent).toHaveBeenCalledTimes(2);
 
-    // Visuals stage
-    expect(mockedStyleGuideAgent).toHaveBeenCalledTimes(1);
-    expect(mockedPageVisualsAgent).toHaveBeenCalledTimes(2);
+    // Visuals stage (single call)
+    expect(mockedVisualsAgent).toHaveBeenCalledTimes(1);
 
     // Render stage
     expect(mockedRenderPage).toHaveBeenCalledTimes(2);
