@@ -258,6 +258,7 @@ describe('executePipeline (incremental)', () => {
       saveProse: vi.fn(),
       saveStory: vi.fn(),
       saveBook: vi.fn(),
+      savePageImage: vi.fn().mockResolvedValue('/test/folder/assets/page-1.png'),
     };
 
     await executePipeline(mockStoryWithPlot, { outputManager });
@@ -288,6 +289,7 @@ describe('executePipeline (incremental)', () => {
       saveProse: vi.fn(),
       saveStory: vi.fn(),
       saveBook: vi.fn(),
+      savePageImage: vi.fn().mockResolvedValue('/test/folder/assets/page-1.png'),
     };
 
     await executePipeline(mockStoryWithPlot, { stopAfter: 'prose', outputManager });

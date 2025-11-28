@@ -116,6 +116,7 @@ export const resumeCommand = new Command('resume')
           const book = await runBook(story, {
             mock: options.mock,
             format: options.format,
+            outputManager,
             onPageRendered: (page) => {
               spinner.text = `Rendered page ${page.pageNumber}/${story.visuals.illustratedPages.length}`;
             },
@@ -145,6 +146,7 @@ export const resumeCommand = new Command('resume')
           const book = await runBook(story, {
             mock: options.mock,
             format: options.format,
+            outputManager,
             onPageRendered: (page) => {
               spinner.text = `Rendered page ${page.pageNumber}/${story.visuals.illustratedPages.length}`;
             },
