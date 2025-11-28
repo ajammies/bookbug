@@ -136,8 +136,10 @@ export const resumeCommand = new Command('resume')
           console.log('\n📍 Resuming from: prose.json (visual direction + rendering)');
           const storyWithProse = StoryWithProseSchema.parse(await loadJson(info.latestFile));
 
+          const updateSpinner = (msg: string) => spinner.isSpinning ? spinner.text = msg : spinner.start(msg);
+
           spinner.start('Creating visual direction...');
-          const story = await generateVisuals(storyWithProse);
+          const story = await generateVisuals(storyWithProse, { onThinking: updateSpinner });
           spinner.succeed('Visual direction complete');
 
           await outputManager.saveStory(story);
@@ -147,6 +149,7 @@ export const resumeCommand = new Command('resume')
             mock: options.mock,
             format: options.format,
             outputManager,
+            onThinking: updateSpinner,
           });
           spinner.succeed('Book rendered');
 
@@ -169,6 +172,7 @@ export const resumeCommand = new Command('resume')
                 spinner.succeed(formatStep(step, true));
               }
             },
+            onThinking: (msg) => spinner.isSpinning ? spinner.text = msg : spinner.start(msg),
             outputManager,
             format: options.format,
           });
@@ -195,6 +199,7 @@ export const resumeCommand = new Command('resume')
                 spinner.succeed(formatStep(step, true));
               }
             },
+            onThinking: (msg) => spinner.isSpinning ? spinner.text = msg : spinner.start(msg),
             outputManager,
             format: options.format,
           });

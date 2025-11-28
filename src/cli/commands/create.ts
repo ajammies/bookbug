@@ -48,9 +48,7 @@ export const createCommand = new Command('create')
             spinner.succeed(formatStep(step, true));
           }
         },
-        onThinking: (msg) => {
-          spinner.text = msg;
-        },
+        onThinking: (msg) => spinner.isSpinning ? spinner.text = msg : spinner.start(msg),
         outputManager: options.save !== false ? outputManager : undefined,
       });
 
