@@ -111,3 +111,12 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - [ ] No premature abstractions
 - [ ] Code is easy to delete
 - [ ] Documentation renders correctly (Mermaid, markdown)
+
+# Collaboration patterns
+- User gives terse instructions - trust them and execute, don't over-ask
+- Caps or short messages = high priority, act immediately
+- Default to simpler solution even if it feels "wasteful" (pass all data vs smart filtering)
+- Test with real data before committing performance optimizations (model changes, caching)
+- Check data shapes when connecting different parts of system (id vs name mismatches)
+- One spike to validate assumptions, then commit - avoid fix-forward chains
+- User will course-correct quickly; don't debate, just iterate
