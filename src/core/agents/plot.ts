@@ -2,7 +2,7 @@ import { generateObject } from '../utils/ai';
 import { PlotStructureSchema, type StoryBrief, type PlotStructure } from '../schemas';
 import { getModel } from '../config';
 
-const SYSTEM_PROMPT = `Generate a story arc summary and plot beats from a StoryBrief.
+const SYSTEM_PROMPT = `Generate a story arc summary, plot beats, and enriched character descriptions from a StoryBrief.
 
 First capture the emotional, stylistic, and genre essence of what the user is describing.
 
@@ -14,6 +14,13 @@ plotBeats: 4-7 beats (extend if instructions say to). Structure approximately:
 - Attempts, obstacles, escalation (can have 1-2 of these)
 - The turning point or biggest moment
 - How it ends, what's learned
+
+characters: Return the input characters with visualDescription filled in. For each character, describe their visual appearance in detail for sprite generation:
+- Body type and proportions (round, lanky, small, etc.)
+- Colors (fur/skin/scales, clothing colors)
+- Clothing and accessories (hat, scarf, backpack, etc.)
+- Props they carry (wand, book, toy, etc.)
+- Distinguishing features (big eyes, freckles, antenna, etc.)
 
 Keep descriptions concrete and visual. The author will expand each beat into multiple pages.`;
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BeatPurposeSchema, type BeatPurpose } from './common';
+import { BeatPurposeSchema, type BeatPurpose, StoryCharacterSchema } from './common';
 
 /**
  * Stage 2: PlotStructure - Output of plotAgent
@@ -20,6 +20,7 @@ export const PlotStructureSchema = z.object({
   storyArcSummary: z.string().min(1).describe('1-2 sentence story arc summary'),
   plotBeats: z.array(PlotBeatSchema).min(3).describe('Key story structure beats'),
   allowCreativeLiberty: z.boolean().default(true).describe('Whether the author can embellish beyond the beats'),
+  characters: z.array(StoryCharacterSchema).optional().describe('Characters with visualDescription filled in for sprite generation'),
 });
 
 export type PlotStructure = z.infer<typeof PlotStructureSchema>;

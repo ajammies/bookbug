@@ -94,26 +94,34 @@ export async function streamObjectWithProgress<T>(
   options: StreamObjectParams & { schema: { parse: (data: unknown) => T } },
   onProgress?: (message: string) => void,
   sampleIntervalMs = 3000,
-  repair?: RepairFunction
+  repair?: RepairFunction,
+  logger?: Logger
 ): Promise<T> {
   const result = aiStreamObject(options);
 
   // Start from now so first sample waits for interval
   let lastSampleTime = Date.now();
 
+  let partialCount = 0;
+  let triggerCount = 0;
   for await (const partial of result.partialObjectStream) {
+    partialCount++;
     const now = Date.now();
-    if (onProgress && now - lastSampleTime > sampleIntervalMs) {
+    const elapsed = now - lastSampleTime;
+    if (onProgress && elapsed > sampleIntervalMs) {
+      triggerCount++;
+      logger?.debug({ triggerCount, partialCount, elapsed }, 'stream trigger');
       lastSampleTime = now;
       try {
         const summary = await summarizePartial(partial);
+        logger?.debug({ triggerCount, summary: summary ?? 'null' }, 'summarize result');
         if (summary) onProgress(summary);
       } catch (err) {
-        // Log summarization errors for debugging
-        console.error('Summarization error:', err);
+        logger?.error({ triggerCount, error: String(err) }, 'summarize error');
       }
     }
   }
+  logger?.debug({ partialCount, triggerCount }, 'stream complete');
 
   try {
     return (await result.object) as T;
@@ -131,7 +139,13 @@ export async function streamObjectWithProgress<T>(
     }
 
     // Parse and validate repaired output
-    const parsed = JSON.parse(repairedText);
-    return options.schema.parse(parsed);
+    try {
+      const parsed = JSON.parse(repairedText);
+      return options.schema.parse(parsed);
+    } catch (parseError) {
+      // Repair produced invalid JSON - throw original error with context
+      console.error('Repair produced invalid JSON:', parseError);
+      throw error;
+    }
   }
 }

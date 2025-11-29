@@ -57,6 +57,12 @@ gh pr merge --squash --delete-branch
 git checkout main && git pull
 ```
 
+### 7. Reflect
+After merge, invoke the `reflection` skill to:
+- Review session for user corrections and preferences
+- Suggest updates to `claude.md` or skills
+- Capture learnings for continuous improvement
+
 ## Principles
 
 - Changes should be small, contained, and atomic

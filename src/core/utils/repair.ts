@@ -50,7 +50,7 @@ Fix the invalid field(s) to match the schema. Return ONLY the corrected JSON, no
       const { text: repairedText } = await generateText({
         model: getModel(),
         prompt: repairPrompt,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 16000,
       });
 
       // Extract JSON from response (in case model added markdown fences)

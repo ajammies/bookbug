@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BeatPurposeSchema } from './common';
+import { BeatPurposeSchema, StoryCharacterSchema } from './common';
 
 /**
  * Stage 4: VisualDirection - Output of visualsAgent
@@ -199,3 +199,11 @@ export const VisualDirectionSchema = z.object({
 });
 
 export type VisualDirection = z.infer<typeof VisualDirectionSchema>;
+
+// CharacterDesign: character + sprite sheet for consistent rendering
+export const CharacterDesignSchema = z.object({
+  character: StoryCharacterSchema.describe('Character with visual description'),
+  spriteSheetUrl: z.string().url().describe('URL to sprite sheet (full body turnarounds)'),
+});
+
+export type CharacterDesign = z.infer<typeof CharacterDesignSchema>;

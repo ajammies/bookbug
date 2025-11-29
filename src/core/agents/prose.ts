@@ -10,6 +10,7 @@ import {
 } from '../schemas';
 import { getModel } from '../config';
 import { createRepairFunction } from '../utils/repair';
+import type { Logger } from '../utils/logger';
 
 const SYSTEM_PROMPT = `Write prose content from a story with plot beats.
 
@@ -42,7 +43,8 @@ Output only the prose fields:
  */
 export const proseAgent = async (
   story: StoryWithPlot,
-  onProgress?: (message: string) => void
+  onProgress?: (message: string) => void,
+  logger?: Logger
 ): Promise<Prose> => {
   return streamObjectWithProgress(
     {
@@ -54,7 +56,8 @@ export const proseAgent = async (
     },
     onProgress,
     3000,
-    createRepairFunction()
+    createRepairFunction(),
+    logger
   );
 };
 

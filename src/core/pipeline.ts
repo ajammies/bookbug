@@ -11,6 +11,7 @@ import type {
   IllustratedPage,
   VisualStyleGuide,
   ProseSetup,
+  CharacterDesign,
 } from './schemas';
 import {
   proseAgent,
@@ -19,6 +20,7 @@ import {
   visualsAgent,
   styleGuideAgent,
   pageVisualsAgent,
+  generateCharacterDesigns,
   renderPage,
   renderPageMock,
   createBook,
@@ -70,9 +72,14 @@ const assembleStoryWithProse = (story: StoryWithPlot, prose: Prose): StoryWithPr
   prose,
 });
 
-const assembleComposedStory = (story: StoryWithProse, visuals: VisualDirection): ComposedStory => ({
+const assembleComposedStory = (
+  story: StoryWithProse,
+  visuals: VisualDirection,
+  characterDesigns?: CharacterDesign[]
+): ComposedStory => ({
   ...story,
   visuals,
+  characterDesigns,
 });
 
 // ============================================================================
@@ -112,6 +119,47 @@ const processPages = async <T>(
 };
 
 // ============================================================================
+// Character design generation
+// ============================================================================
+
+interface CharacterDesignOptions {
+  onThinking?: (msg: string) => void;
+  outputManager?: StoryOutputManager;
+  logger?: Logger;
+}
+
+/**
+ * Generate character sprite sheets and save to disk
+ * Returns designs with original Replicate URLs (for API calls)
+ * Files are saved locally but URLs are preserved for image generation
+ */
+const generateAndSaveCharacterDesigns = async (
+  story: StoryWithPlot,
+  styleGuide: VisualStyleGuide,
+  options: CharacterDesignOptions = {}
+): Promise<CharacterDesign[]> => {
+  const { onThinking, outputManager, logger } = options;
+
+  emitThinking('Generating character sprite sheets...', logger, onThinking);
+  // Prefer plot.characters (may have been modified during plot intake) over brief characters
+  const characters = story.plot.characters ?? story.characters;
+  const designs = await generateCharacterDesigns(
+    characters,
+    styleGuide,
+    { logger, onProgress: onThinking }
+  );
+
+  if (outputManager) {
+    emitThinking('Saving character sprite sheets...', logger, onThinking);
+    for (const design of designs) {
+      await outputManager.saveCharacterDesign(design);
+    }
+  }
+
+  return designs;
+};
+
+// ============================================================================
 // Composable pipelines
 // ============================================================================
 
@@ -128,7 +176,7 @@ export const generateProse = async (
 
   emitThinking('Writing story prose...', logger, onThinking);
   onProgress?.('prose', 'start');
-  const prose = await proseAgent(story, onThinking);
+  const prose = await proseAgent(story, onThinking, logger);
   onProgress?.('prose', 'complete');
 
   return assembleStoryWithProse(story, prose);
@@ -147,7 +195,7 @@ export const generateVisuals = async (
 
   emitThinking('Creating visual direction...', logger, onThinking);
   onProgress?.('visuals', 'start');
-  const visuals = await visualsAgent(story, onThinking);
+  const visuals = await visualsAgent(story, onThinking, logger);
   onProgress?.('visuals', 'complete');
 
   return assembleComposedStory(story, visuals);
@@ -204,6 +252,17 @@ export const executePipeline = async (
 
   emitThinking(`Starting pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
+  // Generate style guide and character designs
+  onProgress?.('setup', 'start');
+  emitThinking('Generating style guide...', logger, onThinking);
+  const styleGuide = await styleGuideAgent(storyWithPlot);
+  const characterDesigns = await generateAndSaveCharacterDesigns(
+    storyWithPlot,
+    styleGuide,
+    { onThinking, outputManager, logger }
+  );
+  onProgress?.('setup', 'complete');
+
   // Generate prose
   onProgress?.('prose', 'start');
   const storyWithProse = await generateProse(storyWithPlot, { onProgress, onThinking, logger });
@@ -212,7 +271,16 @@ export const executePipeline = async (
 
   // Generate visuals
   onProgress?.('visuals', 'start');
-  const story = await generateVisuals(storyWithProse, { onProgress, onThinking, logger });
+  const storyWithVisuals = await generateVisuals(storyWithProse, { onProgress, onThinking, logger });
+  // Add character designs to the composed story
+  const story: ComposedStory = { ...storyWithVisuals, characterDesigns };
+
+  // Debug: log character designs being added
+  logger?.debug(
+    { count: characterDesigns.length, designs: characterDesigns.map(d => ({ name: d.character.name, url: d.spriteSheetUrl })) },
+    'Adding character designs to story'
+  );
+
   await outputManager?.saveStory(story);
   onProgress?.('visuals', 'complete');
 
@@ -241,11 +309,16 @@ export const executeIncrementalPipeline = async (
 
   emitThinking(`Starting incremental pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
-  // Setup phase: style guide + prose setup sequentially to avoid rate limits
+  // Setup phase: style guide + prose setup + character designs
   emitThinking('Setting up style guide and prose...', logger, onThinking);
   onProgress?.('setup', 'start');
   const styleGuide = await styleGuideAgent(storyWithPlot);
   const proseSetup = await proseSetupAgent(storyWithPlot);
+  const characterDesigns = await generateAndSaveCharacterDesigns(
+    storyWithPlot,
+    styleGuide,
+    { onThinking, outputManager, logger }
+  );
   onProgress?.('setup', 'complete');
 
   // Process each page completely before moving to next
@@ -273,6 +346,7 @@ export const executeIncrementalPipeline = async (
       ...storyWithPlot,
       prose: assembleProse(proseSetup, prosePages),
       visuals: assembleVisuals(styleGuide, illustratedPages),
+      characterDesigns,
     };
 
     // Render this page
@@ -291,7 +365,7 @@ export const executeIncrementalPipeline = async (
   // Assemble final outputs
   const prose = assembleProse(proseSetup, prosePages);
   const visuals = assembleVisuals(styleGuide, illustratedPages);
-  const story = assembleComposedStory(assembleStoryWithProse(storyWithPlot, prose), visuals);
+  const story = assembleComposedStory(assembleStoryWithProse(storyWithPlot, prose), visuals, characterDesigns);
   const book = createBook(story, renderedPages, format);
 
   // Save final artifacts

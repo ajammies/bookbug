@@ -59,6 +59,3 @@ export const tailLogFile = (
   return { stop: () => tail.kill() };
 };
 
-/** Get log file path from runId */
-export const getLogPath = (runId: string): string =>
-  path.join(process.cwd(), 'logs', `run-${runId}.log`);

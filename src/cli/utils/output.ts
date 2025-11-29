@@ -7,6 +7,7 @@ import type {
   Story,
   RenderedBook,
   RenderedPage,
+  CharacterDesign,
 } from '../../core/schemas';
 import { createStoryFolderName } from './naming';
 import { downloadFile } from '../../utils';
@@ -35,6 +36,8 @@ export interface StoryOutputManager {
   saveBook(book: RenderedBook): Promise<void>;
   /** Save a single page image to assets folder (downloads from URL) */
   savePageImage(page: RenderedPage): Promise<string>;
+  /** Save a character design sprite sheet to assets/characters folder */
+  saveCharacterDesign(design: CharacterDesign): Promise<string>;
 }
 
 /**
@@ -49,6 +52,7 @@ export const createOutputManager = async (
   const folder = customPath ?? path.join(OUTPUT_DIR, createStoryFolderName(title));
   await fs.mkdir(folder, { recursive: true });
   await fs.mkdir(path.join(folder, 'assets'), { recursive: true });
+  await fs.mkdir(path.join(folder, 'assets', 'characters'), { recursive: true });
   return createManager(folder);
 };
 
@@ -82,6 +86,10 @@ export const isStoryFolder = async (filePath: string): Promise<boolean> => {
   }
 };
 
+/** Slugify a name for use in filenames */
+const slugify = (name: string): string =>
+  name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
 const createManager = (folder: string): StoryOutputManager => ({
   folder,
   saveBrief: (brief) => saveJson(folder, 'brief.json', brief),
@@ -95,6 +103,13 @@ const createManager = (folder: string): StoryOutputManager => ({
     const imagePath = path.join(folder, 'assets', filename);
     await fs.writeFile(imagePath, imageBuffer);
     return imagePath;
+  },
+  saveCharacterDesign: async (design: CharacterDesign): Promise<string> => {
+    const imageBuffer = await downloadFile(design.spriteSheetUrl);
+    const filename = `${slugify(design.character.name)}.png`;
+    const imagePath = path.join(folder, 'assets', 'characters', filename);
+    await fs.writeFile(imagePath, imageBuffer);
+    return `assets/characters/${filename}`;
   },
 });
 

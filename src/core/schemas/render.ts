@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { AgeRangeSchema, StoryCharacterSchema } from './common';
-import { VisualStyleGuideSchema, IllustrationBeatSchema } from './visuals';
+import { AgeRangeSchema } from './common';
+import { VisualStyleGuideSchema, IllustrationBeatSchema, CharacterDesignSchema } from './visuals';
 import { BookFormatKeySchema } from './formats';
 
 /**
@@ -30,7 +30,7 @@ export type RenderedBook = z.infer<typeof RenderedBookSchema>;
 export const PageRenderContextSchema = z.object({
   storyTitle: z.string().min(1),
   style: VisualStyleGuideSchema,
-  characters: z.record(z.string(), StoryCharacterSchema),
+  characterDesigns: z.array(CharacterDesignSchema).describe('Sprite sheets for characters on this page'),
   page: z.object({
     pageNumber: z.number().int().min(1),
     text: z.string().optional(),

@@ -9,14 +9,14 @@ describe('createLogger', () => {
   });
 
   it('creates a logger with debug level by default', () => {
-    const logger = createLogger({ silent: false, runId: 'test-run' });
+    const logger = createLogger({ silent: false, title: 'test-story' });
     expect(logger.level).toBe('debug');
   });
 
-  it('includes runId in bindings', () => {
-    const logger = createLogger({ silent: false, runId: 'custom-id' });
+  it('includes name in bindings based on title', () => {
+    const logger = createLogger({ silent: false, title: 'My Test Story' });
     const bindings = logger.bindings();
-    expect(bindings.runId).toBe('custom-id');
+    expect(bindings.name).toMatch(/my-test-story/);
   });
 });
 

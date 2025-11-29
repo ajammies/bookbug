@@ -24,6 +24,7 @@ export type OnStepProgress = (step: string, status: 'start' | 'complete' | 'erro
 // Re-export agents (named after their output)
 export { proseAgent, proseSetupAgent, prosePageAgent, type ProsePageInput } from './prose';
 export { visualsAgent, styleGuideAgent, pageVisualsAgent, type PageVisualsInput } from './visuals';
+export { characterDesignAgent, generateCharacterDesigns } from './character-design';
 export { renderPage, renderPageMock, createBook, filterStoryForPage } from './renderer';
 
 // Chat intake agents (StoryBrief)

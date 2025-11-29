@@ -23,6 +23,8 @@ vi.mock('./agents', async (importOriginal) => {
     ...actual,
     proseAgent: vi.fn(),
     visualsAgent: vi.fn(),
+    styleGuideAgent: vi.fn(),
+    generateCharacterDesigns: vi.fn(),
     renderPage: vi.fn(),
   };
 });
@@ -30,11 +32,15 @@ vi.mock('./agents', async (importOriginal) => {
 import {
   proseAgent,
   visualsAgent,
+  styleGuideAgent,
+  generateCharacterDesigns,
   renderPage,
 } from './agents';
 
 const mockedProseAgent = vi.mocked(proseAgent);
 const mockedVisualsAgent = vi.mocked(visualsAgent);
+const mockedStyleGuideAgent = vi.mocked(styleGuideAgent);
+const mockedGenerateCharacterDesigns = vi.mocked(generateCharacterDesigns);
 const mockedRenderPage = vi.mocked(renderPage);
 
 // Test fixtures
@@ -137,7 +143,7 @@ describe('generateProse', () => {
     await generateProse(mockStoryWithPlot);
 
     expect(mockedProseAgent).toHaveBeenCalledTimes(1);
-    expect(mockedProseAgent).toHaveBeenCalledWith(mockStoryWithPlot, undefined);
+    expect(mockedProseAgent).toHaveBeenCalledWith(mockStoryWithPlot, undefined, undefined);
   });
 
   it('calls onProgress for prose stage', async () => {
@@ -168,7 +174,7 @@ describe('generateVisuals', () => {
     await generateVisuals(mockStoryWithProse);
 
     expect(mockedVisualsAgent).toHaveBeenCalledTimes(1);
-    expect(mockedVisualsAgent).toHaveBeenCalledWith(mockStoryWithProse, undefined);
+    expect(mockedVisualsAgent).toHaveBeenCalledWith(mockStoryWithProse, undefined, undefined);
   });
 
   it('calls onProgress for visuals stage', async () => {
@@ -216,6 +222,7 @@ describe('renderBook', () => {
       saveStory: vi.fn(),
       saveBook: vi.fn(),
       savePageImage: vi.fn().mockResolvedValue('/test/folder/assets/page-1.png'),
+      saveCharacterDesign: vi.fn().mockResolvedValue('assets/characters/test.png'),
     };
 
     await renderBook(mockComposedStory, { outputManager });
@@ -250,6 +257,10 @@ describe('renderBook', () => {
 describe('executePipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedStyleGuideAgent.mockResolvedValue(mockStyleGuide);
+    mockedGenerateCharacterDesigns.mockResolvedValue([
+      { character: mockStoryWithPlot.characters[0]!, spriteSheetUrl: 'https://example.com/sprite.png' },
+    ]);
     mockedProseAgent.mockResolvedValue(mockProse);
     mockedVisualsAgent.mockResolvedValue(mockVisuals);
     mockedRenderPage.mockImplementation(async (_story, pageNumber) => ({
@@ -285,6 +296,8 @@ describe('executePipeline', () => {
 
     await executePipeline(mockStoryWithPlot, { onProgress });
 
+    expect(onProgress).toHaveBeenCalledWith('setup', 'start');
+    expect(onProgress).toHaveBeenCalledWith('setup', 'complete');
     expect(onProgress).toHaveBeenCalledWith('prose', 'start');
     expect(onProgress).toHaveBeenCalledWith('prose', 'complete');
     expect(onProgress).toHaveBeenCalledWith('visuals', 'start');
@@ -302,6 +315,7 @@ describe('executePipeline', () => {
       saveStory: vi.fn(),
       saveBook: vi.fn(),
       savePageImage: vi.fn().mockResolvedValue('/test/folder/assets/page-1.png'),
+      saveCharacterDesign: vi.fn().mockResolvedValue('assets/characters/test.png'),
     };
 
     await executePipeline(mockStoryWithPlot, { outputManager });

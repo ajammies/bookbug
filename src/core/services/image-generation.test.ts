@@ -47,7 +47,7 @@ describe('generatePageImage', () => {
         diegetic_lights: [],
       },
     },
-    characters: {},
+    characterDesigns: [],
     page: {
       pageNumber: 1,
       text: 'Luna found an old garden gate.',

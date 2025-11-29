@@ -68,6 +68,7 @@ export {
   VisualStyleGuideSchema,
   IllustratedPageSchema,
   VisualDirectionSchema,
+  CharacterDesignSchema,
   type Lighting,
   type ColorScript,
   type Mood,
@@ -82,6 +83,7 @@ export {
   type VisualStyleGuide,
   type IllustratedPage,
   type VisualDirection,
+  type CharacterDesign,
 } from './visuals';
 
 // Composed types

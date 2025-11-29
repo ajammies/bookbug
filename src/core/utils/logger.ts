@@ -6,18 +6,18 @@
  */
 import pino from 'pino';
 import path from 'path';
-import { nanoid } from 'nanoid';
+import { createStoryFolderName } from '../../cli/utils/naming';
 
 export type Logger = pino.Logger;
 
 export interface LoggerConfig {
   silent?: boolean;
-  runId?: string;
+  title?: string;
 }
 
-/** Derive log file path from runId */
-const getLogPath = (runId: string): string =>
-  path.join(process.cwd(), 'logs', `run-${runId}.log`);
+/** Derive log file path from name */
+const getLogPath = (name: string): string =>
+  path.join(process.cwd(), 'logs', `${name}.log`);
 
 /** Create a configured logger instance */
 export const createLogger = (config: LoggerConfig = {}): Logger => {
@@ -25,14 +25,14 @@ export const createLogger = (config: LoggerConfig = {}): Logger => {
     return pino({ level: 'silent' });
   }
 
-  const runId = config.runId ?? nanoid(8);
+  const name = createStoryFolderName(config.title ?? 'run');
 
   return pino(
-    { level: 'debug', base: { runId } },
+    { level: 'debug', base: { name } },
     pino.transport({
       target: 'pino/file',
       options: {
-        destination: getLogPath(runId),
+        destination: getLogPath(name),
         mkdir: true,
       },
     })
