@@ -65,7 +65,7 @@ type StreamObjectParams = Parameters<typeof aiStreamObject>[0];
 /** Summarize partial object into human-readable progress using Haiku */
 const summarizePartial = async (partial: unknown): Promise<string> => {
   const { text } = await generateText({
-    model: anthropic('claude-3-haiku-20240307'),
+    model: anthropic('claude-3-5-haiku-latest'),
     prompt: `Describe in 5-8 words what's being created in this children's book data: ${JSON.stringify(partial).slice(0, 500)}`,
     maxOutputTokens: 20,
   });
@@ -89,8 +89,9 @@ export async function streamObjectWithProgress<T>(
       try {
         const summary = await summarizePartial(partial);
         onProgress(summary);
-      } catch {
-        // Ignore summarization errors - don't break the main stream
+      } catch (err) {
+        // Log summarization errors for debugging
+        console.error('Summarization error:', err);
       }
     }
   }
