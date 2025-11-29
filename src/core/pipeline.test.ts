@@ -11,8 +11,6 @@ import type {
   ComposedStory,
   Prose,
   VisualDirection,
-  ProseSetup,
-  ProsePage,
   VisualStyleGuide,
   IllustratedPage,
 } from './schemas';
@@ -23,22 +21,19 @@ vi.mock('./agents', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./agents')>();
   return {
     ...actual,
-    proseSetupAgent: vi.fn(),
-    prosePageAgent: vi.fn(),
+    proseAgent: vi.fn(),
     visualsAgent: vi.fn(),
     renderPage: vi.fn(),
   };
 });
 
 import {
-  proseSetupAgent,
-  prosePageAgent,
+  proseAgent,
   visualsAgent,
   renderPage,
 } from './agents';
 
-const mockedProseSetupAgent = vi.mocked(proseSetupAgent);
-const mockedProsePageAgent = vi.mocked(prosePageAgent);
+const mockedProseAgent = vi.mocked(proseAgent);
 const mockedVisualsAgent = vi.mocked(visualsAgent);
 const mockedRenderPage = vi.mocked(renderPage);
 
@@ -64,27 +59,13 @@ const mockStoryWithPlot: StoryWithPlot = {
   },
 };
 
-const mockProseSetup: ProseSetup = {
-  logline: 'A hero saves the day',
-  theme: 'Courage',
-};
-
-const mockProsePage1: ProsePage = {
-  summary: 'Page 1',
-  text: 'Once upon a time...',
-  imageConcept: 'Hero standing',
-};
-
-const mockProsePage2: ProsePage = {
-  summary: 'Page 2',
-  text: 'The end.',
-  imageConcept: 'Hero celebrating',
-};
-
 const mockProse: Prose = {
   logline: 'A hero saves the day',
   theme: 'Courage',
-  pages: [mockProsePage1, mockProsePage2],
+  pages: [
+    { summary: 'Page 1', text: 'Once upon a time...', imageConcept: 'Hero standing' },
+    { summary: 'Page 2', text: 'The end.', imageConcept: 'Hero celebrating' },
+  ],
 };
 
 const mockStyleGuide: VisualStyleGuide = {
@@ -141,13 +122,10 @@ const mockComposedStory: ComposedStory = {
 describe('generateProse', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedProseSetupAgent.mockResolvedValue(mockProseSetup);
-    mockedProsePageAgent
-      .mockResolvedValueOnce(mockProsePage1)
-      .mockResolvedValueOnce(mockProsePage2);
+    mockedProseAgent.mockResolvedValue(mockProse);
   });
 
-  it('generates prose setup then pages sequentially', async () => {
+  it('generates prose in single call', async () => {
     const result = await generateProse(mockStoryWithPlot);
 
     expect(result.title).toBe('Test Story');
@@ -155,38 +133,20 @@ describe('generateProse', () => {
     expect(result.prose.pages).toHaveLength(2);
   });
 
-  it('calls prose setup agent once', async () => {
+  it('calls prose agent once with story', async () => {
     await generateProse(mockStoryWithPlot);
 
-    expect(mockedProseSetupAgent).toHaveBeenCalledTimes(1);
-    expect(mockedProseSetupAgent).toHaveBeenCalledWith(mockStoryWithPlot);
+    expect(mockedProseAgent).toHaveBeenCalledTimes(1);
+    expect(mockedProseAgent).toHaveBeenCalledWith(mockStoryWithPlot);
   });
 
-  it('passes previous pages to prose page agent', async () => {
-    await generateProse(mockStoryWithPlot);
-
-    expect(mockedProsePageAgent).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      pageNumber: 1,
-      previousPages: [],
-    }));
-
-    expect(mockedProsePageAgent).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      pageNumber: 2,
-      previousPages: [mockProsePage1],
-    }));
-  });
-
-  it('calls onProgress for setup and each page', async () => {
+  it('calls onProgress for prose stage', async () => {
     const onProgress = vi.fn();
 
     await generateProse(mockStoryWithPlot, { onProgress });
 
-    expect(onProgress).toHaveBeenCalledWith('prose-setup', 'start');
-    expect(onProgress).toHaveBeenCalledWith('prose-setup', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('prose-page-1', 'start');
-    expect(onProgress).toHaveBeenCalledWith('prose-page-1', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('prose-page-2', 'start');
-    expect(onProgress).toHaveBeenCalledWith('prose-page-2', 'complete');
+    expect(onProgress).toHaveBeenCalledWith('prose', 'start');
+    expect(onProgress).toHaveBeenCalledWith('prose', 'complete');
   });
 });
 
@@ -290,11 +250,8 @@ describe('renderBook', () => {
 describe('executePipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedProseSetupAgent.mockResolvedValue(mockProseSetup);
+    mockedProseAgent.mockResolvedValue(mockProse);
     mockedVisualsAgent.mockResolvedValue(mockVisuals);
-    mockedProsePageAgent
-      .mockResolvedValueOnce(mockProsePage1)
-      .mockResolvedValueOnce(mockProsePage2);
     mockedRenderPage.mockImplementation(async (_story, pageNumber) => ({
       pageNumber,
       url: `https://example.com/page${pageNumber}.png`,
@@ -313,9 +270,8 @@ describe('executePipeline', () => {
   it('chains prose, visuals, and render stages', async () => {
     await executePipeline(mockStoryWithPlot);
 
-    // Prose stage
-    expect(mockedProseSetupAgent).toHaveBeenCalledTimes(1);
-    expect(mockedProsePageAgent).toHaveBeenCalledTimes(2);
+    // Prose stage (single call)
+    expect(mockedProseAgent).toHaveBeenCalledTimes(1);
 
     // Visuals stage (single call)
     expect(mockedVisualsAgent).toHaveBeenCalledTimes(1);

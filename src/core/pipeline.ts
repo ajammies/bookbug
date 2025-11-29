@@ -13,6 +13,7 @@ import type {
   ProseSetup,
 } from './schemas';
 import {
+  proseAgent,
   proseSetupAgent,
   prosePageAgent,
   visualsAgent,
@@ -116,6 +117,8 @@ const processPages = async <T>(
 
 /**
  * Generate prose for a story (StoryWithPlot → StoryWithProse)
+ *
+ * Uses single-call proseAgent to minimize API requests and avoid rate limits.
  */
 export const generateProse = async (
   story: StoryWithPlot,
@@ -123,20 +126,11 @@ export const generateProse = async (
 ): Promise<StoryWithProse> => {
   const { onProgress, onThinking, logger } = options;
 
-  emitThinking('Establishing story voice...', logger, onThinking);
-  onProgress?.('prose-setup', 'start');
-  const proseSetup = await proseSetupAgent(story);
-  onProgress?.('prose-setup', 'complete');
+  emitThinking('Writing story prose...', logger, onThinking);
+  onProgress?.('prose', 'start');
+  const prose = await proseAgent(story);
+  onProgress?.('prose', 'complete');
 
-  const prosePages = await processPages<ProsePage>(story.pageCount, async (pageNumber, previous) => {
-    emitThinking(`Writing page ${pageNumber} of ${story.pageCount}...`, logger, onThinking);
-    onProgress?.(`prose-page-${pageNumber}`, 'start');
-    const page = await generateProsePage(story, proseSetup, pageNumber, previous);
-    onProgress?.(`prose-page-${pageNumber}`, 'complete');
-    return page;
-  });
-
-  const prose = assembleProse(proseSetup, prosePages);
   return assembleStoryWithProse(story, prose);
 };
 
