@@ -41,3 +41,38 @@ description: Code editing rules. Reference before complex edits.
 - Trust terse instructions - execute, do not over-ask
 - Always default to simpler solution even if it feels "wasteful"
 - Do one spike to validate assumptions, then commit - avoid fix-forward chains
+
+## Examples
+
+### Pure Functions
+
+```ts
+// INCORRECT - side effect, mutates external state
+let count = 0;
+function increment() { count++; }
+
+// CORRECT - pure, returns new value
+function increment(count: number): number { return count + 1; }
+```
+
+### Data Flow
+
+```ts
+// INCORRECT - global state
+const config = { apiKey: '' };
+function fetchData() { return fetch(url, { headers: { key: config.apiKey } }); }
+
+// CORRECT - explicit parameters
+function fetchData(apiKey: string) { return fetch(url, { headers: { key: apiKey } }); }
+```
+
+### Premature Abstraction
+
+```ts
+// INCORRECT - abstraction for one use case
+const createHandler = (type: string) => (data: unknown) => process(type, data);
+const userHandler = createHandler('user');
+
+// CORRECT - direct and simple
+function handleUser(data: unknown) { return process('user', data); }
+```
