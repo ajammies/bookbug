@@ -9,8 +9,10 @@ import {
   generateObject as aiGenerateObject,
   streamObject as aiStreamObject,
   generateText,
+  NoObjectGeneratedError,
   type GenerateObjectResult,
 } from 'ai';
+import type { JSONParseError, TypeValidationError } from '@ai-sdk/provider';
 import { anthropic } from '@ai-sdk/anthropic';
 import { sleep } from './retry';
 import { type Logger, logApiSuccess, logApiError, logRateLimit } from './logger';
@@ -62,8 +64,23 @@ export async function generateObject<T>(
 
 type StreamObjectParams = Parameters<typeof aiStreamObject>[0];
 
+/** Repair function type matching generateObject's experimental_repairText */
+export type RepairFunction = (opts: {
+  text: string;
+  error: JSONParseError | TypeValidationError;
+}) => Promise<string | null>;
+
+/** Check if partial object has meaningful data to summarize */
+const hasSubstantialData = (partial: unknown): boolean => {
+  const json = JSON.stringify(partial);
+  // Skip empty objects, arrays, or very small data
+  return json.length > 20 && json !== '{}' && json !== '[]';
+};
+
 /** Summarize partial object into human-readable progress using Haiku */
-const summarizePartial = async (partial: unknown): Promise<string> => {
+const summarizePartial = async (partial: unknown): Promise<string | null> => {
+  if (!hasSubstantialData(partial)) return null;
+
   const { text } = await generateText({
     model: anthropic('claude-3-5-haiku-latest'),
     prompt: `Describe in 5-8 words what's being created in this children's book data: ${JSON.stringify(partial).slice(0, 500)}`,
@@ -72,15 +89,17 @@ const summarizePartial = async (partial: unknown): Promise<string> => {
   return text.trim();
 };
 
-/** Stream object generation with progress callbacks */
+/** Stream object generation with progress callbacks and optional repair */
 export async function streamObjectWithProgress<T>(
   options: StreamObjectParams & { schema: { parse: (data: unknown) => T } },
   onProgress?: (message: string) => void,
-  sampleIntervalMs = 3000
+  sampleIntervalMs = 3000,
+  repair?: RepairFunction
 ): Promise<T> {
   const result = aiStreamObject(options);
 
-  let lastSampleTime = 0;
+  // Start from now so first sample waits for interval
+  let lastSampleTime = Date.now();
 
   for await (const partial of result.partialObjectStream) {
     const now = Date.now();
@@ -88,7 +107,7 @@ export async function streamObjectWithProgress<T>(
       lastSampleTime = now;
       try {
         const summary = await summarizePartial(partial);
-        onProgress(summary);
+        if (summary) onProgress(summary);
       } catch (err) {
         // Log summarization errors for debugging
         console.error('Summarization error:', err);
@@ -96,5 +115,23 @@ export async function streamObjectWithProgress<T>(
     }
   }
 
-  return (await result.object) as T;
+  try {
+    return (await result.object) as T;
+  } catch (error) {
+    // Attempt repair if provided and error is a validation error with text
+    if (!repair || !NoObjectGeneratedError.isInstance(error) || !error.text) {
+      throw error;
+    }
+
+    const cause = error.cause as JSONParseError | TypeValidationError;
+    const repairedText = await repair({ text: error.text, error: cause });
+
+    if (!repairedText) {
+      throw error;
+    }
+
+    // Parse and validate repaired output
+    const parsed = JSON.parse(repairedText);
+    return options.schema.parse(parsed);
+  }
 }

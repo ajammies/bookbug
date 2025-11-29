@@ -53,7 +53,8 @@ export const proseAgent = async (
       maxOutputTokens: 16000,
     },
     onProgress,
-    3000
+    3000,
+    createRepairFunction()
   );
 };
 

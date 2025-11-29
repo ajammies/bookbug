@@ -56,7 +56,8 @@ export const visualsAgent = async (
       maxOutputTokens: 16000,
     },
     onProgress,
-    3000
+    3000,
+    createRepairFunction('IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button')
   );
 };
 
