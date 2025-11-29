@@ -130,7 +130,8 @@ interface CharacterDesignOptions {
 
 /**
  * Generate character sprite sheets and save to disk
- * Returns designs with local paths (if outputManager provided) or remote URLs
+ * Returns designs with original Replicate URLs (for API calls)
+ * Files are saved locally but URLs are preserved for image generation
  */
 const generateAndSaveCharacterDesigns = async (
   story: StoryWithPlot,
@@ -149,8 +150,7 @@ const generateAndSaveCharacterDesigns = async (
   if (outputManager) {
     emitThinking('Saving character sprite sheets...', logger, onThinking);
     for (const design of designs) {
-      const localPath = await outputManager.saveCharacterDesign(design);
-      design.spriteSheetUrl = localPath;
+      await outputManager.saveCharacterDesign(design);
     }
   }
 
