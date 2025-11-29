@@ -1,5 +1,6 @@
 ---
 name: reflect
+allowed-tools: Read, Edit
 description: End-of-session reflection for continuous improvement. Use when user asks to reflect, after merging PRs, or at session end. Outputs improvement recommendations table.
 ---
 

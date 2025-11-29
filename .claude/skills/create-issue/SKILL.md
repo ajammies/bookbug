@@ -1,5 +1,6 @@
 ---
 name: create-issue
+allowed-tools: Bash(gh:*)
 description: |
   Use this skill when: creating issues, viewing issues, resolving issues, or linking issues to PRs.
   Also use PROACTIVELY when encountering bugs or features to track later.

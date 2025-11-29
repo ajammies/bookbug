@@ -1,5 +1,6 @@
 ---
 name: commit
+allowed-tools: Bash(git:*)
 description: |
   Use this skill when committing changes. Validates branch relevance, ensures atomic commits.
 ---
