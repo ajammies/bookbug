@@ -272,6 +272,13 @@ export const executePipeline = async (
   const storyWithVisuals = await generateVisuals(storyWithProse, { onProgress, onThinking, logger });
   // Add character designs to the composed story
   const story: ComposedStory = { ...storyWithVisuals, characterDesigns };
+
+  // Debug: log character designs being added
+  console.log(`[pipeline] Adding ${characterDesigns.length} character designs to story`);
+  characterDesigns.forEach((d, i) => {
+    console.log(`[pipeline]   ${i + 1}. ${d.character.name}: ${d.spriteSheetUrl}`);
+  });
+
   await outputManager?.saveStory(story);
   onProgress?.('visuals', 'complete');
 

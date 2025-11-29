@@ -163,6 +163,10 @@ export const generatePageImage = async (
   try {
     const referenceImages = extractReferenceImages(context);
 
+    // Debug logging for reference images
+    console.log(`[imageGen] Page ${context.page.pageNumber}: ${context.characterDesigns?.length ?? 0} character designs`);
+    console.log(`[imageGen] Reference images to pass: ${referenceImages.length > 0 ? referenceImages.join(', ') : 'none'}`);
+
     const input: Record<string, unknown> = {
       prompt: buildPrompt(context),
       aspect_ratio: getAspectRatio(format),
