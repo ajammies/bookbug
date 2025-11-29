@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { executeIncrementalPipeline, generateVisuals, renderBook } from '../../core/pipeline';
+import { executePipeline, generateVisuals, renderBook } from '../../core/pipeline';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -162,15 +162,15 @@ export const resumeCommand = new Command('resume')
         }
 
         case 'blurb': {
-          // Has blurb.json, run full incremental pipeline
           console.log('\n📍 Resuming from: blurb.json (prose + visuals + rendering)');
           const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(info.latestFile));
 
-          const result = await executeIncrementalPipeline(storyWithPlot, {
+          const majorPhases = ['prose', 'visuals', 'render'];
+          const result = await executePipeline(storyWithPlot, {
             onProgress: (step, status) => {
               if (status === 'start') {
                 spinner.start(formatStep(step));
-              } else if (status === 'complete') {
+              } else if (status === 'complete' && majorPhases.includes(step)) {
                 spinner.succeed(formatStep(step, true));
               }
             },
@@ -187,19 +187,18 @@ export const resumeCommand = new Command('resume')
         }
 
         case 'brief': {
-          // Has brief.json only, needs plot intake + full pipeline
           console.log('\n📍 Resuming from: brief.json (plot iteration + prose + visuals + rendering)');
           const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
 
-          // Run plot intake to create StoryWithPlot
           const storyWithPlot = await runPlotIntake(brief);
           await outputManager.saveBlurb(storyWithPlot);
 
-          const result = await executeIncrementalPipeline(storyWithPlot, {
+          const majorPhases = ['prose', 'visuals', 'render'];
+          const result = await executePipeline(storyWithPlot, {
             onProgress: (step, status) => {
               if (status === 'start') {
                 spinner.start(formatStep(step));
-              } else if (status === 'complete') {
+              } else if (status === 'complete' && majorPhases.includes(step)) {
                 spinner.succeed(formatStep(step, true));
               }
             },
