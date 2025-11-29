@@ -29,6 +29,7 @@ import {
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
 import { type Logger, logThinking } from './utils/logger';
+import { loadArtDirection } from './services/style-loader';
 
 // ============================================================================
 // Types
@@ -250,13 +251,17 @@ export const executePipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, onThinking, outputManager, format, logger, artDirectionPreset } = options;
+  const { onProgress, onThinking, outputManager, format, logger, artDirectionPreset: optionsPreset } = options;
 
   emitThinking(`Starting pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
+  // Load art direction preset from options, story brief, or generate new
+  const artDirectionPreset = optionsPreset
+    ?? (storyWithPlot.artStyle ? await loadArtDirection(storyWithPlot.artStyle) : undefined);
+
   // Generate style guide and character designs
   onProgress?.('setup', 'start');
-  emitThinking(artDirectionPreset ? 'Applying style preset...' : 'Generating style guide...', logger, onThinking);
+  emitThinking(artDirectionPreset ? `Applying style: ${storyWithPlot.artStyle ?? 'preset'}...` : 'Generating style guide...', logger, onThinking);
   const styleGuide = await styleGuideAgent(storyWithPlot, artDirectionPreset);
   const characterDesigns = await generateAndSaveCharacterDesigns(
     storyWithPlot,
@@ -307,12 +312,16 @@ export const executeIncrementalPipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, onThinking, outputManager, format = 'square-large', logger, artDirectionPreset } = options;
+  const { onProgress, onThinking, outputManager, format = 'square-large', logger, artDirectionPreset: optionsPreset } = options;
 
   emitThinking(`Starting incremental pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
+  // Load art direction preset from options, story brief, or generate new
+  const artDirectionPreset = optionsPreset
+    ?? (storyWithPlot.artStyle ? await loadArtDirection(storyWithPlot.artStyle) : undefined);
+
   // Setup phase: style guide + prose setup + character designs
-  emitThinking(artDirectionPreset ? 'Applying style preset...' : 'Setting up style guide and prose...', logger, onThinking);
+  emitThinking(artDirectionPreset ? `Applying style: ${storyWithPlot.artStyle ?? 'preset'}...` : 'Setting up style guide and prose...', logger, onThinking);
   onProgress?.('setup', 'start');
   const styleGuide = await styleGuideAgent(storyWithPlot, artDirectionPreset);
   const proseSetup = await proseSetupAgent(storyWithPlot);

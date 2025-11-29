@@ -32,7 +32,7 @@ export { progressMessagesAgent } from './progress-messages';
 
 // Chat intake agents (StoryBrief)
 export { interpreterAgent } from './interpreter';
-export { conversationAgent, type Message, type MessageRole } from './conversation';
+export { conversationAgent, type Message, type MessageRole, type ConversationAgentOptions } from './conversation';
 
 // Plot iteration agents (PlotStructure)
 export { plotAgent } from './plot';

@@ -6,6 +6,7 @@ import {
   conversationAgent,
   type Message,
 } from '../../core/agents';
+import { listStyles } from '../../core/services/style-loader';
 
 /**
  * LLM-driven conversational story intake
@@ -18,6 +19,9 @@ export async function runStoryIntake(
 ): Promise<StoryBrief> {
   let currentBrief: Partial<StoryBrief> = {};
   const history: Message[] = [];
+
+  // Load available art styles for the conversation agent
+  const availableStyles = await listStyles();
 
   console.log('\n📚 Let\'s create a children\'s book!\n');
 
@@ -36,7 +40,7 @@ export async function runStoryIntake(
   while (true) {
     // Get next question from conversation agent
     const spinner = ora('Thinking...').start();
-    const response = await conversationAgent(currentBrief, history);
+    const response = await conversationAgent(currentBrief, history, { availableStyles });
     spinner.stop();
 
     if (response.isComplete) {
