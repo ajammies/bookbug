@@ -35,10 +35,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post-edit-rules.sh"
-          },
-          {
-            "type": "command",
             "command": "bash .claude/hooks/remind-atomic-commit.sh"
           },
           {
@@ -50,10 +46,6 @@
       {
         "matcher": "Write",
         "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/post-edit-rules.sh"
-          },
           {
             "type": "command",
             "command": "bash .claude/hooks/remind-atomic-commit.sh"
