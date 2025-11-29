@@ -2,20 +2,27 @@ import type { ComposedStory, RenderedBook, RenderedPage, BookFormatKey, PageRend
 import { BOOK_FORMATS } from '../schemas';
 import { generatePageImage } from '../services/image-generation';
 
+export interface RenderPageOptions {
+  format?: BookFormatKey;
+  previousPages?: RenderedPage[];
+}
+
 /**
  * Render a single page image from a ComposedStory
  *
  * Returns a RenderedPage with a temporary URL from Replicate.
  * Call this for each page to have full control over the generation process.
+ * Pass previousPages for style consistency across the book.
  */
 export const renderPage = async (
   story: ComposedStory,
   pageNumber: number,
-  format: BookFormatKey = 'square-large'
+  options: RenderPageOptions = {}
 ): Promise<RenderedPage> => {
+  const { format = 'square-large', previousPages } = options;
   const storySlice = filterStoryForPage(story, pageNumber);
   const formatSpec = BOOK_FORMATS[format];
-  const result = await generatePageImage(storySlice, formatSpec);
+  const result = await generatePageImage(storySlice, formatSpec, { previousPages });
 
   return {
     pageNumber,

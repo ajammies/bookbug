@@ -209,7 +209,8 @@ describe('renderPage', () => {
         storyTitle: 'The Magic Garden',
         page: expect.objectContaining({ pageNumber: 1 }),
       }),
-      expect.any(Object) // format spec
+      expect.any(Object), // format spec
+      expect.any(Object)  // options
     );
   });
 
@@ -230,18 +231,20 @@ describe('renderPage', () => {
     // Should use square-large format (the default)
     expect(generatePageImage).toHaveBeenCalledWith(
       expect.any(Object),
-      expect.objectContaining({ name: 'Large Square' })
+      expect.objectContaining({ name: 'Large Square' }),
+      expect.any(Object)
     );
   });
 
   it('passes specified format to generatePageImage', async () => {
     const story = createMinimalStory();
 
-    await renderPage(story, 1, 'landscape');
+    await renderPage(story, 1, { format: 'landscape' });
 
     expect(generatePageImage).toHaveBeenCalledWith(
       expect.any(Object),
-      expect.objectContaining({ name: 'Landscape' })
+      expect.objectContaining({ name: 'Landscape' }),
+      expect.any(Object)
     );
   });
 });

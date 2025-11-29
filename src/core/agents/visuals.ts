@@ -40,15 +40,10 @@ CRITICAL: Generate illustratedPages for EVERY page in the story. Do not stop aft
 /**
  * VisualsAgent: Takes a StoryWithProse and produces VisualDirection
  *
- * Uses streaming to provide real-time progress updates via onProgress callback.
  * Output contains ONLY the new fields (style, illustratedPages).
  * Caller composes the result: ComposedStory = { ...story, visuals: result }
  */
-export const visualsAgent = async (
-  story: StoryWithProse,
-  onProgress?: (message: string) => void,
-  logger?: Logger
-): Promise<VisualDirection> => {
+export const visualsAgent = async (story: StoryWithProse, logger?: Logger): Promise<VisualDirection> => {
   return streamObjectWithProgress(
     {
       model: getModel(),
@@ -57,8 +52,6 @@ export const visualsAgent = async (
       prompt: JSON.stringify(story, null, 2),
       maxOutputTokens: 64000,
     },
-    onProgress,
-    3000,
     createRepairFunction('IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button'),
     logger
   );

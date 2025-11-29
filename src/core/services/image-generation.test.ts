@@ -61,7 +61,7 @@ describe('generatePageImage', () => {
     const mockRun = vi.fn().mockResolvedValue(['https://example.com/image.png']);
     const mockClient = createMockClient(mockRun);
 
-    await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient);
+    await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient });
 
     expect(mockRun).toHaveBeenCalledWith('google/nano-banana-pro', expect.any(Object));
   });
@@ -73,7 +73,7 @@ describe('generatePageImage', () => {
     const result = await generatePageImage(
       minimalContext,
       BOOK_FORMATS['square-large'],
-      mockClient
+      { client: mockClient }
     );
 
     expect(result.url).toBe('https://example.com/page.png');
@@ -89,7 +89,7 @@ describe('generatePageImage', () => {
     const result = await generatePageImage(
       minimalContext,
       BOOK_FORMATS['square-large'],
-      mockClient
+      { client: mockClient }
     );
 
     expect(result.url).toBe('https://example.com/file-output.png');
@@ -102,7 +102,7 @@ describe('generatePageImage', () => {
     const result = await generatePageImage(
       minimalContext,
       BOOK_FORMATS['square-large'],
-      mockClient
+      { client: mockClient }
     );
 
     expect(result.url).toBe('https://example.com/single.png');
@@ -113,7 +113,7 @@ describe('generatePageImage', () => {
     const mockClient = createMockClient(mockRun);
 
     await expect(
-      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
+      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient })
     ).rejects.toThrow('Unexpected output format from Replicate model');
   });
 
@@ -121,7 +121,7 @@ describe('generatePageImage', () => {
     const mockRun = vi.fn().mockResolvedValue(['https://example.com/image.png']);
     const mockClient = createMockClient(mockRun);
 
-    await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient);
+    await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient });
 
     const callArgs = mockRun.mock.calls[0]?.[1] as { input: { prompt: string } };
     const prompt = callArgs.input.prompt;
@@ -136,7 +136,7 @@ describe('generatePageImage', () => {
     const mockRun = vi.fn().mockResolvedValue(['https://example.com/image.png']);
     const mockClient = createMockClient(mockRun);
 
-    await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient);
+    await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient });
 
     const callArgs = mockRun.mock.calls[0]?.[1] as { input: { aspect_ratio: string } };
     expect(callArgs.input.aspect_ratio).toBe('1:1');
@@ -146,7 +146,7 @@ describe('generatePageImage', () => {
     const mockRun = vi.fn().mockResolvedValue(['https://example.com/image.png']);
     const mockClient = createMockClient(mockRun);
 
-    await generatePageImage(minimalContext, BOOK_FORMATS['landscape'], mockClient);
+    await generatePageImage(minimalContext, BOOK_FORMATS['landscape'], { client: mockClient });
 
     const callArgs = mockRun.mock.calls[0]?.[1] as { input: { aspect_ratio: string } };
     expect(callArgs.input.aspect_ratio).toBe('4:3');
@@ -156,7 +156,7 @@ describe('generatePageImage', () => {
     const mockRun = vi.fn().mockResolvedValue(['https://example.com/image.png']);
     const mockClient = createMockClient(mockRun);
 
-    await generatePageImage(minimalContext, BOOK_FORMATS['portrait-small'], mockClient);
+    await generatePageImage(minimalContext, BOOK_FORMATS['portrait-small'], { client: mockClient });
 
     const callArgs = mockRun.mock.calls[0]?.[1] as { input: { aspect_ratio: string } };
     expect(callArgs.input.aspect_ratio).toBe('3:4');
@@ -175,7 +175,7 @@ describe('generatePageImage', () => {
     const result = await generatePageImage(
       minimalContext,
       BOOK_FORMATS['square-large'],
-      mockClient
+      { client: mockClient }
     );
 
     expect(mockRun).toHaveBeenCalledTimes(2);
@@ -191,7 +191,7 @@ describe('generatePageImage', () => {
     const mockClient = createMockClient(mockRun);
 
     await expect(
-      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
+      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient })
     ).rejects.toEqual(apiError);
 
     expect(mockRun).toHaveBeenCalledTimes(2);
@@ -206,7 +206,7 @@ describe('generatePageImage', () => {
     const mockClient = createMockClient(mockRun);
 
     await expect(
-      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
+      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient })
     ).rejects.toEqual(apiError);
 
     expect(mockRun).toHaveBeenCalledTimes(1);
@@ -218,7 +218,7 @@ describe('generatePageImage', () => {
     const mockClient = createMockClient(mockRun);
 
     await expect(
-      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
+      generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient })
     ).rejects.toThrow('Network connection failed');
   });
 });

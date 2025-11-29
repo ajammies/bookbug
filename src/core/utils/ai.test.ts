@@ -5,16 +5,10 @@ import { z } from 'zod';
 vi.mock('ai', () => ({
   generateObject: vi.fn(),
   streamObject: vi.fn(),
-  generateText: vi.fn(),
   NoObjectGeneratedError: {
     isInstance: (error: unknown) =>
       error instanceof Error && (error as { name?: string }).name === 'NoObjectGeneratedError',
   },
-}));
-
-// Mock anthropic
-vi.mock('@ai-sdk/anthropic', () => ({
-  anthropic: vi.fn(() => 'mock-model'),
 }));
 
 // Mock retry
@@ -63,33 +57,6 @@ describe('streamObjectWithProgress', () => {
     expect(result).toEqual(mockObject);
   });
 
-  it('calls onProgress during streaming', async () => {
-    const mockObject = { name: 'test', value: 42 };
-    const mockStreamObject = streamObject as ReturnType<typeof vi.fn>;
-    const onProgress = vi.fn();
-
-    // Create a stream that emits partials with time delays
-    mockStreamObject.mockReturnValue({
-      partialObjectStream: (async function* () {
-        yield { name: 'partial' };
-      })(),
-      object: Promise.resolve(mockObject),
-    });
-
-    await streamObjectWithProgress(
-      {
-        model: 'mock-model' as unknown as Parameters<typeof streamObject>[0]['model'],
-        schema: TestSchema,
-        prompt: 'test prompt',
-      },
-      onProgress,
-      0 // Set to 0 for immediate progress
-    );
-
-    // onProgress may be called depending on timing
-    expect(mockStreamObject).toHaveBeenCalled();
-  });
-
   it('throws error when streaming fails without repair function', async () => {
     const mockStreamObject = streamObject as ReturnType<typeof vi.fn>;
     const error = new Error('Validation failed');
@@ -135,8 +102,6 @@ describe('streamObjectWithProgress', () => {
         schema: TestSchema,
         prompt: 'test prompt',
       },
-      undefined,
-      3000,
       repair
     );
 
@@ -170,8 +135,6 @@ describe('streamObjectWithProgress', () => {
           schema: TestSchema,
           prompt: 'test prompt',
         },
-        undefined,
-        3000,
         repair
       )
     ).rejects.toThrow('Validation failed');
@@ -202,8 +165,6 @@ describe('streamObjectWithProgress', () => {
           schema: TestSchema,
           prompt: 'test prompt',
         },
-        undefined,
-        3000,
         repair
       )
     ).rejects.toThrow(); // JSON.parse will throw
@@ -231,8 +192,6 @@ describe('streamObjectWithProgress', () => {
           schema: TestSchema,
           prompt: 'test prompt',
         },
-        undefined,
-        3000,
         repair
       )
     ).rejects.toThrow('Network error');

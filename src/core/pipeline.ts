@@ -176,7 +176,7 @@ export const generateProse = async (
 
   emitThinking('Writing story prose...', logger, onThinking);
   onProgress?.('prose', 'start');
-  const prose = await proseAgent(story, onThinking, logger);
+  const prose = await proseAgent(story, logger);
   onProgress?.('prose', 'complete');
 
   return assembleStoryWithProse(story, prose);
@@ -195,7 +195,7 @@ export const generateVisuals = async (
 
   emitThinking('Creating visual direction...', logger, onThinking);
   onProgress?.('visuals', 'start');
-  const visuals = await visualsAgent(story, onThinking, logger);
+  const visuals = await visualsAgent(story, logger);
   onProgress?.('visuals', 'complete');
 
   return assembleComposedStory(story, visuals);
@@ -218,13 +218,13 @@ export const renderBook = async (
   const { format = 'square-large', mock = false, onProgress, onThinking, outputManager, logger } = options;
   const totalPages = story.visuals.illustratedPages.length;
 
-  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber) => {
+  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber, previousPages) => {
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
     onProgress?.(`render-page-${pageNumber}`, 'start');
 
     const page = mock
       ? renderPageMock(pageNumber)
-      : await renderPage(story, pageNumber, format);
+      : await renderPage(story, pageNumber, { format, previousPages });
 
     if (outputManager) {
       await outputManager.savePageImage(page);
@@ -351,7 +351,7 @@ export const executeIncrementalPipeline = async (
 
     // Render this page
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
-    const renderedPage = await renderPage(currentStory, pageNumber, format);
+    const renderedPage = await renderPage(currentStory, pageNumber, { format, previousPages: renderedPages });
     renderedPages.push(renderedPage);
 
     // Save incrementally

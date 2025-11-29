@@ -1,11 +1,13 @@
 import { Command } from 'commander';
 import path from 'path';
 import { executePipeline } from '../../core/pipeline';
+import { progressMessagesAgent } from '../../core/agents';
 import { runStoryIntake } from '../prompts/story-intake';
 import { runPlotIntake } from '../prompts/plot-intake';
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
+import { createProgressRotator, type ProgressRotator } from '../utils/progress-rotator';
 import { createLogger } from '../../core/utils/logger';
 
 export const createCommand = new Command('create')
@@ -37,21 +39,43 @@ export const createCommand = new Command('create')
       const storyWithPlot = await runPlotIntake(brief);
       await outputManager.saveBlurb(storyWithPlot);
 
-      // Step 3: Run pipeline from StoryWithPlot to book
-      // Only show checkmarks for major phases, not sub-steps
+      // Step 3: Generate witty progress messages for prose/visuals phases
+      spinner.start('Preparing witty progress messages...');
+      const progressMessages = await progressMessagesAgent(storyWithPlot, logger);
+      spinner.succeed('Progress messages ready');
+
+      // Step 4: Run pipeline from StoryWithPlot to book
+      // Progress rotator shows witty messages during long-running phases
+      let rotator: ProgressRotator | null = null;
       const majorPhases = ['prose', 'visuals', 'render'];
+      const longRunningPhases = ['prose', 'visuals'];
 
       const { book } = await executePipeline(storyWithPlot, {
         logger,
         onProgress: (step, status) => {
           if (status === 'start') {
             spinner.start(formatStep(step));
-          } else if (status === 'complete' && majorPhases.includes(step)) {
-            spinner.succeed(formatStep(step, true));
+            // Start rotator for long-running phases
+            if (longRunningPhases.includes(step)) {
+              rotator = createProgressRotator(progressMessages, 3000, (msg) => {
+                if (spinner.isSpinning) spinner.text = msg;
+              });
+              rotator.start();
+            }
+          } else if (status === 'complete') {
+            // Stop rotator when phase completes
+            if (longRunningPhases.includes(step)) {
+              rotator?.stop();
+              rotator = null;
+            }
+            if (majorPhases.includes(step)) {
+              spinner.succeed(formatStep(step, true));
+            }
           }
         },
         onThinking: (msg) => {
-          if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`;
+          // Still show pipeline-level thinking for non-rotating phases
+          if (spinner.isSpinning && !rotator) spinner.text = msg;
         },
         outputManager: options.save !== false ? outputManager : undefined,
       });

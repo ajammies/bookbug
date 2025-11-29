@@ -48,7 +48,7 @@ export const renderCommand = new Command('render')
 
         const page = options.mock
           ? renderPageMock(storyPage.pageNumber)
-          : await renderPage(story, storyPage.pageNumber, format);
+          : await renderPage(story, storyPage.pageNumber, { format, previousPages: pages });
 
         pages.push(page);
         spinner.succeed(`Rendered page ${storyPage.pageNumber}/${totalPages}`);
