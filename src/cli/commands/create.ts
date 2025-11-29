@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import path from 'path';
 import { executePipeline } from '../../core/pipeline';
 import { runStoryIntake } from '../prompts/story-intake';
 import { runPlotIntake } from '../prompts/plot-intake';
@@ -6,7 +7,6 @@ import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
 import { createLogger } from '../../core/utils/logger';
-import { getLogPath } from '../utils/log-tailer';
 
 export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
@@ -17,17 +17,16 @@ export const createCommand = new Command('create')
     const spinner = createSpinner();
     let outputManager: StoryOutputManager;
 
-    // Create logger for file logging
-    const logger = createLogger();
-    const runId = logger.bindings()?.runId as string | undefined;
-    const logPath = runId ? getLogPath(runId) : null;
-
     try {
       // Step 1: Get StoryBrief via chat intake
       const brief = await runStoryIntake(prompt);
 
-      // Create output folder after we have a title
+      // Create output folder and logger after we have a title
       outputManager = await createOutputManager(brief.title);
+      const logger = createLogger({ title: brief.title });
+      const logName = logger.bindings()?.name as string | undefined;
+      const logPath = logName ? path.join(process.cwd(), 'logs', `${logName}.log`) : null;
+
       await outputManager.saveBrief(brief);
       console.log(`\nStory folder created: ${outputManager.folder}`);
       if (logPath) {

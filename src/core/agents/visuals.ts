@@ -13,6 +13,7 @@ import {
 } from '../schemas';
 import { getModel } from '../config';
 import { createRepairFunction } from '../utils/repair';
+import type { Logger } from '../utils/logger';
 
 const SYSTEM_PROMPT = `You are an illustrator for children's picture books. Given a story with prose, create visual direction for each page.
 
@@ -45,7 +46,8 @@ Output only the visual direction fields:
  */
 export const visualsAgent = async (
   story: StoryWithProse,
-  onProgress?: (message: string) => void
+  onProgress?: (message: string) => void,
+  logger?: Logger
 ): Promise<VisualDirection> => {
   return streamObjectWithProgress(
     {
@@ -57,7 +59,8 @@ export const visualsAgent = async (
     },
     onProgress,
     3000,
-    createRepairFunction('IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button')
+    createRepairFunction('IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button'),
+    logger
   );
 };
 

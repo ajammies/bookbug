@@ -141,8 +141,10 @@ const generateAndSaveCharacterDesigns = async (
   const { onThinking, outputManager, logger } = options;
 
   emitThinking('Generating character sprite sheets...', logger, onThinking);
+  // Prefer plot.characters (may have been modified during plot intake) over brief characters
+  const characters = story.plot.characters ?? story.characters;
   const designs = await generateCharacterDesigns(
-    story.characters,
+    characters,
     styleGuide,
     { logger, onProgress: onThinking }
   );
@@ -174,7 +176,7 @@ export const generateProse = async (
 
   emitThinking('Writing story prose...', logger, onThinking);
   onProgress?.('prose', 'start');
-  const prose = await proseAgent(story, onThinking);
+  const prose = await proseAgent(story, onThinking, logger);
   onProgress?.('prose', 'complete');
 
   return assembleStoryWithProse(story, prose);
@@ -193,7 +195,7 @@ export const generateVisuals = async (
 
   emitThinking('Creating visual direction...', logger, onThinking);
   onProgress?.('visuals', 'start');
-  const visuals = await visualsAgent(story, onThinking);
+  const visuals = await visualsAgent(story, onThinking, logger);
   onProgress?.('visuals', 'complete');
 
   return assembleComposedStory(story, visuals);

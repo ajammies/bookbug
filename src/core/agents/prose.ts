@@ -43,7 +43,8 @@ Output only the prose fields:
  */
 export const proseAgent = async (
   story: StoryWithPlot,
-  onProgress?: (message: string) => void
+  onProgress?: (message: string) => void,
+  logger?: Logger
 ): Promise<Prose> => {
   return streamObjectWithProgress(
     {
@@ -55,7 +56,8 @@ export const proseAgent = async (
     },
     onProgress,
     3000,
-    createRepairFunction()
+    createRepairFunction(),
+    logger
   );
 };
 
