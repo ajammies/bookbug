@@ -30,7 +30,9 @@ export const writeCommand = new Command('write')
 
       // Generate prose
       spinner.start('Writing prose...');
-      const storyWithProse = await generateProse(storyWithPlot);
+      const storyWithProse = await generateProse(storyWithPlot, {
+        onThinking: (msg) => { if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`; },
+      });
       spinner.succeed('Prose written');
 
       displayProse(storyWithProse.prose);

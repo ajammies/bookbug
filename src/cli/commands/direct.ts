@@ -31,7 +31,9 @@ export const directCommand = new Command('direct')
 
       // Generate visual direction
       spinner.start('Creating visual direction...');
-      const composedStory = await generateVisuals(storyWithProse);
+      const composedStory = await generateVisuals(storyWithProse, {
+        onThinking: (msg) => { if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`; },
+      });
       spinner.succeed('Visual direction complete');
 
       displayVisuals(composedStory.visuals);

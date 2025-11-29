@@ -113,7 +113,6 @@ export const resumeCommand = new Command('resume')
         }
 
         case 'story': {
-          // Has story.json, just needs rendering
           console.log('\n📍 Resuming from: story.json (rendering images)');
           const story = StorySchema.parse(await loadJson(info.latestFile));
 
@@ -122,6 +121,7 @@ export const resumeCommand = new Command('resume')
             mock: options.mock,
             format: options.format,
             outputManager,
+            onThinking: (msg) => { if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`; },
           });
           spinner.succeed('Book rendered');
 
