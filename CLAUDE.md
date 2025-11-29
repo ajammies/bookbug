@@ -79,9 +79,11 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - Provide domain knowledge, not step-by-step instructions - the model knows how to converse
 
 # Skills
-- Use skill-creator skill when creating or updating skills
-- Use reflection skill at session end or after significant work
-- Use agent-design skill when implementing or reviewing agents
+- Use create-skill skill when creating or updating skills
+- Use reflect skill at session end or after significant work
+- Use design-agent skill when implementing or reviewing agents
+- Use commit skill when committing changes
+- Use create-issue skill when creating GitHub issues
 
 # Schema descriptions (.describe())
 - `.describe()` is a mini-prompt to guide the model on ambiguous fields

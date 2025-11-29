@@ -1,10 +1,27 @@
 ---
-name: skill-creator
+name: create-skill
+allowed-tools: Read, Write, Glob
 description: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.
-license: Complete terms in LICENSE.txt
 ---
 
-# Skill Creator
+# Create Skill
+
+## WORKFLOW
+
+**Follow these steps. After each, state: "✓ Step N done. Next: Step N+1"**
+
+1. **Purpose** - Define what the skill does and when to invoke it
+
+2. **Design** - Draft SKILL.md with WORKFLOW, principles, references
+   ⏸️ Review skill design with user
+
+3. **Hooks** - Determine if skill needs PreToolUse/PostToolUse hooks
+   ⏸️ Review hook design with user (if applicable)
+
+4. **Create** - Write files to `.claude/skills/<name>/`
+   ⟳ Repeat if user requests changes
+
+5. **Test** - Verify skill appears in `/skills` and can be invoked
 
 This skill provides guidance for creating effective skills.
 

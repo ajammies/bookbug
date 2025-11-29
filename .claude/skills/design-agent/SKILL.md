@@ -1,12 +1,31 @@
 ---
-name: agent-design
+name: design-agent
+allowed-tools: Read, Edit, Grep, Glob
 description: |
-  Comprehensive Agent Design, Creation and modification using Vercel AI SDK generateObject with Zod schemas. used when claude needs to create, prompt, modify, fix, refactor or improve any agent code, and any time a Zod Schema is modified that is used by an agent. 
+  Comprehensive Agent Design, Creation and modification using Vercel AI SDK generateObject with Zod schemas. used when claude needs to create, prompt, modify, fix, refactor or improve any agent code, and any time a Zod Schema is modified that is used by an agent.
 
   Covers: agent architecture, Zod schema patterns, .describe() usage, prompting for structured output, error handling.
 ---
 
 # Agent creation, modification, error handling
+
+## WORKFLOW
+
+**Follow these steps. After each, state: "✓ Step N done. Next: Step N+1"**
+
+1. **Understand** - Read existing schemas and agents in the area
+
+2. **Schema first** - Define Zod schema with `.describe()` on ambiguous fields
+   ⏸️ Review schema design with user
+
+3. **Prompt** - Write system prompt with domain knowledge (not step-by-step)
+
+4. **Implement** - Create agent as pure function, single transformation
+   ⏸️ Review implementation with user
+
+5. **Test** - Add tests for valid input, edge cases, malformed input
+
+**Escalation**: If agent fails validation 3 times, use context7 to research the pattern before continuing.
 
 ## Overview
 

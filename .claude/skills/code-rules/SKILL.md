@@ -1,0 +1,79 @@
+---
+name: code-rules
+description: Code editing rules. Reference before complex edits.
+---
+
+# Code Rules
+
+## Philosophy
+
+- 🔴 Always make it as simple as possible, but not simpler
+- Always write code that is easy to follow and read
+- 🔴 Always write code that is easy to delete - loose coupling, no tentacles across files
+- Always keep functions small enough to fit in your head
+- Do not abstract until you see the pattern three times
+- Always prefer explicit over implicit - no magic
+
+## Writing Code
+
+- 🔴 Always read file before editing - never propose changes to code you haven't read
+- 🔴 Always use pure functions, immutability, no side effects
+- Use context7 when working with libraries or doing something new
+- Always use explicit types for data flowing between functions
+- Always use standalone exported functions, not classes
+- Always flow data through parameters, not global state
+- Use 2-3 params as direct arguments; 4+ use options object
+- Always use logger (pino) not console.log
+
+## Refactoring
+
+- Always check data shapes when connecting different parts of system (id vs name mismatches)
+- Always keep intuitive file organization - things live where you'd expect
+- Always make external services injectable via optional params with factory defaults
+
+## Testing
+
+- Always co-locate tests: `file.ts` → `file.test.ts`
+- Always run `npm run test:run` and `npm run typecheck` before PR
+- Always test with real data before committing performance optimizations
+
+## Collaboration
+
+- Trust terse instructions - execute, do not over-ask
+- Always default to simpler solution even if it feels "wasteful"
+- Do one spike to validate assumptions, then commit - avoid fix-forward chains
+
+## Examples
+
+### Pure Functions
+
+```ts
+// INCORRECT - side effect, mutates external state
+let count = 0;
+function increment() { count++; }
+
+// CORRECT - pure, returns new value
+function increment(count: number): number { return count + 1; }
+```
+
+### Data Flow
+
+```ts
+// INCORRECT - global state
+const config = { apiKey: '' };
+function fetchData() { return fetch(url, { headers: { key: config.apiKey } }); }
+
+// CORRECT - explicit parameters
+function fetchData(apiKey: string) { return fetch(url, { headers: { key: apiKey } }); }
+```
+
+### Premature Abstraction
+
+```ts
+// INCORRECT - abstraction for one use case
+const createHandler = (type: string) => (data: unknown) => process(type, data);
+const userHandler = createHandler('user');
+
+// CORRECT - direct and simple
+function handleUser(data: unknown) { return process('user', data); }
+```

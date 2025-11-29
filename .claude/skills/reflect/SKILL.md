@@ -1,17 +1,22 @@
 ---
-name: reflection
+name: reflect
+allowed-tools: Read, Edit
 description: End-of-session reflection for continuous improvement. Use when user asks to reflect, after merging PRs, or at session end. Outputs improvement recommendations table.
 ---
 
-# Reflection
+# Reflect
 
 Analyze session and recommend improvements.
 
-## Steps
+## WORKFLOW
 
-1. Review full chat history for user feedback (corrections, preferences, frustrations)
-2. Note what was accomplished and what caused friction
-3. Output recommendations table
+**Follow these steps. After each, state: "✓ Step N done. Next: Step N+1"**
+
+1. **Review** - Scan full chat history for corrections, preferences, frustrations
+
+2. **Analyze** - Note what worked, what caused friction, patterns
+
+3. **Output** - Generate recommendations table with type, priority, change, why
 
 ## Output
 
