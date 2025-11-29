@@ -25,6 +25,8 @@ description: |
 
 5. **Test** - Add tests for valid input, edge cases, malformed input
 
+**Escalation**: If agent fails validation 3 times, use context7 to research the pattern before continuing.
+
 ## Overview
 
 A user may ask you create, modify, fix, refactor or improve any agent code. An agent is any code scaffolding that calls llms (either to generate text or generateObject). LLM calls are fragile, since they are non-deterministic, and require strict adherance to design principles, typed schemas, explicit descritions of ZOD properties using .describe() and error handling. This skill strictly enforces best practices of agent architecture, prompting, Zod schema patterns, .describe() usage, prompting for structured output, error handling.
