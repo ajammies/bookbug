@@ -9,12 +9,34 @@
             "command": "bash .claude/hooks/validate-commit-branch.sh"
           }
         ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-edit-rules.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-edit-rules.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-edit-rules.sh"
+          },
           {
             "type": "command",
             "command": "bash .claude/hooks/remind-atomic-commit.sh"
@@ -24,6 +46,10 @@
       {
         "matcher": "Write",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-edit-rules.sh"
+          },
           {
             "type": "command",
             "command": "bash .claude/hooks/remind-atomic-commit.sh"
