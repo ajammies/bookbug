@@ -101,7 +101,10 @@ export async function streamObjectWithProgress<T>(
   // Start from now so first sample waits for interval
   let lastSampleTime = Date.now();
 
+  let partialCount = 0;
   for await (const partial of result.partialObjectStream) {
+    partialCount++;
+    console.log(`[stream] partial #${partialCount} | len=${JSON.stringify(partial).length}`);
     const now = Date.now();
     if (onProgress && now - lastSampleTime > sampleIntervalMs) {
       lastSampleTime = now;
@@ -131,7 +134,13 @@ export async function streamObjectWithProgress<T>(
     }
 
     // Parse and validate repaired output
-    const parsed = JSON.parse(repairedText);
-    return options.schema.parse(parsed);
+    try {
+      const parsed = JSON.parse(repairedText);
+      return options.schema.parse(parsed);
+    } catch (parseError) {
+      // Repair produced invalid JSON - throw original error with context
+      console.error('Repair produced invalid JSON:', parseError);
+      throw error;
+    }
   }
 }
