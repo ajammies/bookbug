@@ -128,7 +128,7 @@ export const generateProse = async (
 
   emitThinking('Writing story prose...', logger, onThinking);
   onProgress?.('prose', 'start');
-  const prose = await proseAgent(story);
+  const prose = await proseAgent(story, onThinking);
   onProgress?.('prose', 'complete');
 
   return assembleStoryWithProse(story, prose);
@@ -147,7 +147,7 @@ export const generateVisuals = async (
 
   emitThinking('Creating visual direction...', logger, onThinking);
   onProgress?.('visuals', 'start');
-  const visuals = await visualsAgent(story);
+  const visuals = await visualsAgent(story, onThinking);
   onProgress?.('visuals', 'complete');
 
   return assembleComposedStory(story, visuals);

@@ -1,4 +1,4 @@
-import { generateObject } from '../utils/ai';
+import { generateObject, streamObjectWithProgress } from '../utils/ai';
 import { z } from 'zod';
 import {
   VisualDirectionSchema,
@@ -39,22 +39,25 @@ Output only the visual direction fields:
 /**
  * VisualsAgent: Takes a StoryWithProse and produces VisualDirection
  *
+ * Uses streaming to provide real-time progress updates via onProgress callback.
  * Output contains ONLY the new fields (style, illustratedPages).
  * Caller composes the result: ComposedStory = { ...story, visuals: result }
  */
-export const visualsAgent = async (story: StoryWithProse): Promise<VisualDirection> => {
-  const { object } = await generateObject({
-    model: getModel(),
-    schema: VisualDirectionSchema,
-    system: SYSTEM_PROMPT,
-    prompt: JSON.stringify(story, null, 2),
-    maxOutputTokens: 16000,
-    experimental_repairText: createRepairFunction(
-      'IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button'
-    ),
-  });
-
-  return object;
+export const visualsAgent = async (
+  story: StoryWithProse,
+  onProgress?: (message: string) => void
+): Promise<VisualDirection> => {
+  return streamObjectWithProgress(
+    {
+      model: getModel(),
+      schema: VisualDirectionSchema,
+      system: SYSTEM_PROMPT,
+      prompt: JSON.stringify(story, null, 2),
+      maxOutputTokens: 16000,
+    },
+    onProgress,
+    3000
+  );
 };
 
 /**

@@ -1,4 +1,4 @@
-import { generateObject } from '../utils/ai';
+import { generateObject, streamObjectWithProgress } from '../utils/ai';
 import {
   ProseSchema,
   ProseSetupSchema,
@@ -36,20 +36,25 @@ Output only the prose fields:
 /**
  * ProseAgent: Takes a StoryWithPlot and produces Prose
  *
+ * Uses streaming to provide real-time progress updates via onProgress callback.
  * Output contains ONLY the new fields (logline, theme, styleNotes, pages).
  * Caller composes the result: StoryWithProse = { ...story, prose: result }
  */
-export const proseAgent = async (story: StoryWithPlot): Promise<Prose> => {
-  const { object } = await generateObject({
-    model: getModel(),
-    schema: ProseSchema,
-    system: SYSTEM_PROMPT,
-    prompt: JSON.stringify(story, null, 2),
-    maxOutputTokens: 16000,
-    experimental_repairText: createRepairFunction(),
-  });
-
-  return object;
+export const proseAgent = async (
+  story: StoryWithPlot,
+  onProgress?: (message: string) => void
+): Promise<Prose> => {
+  return streamObjectWithProgress(
+    {
+      model: getModel(),
+      schema: ProseSchema,
+      system: SYSTEM_PROMPT,
+      prompt: JSON.stringify(story, null, 2),
+      maxOutputTokens: 16000,
+    },
+    onProgress,
+    3000
+  );
 };
 
 /**
