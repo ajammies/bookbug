@@ -62,10 +62,12 @@ CONFLICT RESOLUTION
 - Resolution through character action, not luck/magic
 - Model healthy coping (asking for help, compromise, expressing feelings)`;
 
-const AGE_GUIDELINES = `AGE-SPECIFIC GUIDELINES
-- Ages 2-4: 50-100 words total | 3-8 words/sentence | Simple conflicts (lost toy, scared) | Concrete words, repetition
-- Ages 4-6: 200-400 words total | 5-10 words/sentence | Social situations, simple problem-solving | Mix simple + new words
-- Ages 6-8: 400-800 words total | 8-15 words/sentence | Internal conflicts, empathy, multi-step problems | Descriptive vocabulary`;
+const AGE_GUIDELINES = `PER-PAGE TEXT LIMITS (picture books have minimal text!)
+- Ages 2-4: 1-2 sentences per page (10-20 words max) | Simple words, repetition
+- Ages 4-6: 2-3 sentences per page (20-40 words max) | Mix simple + new words
+- Ages 6-8: 3-4 sentences per page (40-60 words max) | Descriptive vocabulary
+
+CRITICAL: Each page should have just a few lines of text. The illustrations carry the story.`;
 
 // ============================================================================
 // Prompts
