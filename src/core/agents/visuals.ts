@@ -48,6 +48,7 @@ export const visualsAgent = async (story: StoryWithProse): Promise<VisualDirecti
     schema: VisualDirectionSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(story, null, 2),
+    maxOutputTokens: 16000,
     experimental_repairText: createRepairFunction(
       'IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button'
     ),

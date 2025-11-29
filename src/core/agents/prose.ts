@@ -45,6 +45,7 @@ export const proseAgent = async (story: StoryWithPlot): Promise<Prose> => {
     schema: ProseSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(story, null, 2),
+    maxOutputTokens: 16000,
     experimental_repairText: createRepairFunction(),
   });
 
