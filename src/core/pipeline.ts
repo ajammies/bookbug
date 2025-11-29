@@ -218,13 +218,13 @@ export const renderBook = async (
   const { format = 'square-large', mock = false, onProgress, onThinking, outputManager, logger } = options;
   const totalPages = story.visuals.illustratedPages.length;
 
-  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber) => {
+  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber, previousPages) => {
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
     onProgress?.(`render-page-${pageNumber}`, 'start');
 
     const page = mock
       ? renderPageMock(pageNumber)
-      : await renderPage(story, pageNumber, format);
+      : await renderPage(story, pageNumber, { format, previousPages });
 
     if (outputManager) {
       await outputManager.savePageImage(page);
@@ -351,7 +351,7 @@ export const executeIncrementalPipeline = async (
 
     // Render this page
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
-    const renderedPage = await renderPage(currentStory, pageNumber, format);
+    const renderedPage = await renderPage(currentStory, pageNumber, { format, previousPages: renderedPages });
     renderedPages.push(renderedPage);
 
     // Save incrementally

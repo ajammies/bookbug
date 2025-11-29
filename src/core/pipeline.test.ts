@@ -238,7 +238,7 @@ describe('renderBook', () => {
     expect(mockedRenderPage).toHaveBeenCalledWith(
       mockComposedStory,
       expect.any(Number),
-      'landscape'
+      expect.objectContaining({ format: 'landscape' })
     );
   });
 

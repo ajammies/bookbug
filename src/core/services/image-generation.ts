@@ -1,5 +1,5 @@
 import Replicate, { type FileOutput } from 'replicate';
-import type { PageRenderContext, BookFormat } from '../schemas';
+import type { PageRenderContext, BookFormat, RenderedPage } from '../schemas';
 import { getAspectRatio } from '../schemas';
 import { sleep } from '../utils/retry';
 import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
@@ -139,29 +139,42 @@ export const runWithRateLimit = async (
 const buildPrompt = (context: PageRenderContext): string =>
   `${RENDER_INSTRUCTIONS}\n${JSON.stringify(context, null, 2)}`;
 
-/** Extract sprite sheet URLs from character designs for image_input (only valid http URLs) */
-const extractReferenceImages = (context: PageRenderContext): string[] =>
-  (context.characterDesigns ?? [])
+/** Extract reference image URLs for image_input (sprite sheets + previously rendered pages) */
+const extractReferenceImages = (context: PageRenderContext, previousPages?: RenderedPage[]): string[] => {
+  const spriteUrls = (context.characterDesigns ?? [])
     .map(design => design.spriteSheetUrl)
     .filter((url): url is string => Boolean(url) && url.startsWith('http'));
+
+  const pageUrls = (previousPages ?? [])
+    .map(page => page.url)
+    .filter(url => url.startsWith('http'));
+
+  return [...spriteUrls, ...pageUrls];
+};
+
+export interface GeneratePageImageOptions {
+  previousPages?: RenderedPage[];
+  client?: Replicate;
+  logger?: Logger;
+}
 
 /**
  * Generate a page image using Google Nano Banana Pro via Replicate
  *
  * Passes rendering instructions plus filtered Story JSON as the prompt.
- * Character sprite sheets are passed as image_input for visual consistency.
+ * Character sprite sheets and previous pages are passed as image_input for visual consistency.
  * Handles rate limits internally with retry-after.
  */
 export const generatePageImage = async (
   context: PageRenderContext,
   format: BookFormat,
-  client: Replicate = createReplicateClient(),
-  logger?: Logger
+  options: GeneratePageImageOptions = {}
 ): Promise<GeneratedPage> => {
+  const { previousPages, client = createReplicateClient(), logger } = options;
   const agent = 'imageGen';
 
   try {
-    const referenceImages = extractReferenceImages(context);
+    const referenceImages = extractReferenceImages(context, previousPages);
 
     // Debug logging for reference images
     logger?.debug(
@@ -176,7 +189,7 @@ export const generatePageImage = async (
       output_format: 'png',
     };
 
-    // Pass character sprite sheets as reference images for consistency
+    // Pass sprite sheets and previous pages as reference images for consistency
     if (referenceImages.length > 0) {
       input.image_input = referenceImages;
     }
