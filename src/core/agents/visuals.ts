@@ -55,7 +55,7 @@ export const visualsAgent = async (
       schema: VisualDirectionSchema,
       system: SYSTEM_PROMPT,
       prompt: JSON.stringify(story, null, 2),
-      maxOutputTokens: 16000,
+      maxOutputTokens: 64000,
     },
     onProgress,
     3000,
