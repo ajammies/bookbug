@@ -42,6 +42,17 @@ description: |
 
 8. **Reflect** - Invoke `reflect` skill for learnings
 
+## Pre-PR Checklist
+
+Before creating PR, verify:
+
+- [ ] Tests pass (`npm run test:run`)
+- [ ] Types check (`npm run typecheck`)
+- [ ] No global mutable state
+- [ ] Single-responsibility functions
+- [ ] Code is easy to delete
+- [ ] No premature abstractions
+
 ## Principles
 
 - Always make changes small, contained, and atomic
