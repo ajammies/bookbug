@@ -7,16 +7,17 @@ description: Code editing rules. Reference before complex edits.
 
 ## Philosophy
 
-- Always make it as simple as possible, but not simpler
+- 🔴 Always make it as simple as possible, but not simpler
 - Always write code that is easy to follow and read
-- Always write code that is easy to delete - loose coupling, no tentacles across files
+- 🔴 Always write code that is easy to delete - loose coupling, no tentacles across files
 - Always keep functions small enough to fit in your head
 - Do not abstract until you see the pattern three times
 - Always prefer explicit over implicit - no magic
 
 ## Writing Code
 
-- Always use pure functions, immutability, no side effects
+- 🔴 Always read file before editing - never propose changes to code you haven't read
+- 🔴 Always use pure functions, immutability, no side effects
 - Always use explicit types for data flowing between functions
 - Always use standalone exported functions, not classes
 - Always flow data through parameters, not global state
