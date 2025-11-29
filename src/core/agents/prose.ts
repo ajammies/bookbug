@@ -66,6 +66,8 @@ const AGE_GUIDELINES = `PER-PAGE TEXT LIMITS (picture books have minimal text!)
 - Ages 2-4: 1-2 sentences per page (10-20 words max) | Simple words, repetition
 - Ages 4-6: 2-3 sentences per page (20-40 words max) | Mix simple + new words
 - Ages 6-8: 3-4 sentences per page (40-60 words max) | Descriptive vocabulary
+- Ages 8+: 3-4 sentences per page (40-60 words max) | Descriptive vocabulary
+
 
 CRITICAL: Each page should have just a few lines of text. The illustrations carry the story.`;
 

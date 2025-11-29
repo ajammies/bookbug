@@ -50,29 +50,17 @@ export const createBook = (
 });
 
 /**
- * Filter a ComposedStory to include only data relevant to a specific page.
- * This creates a minimal payload for image generation.
+ * Extract page context from a ComposedStory for image generation.
+ * Passes all character designs for consistent visual reference across pages.
  */
 export const filterStoryForPage = (story: ComposedStory, pageNumber: number): PageRenderContext => {
-  const illustratedPage = story.visuals.illustratedPages[pageNumber - 1]; // Pages are 1-indexed
+  const illustratedPage = story.visuals.illustratedPages[pageNumber - 1];
   const prosePage = story.prose.pages[pageNumber - 1];
-
-  // Extract character IDs from beats
-  const characterIds = (illustratedPage?.beats ?? [])
-    .flatMap(beat => beat.characters)
-    .map(char => char.id);
-
-  const uniqueCharacterIds = [...new Set(characterIds)];
-
-  // Filter character designs to only those appearing on this page
-  const characterDesigns = (story.characterDesigns ?? []).filter(
-    design => uniqueCharacterIds.includes(design.character.name)
-  );
 
   return {
     storyTitle: story.title,
     style: story.visuals.style,
-    characterDesigns,
+    characterDesigns: story.characterDesigns ?? [],
     page: {
       pageNumber,
       text: prosePage?.text,

@@ -130,17 +130,15 @@ describe('filterStoryForPage', () => {
     expect(slice.style.art_direction.genre).toContain('whimsical');
   });
 
-  it('extracts only referenced character designs', () => {
+  it('includes all character designs for consistent reference', () => {
     const story = createMinimalStory();
 
-    // Page 1 only references 'Luna'
+    // Both pages get all character designs
     const slice1 = filterStoryForPage(story, 1);
-    expect(slice1.characterDesigns.map(d => d.character.name)).toEqual(['Luna']);
-    expect(slice1.characterDesigns[0]?.character.name).toBe('Luna');
+    expect(slice1.characterDesigns.map(d => d.character.name)).toEqual(['Luna', 'Pip']);
 
-    // Page 2 references both 'Luna' and 'Pip'
     const slice2 = filterStoryForPage(story, 2);
-    expect(slice2.characterDesigns.map(d => d.character.name).sort()).toEqual(['Luna', 'Pip']);
+    expect(slice2.characterDesigns.map(d => d.character.name)).toEqual(['Luna', 'Pip']);
   });
 
   it('handles page with no beats gracefully', () => {
@@ -149,7 +147,8 @@ describe('filterStoryForPage', () => {
 
     const slice = filterStoryForPage(story, 1);
 
-    expect(slice.characterDesigns).toEqual([]);
+    // Still includes all character designs for reference
+    expect(slice.characterDesigns.map(d => d.character.name)).toEqual(['Luna', 'Pip']);
     expect(slice.page.beats).toEqual([]);
   });
 
@@ -176,56 +175,12 @@ describe('filterStoryForPage', () => {
     expect(slice.page.text).toBeUndefined();
   });
 
-  it('handles duplicate character IDs in beats', () => {
+  it('handles missing characterDesigns gracefully', () => {
     const story = createMinimalStory();
-    story.visuals.illustratedPages = [
-      {
-        pageNumber: 1,
-        beats: [
-          {
-            order: 1,
-            purpose: 'setup',
-            summary: 'Luna appears twice',
-            emotion: 'curious',
-            characters: [
-              { id: 'Luna', expression: 'curious', pose: 'sitting', focus: 'primary' },
-              { id: 'Luna', expression: 'happy', pose: 'standing', focus: 'secondary' },
-            ],
-            shot: { size: 'wide', angle: 'eye_level' },
-          },
-        ],
-      },
-    ];
+    story.characterDesigns = undefined;
 
     const slice = filterStoryForPage(story, 1);
 
-    // Should only have one 'Luna' entry despite duplicate references
-    expect(slice.characterDesigns.map(d => d.character.name)).toEqual(['Luna']);
-  });
-
-  it('handles non-existent character ID gracefully', () => {
-    const story = createMinimalStory();
-    story.visuals.illustratedPages = [
-      {
-        pageNumber: 1,
-        beats: [
-          {
-            order: 1,
-            purpose: 'setup',
-            summary: 'Unknown character',
-            emotion: 'curious',
-            characters: [
-              { id: 'unknown', expression: 'neutral', pose: 'standing', focus: 'primary' },
-            ],
-            shot: { size: 'wide', angle: 'eye_level' },
-          },
-        ],
-      },
-    ];
-
-    const slice = filterStoryForPage(story, 1);
-
-    // 'unknown' ID doesn't exist in story.characterDesigns, should be filtered out
     expect(slice.characterDesigns).toEqual([]);
   });
 
