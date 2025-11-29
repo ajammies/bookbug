@@ -15,7 +15,7 @@ export const StoryBriefSchema = z.object({
   tone: z.string().optional().describe('Emotional tone (e.g., "whimsical", "heartfelt")'),
   moral: z.string().optional().describe('Lesson or takeaway for the reader'),
   interests: z.array(z.string().min(1)).default([]).describe('Topics the child enjoys'),
-  customInstructions: z.array(z.string().min(1)).default([]).describe('Special requests from the user'),
+  customInstructions: z.string().optional().describe('Special requests or notes from the user'),
 });
 
 export type StoryBrief = z.infer<typeof StoryBriefSchema>;

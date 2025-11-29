@@ -131,12 +131,12 @@ describe('StoryBriefSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('applies default empty arrays for optional fields', () => {
+  it('applies defaults for optional fields', () => {
     const result = StoryBriefSchema.safeParse(validBrief);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.interests).toEqual([]);
-      expect(result.data.customInstructions).toEqual([]);
+      expect(result.data.customInstructions).toBeUndefined();
     }
   });
 });

@@ -46,7 +46,7 @@ const mockStoryWithPlot: StoryWithPlot = {
   pageCount: 2,
   characters: [{ name: 'Hero', description: 'The main character', traits: [], notes: [] }],
   interests: [],
-  customInstructions: [],
+  
   plot: {
     storyArcSummary: 'A hero goes on a journey',
     plotBeats: [

@@ -26,7 +26,7 @@ const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory =
     { name: 'Pip', description: 'A friendly bird', traits: [], notes: [] },
   ],
   interests: [],
-  customInstructions: [],
+  
   // PlotStructure
   plot: {
     storyArcSummary: 'A rabbit discovers wonder in a hidden garden',
