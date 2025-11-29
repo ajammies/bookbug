@@ -1,6 +1,7 @@
 ---
 name: pr-workflow
-description: Workflow for creating pull requests with atomic commits and user approval. Use when implementing features, fixing bugs, or any code changes that should be committed and merged.
+description: |
+  ALWAYS use this skill when the user asks to: create a feature, fix a bug, make changes, add something, implement anything, or create a PR. This skill MUST be invoked before making any code changes. Provides the standard workflow for branching, commits, and PRs.
 ---
 
 # PR Workflow
