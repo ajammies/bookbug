@@ -42,6 +42,7 @@ If changes don't belong on current branch, commit to main and rebase:
 current_branch=$(git branch --show-current)
 git stash
 git checkout main && git pull
+git stash pop
 # ... make commit on main ...
 git checkout $current_branch
 git rebase main
