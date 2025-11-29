@@ -18,6 +18,7 @@ description: Code editing rules. Reference before complex edits.
 
 - 🔴 Always read file before editing - never propose changes to code you haven't read
 - 🔴 Always use pure functions, immutability, no side effects
+- Use context7 when working with libraries or doing something new
 - Always use explicit types for data flowing between functions
 - Always use standalone exported functions, not classes
 - Always flow data through parameters, not global state
