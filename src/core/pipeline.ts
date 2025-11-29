@@ -119,6 +119,45 @@ const processPages = async <T>(
 };
 
 // ============================================================================
+// Character design generation
+// ============================================================================
+
+interface CharacterDesignOptions {
+  onThinking?: (msg: string) => void;
+  outputManager?: StoryOutputManager;
+  logger?: Logger;
+}
+
+/**
+ * Generate character sprite sheets and save to disk
+ * Returns designs with local paths (if outputManager provided) or remote URLs
+ */
+const generateAndSaveCharacterDesigns = async (
+  story: StoryWithPlot,
+  styleGuide: VisualStyleGuide,
+  options: CharacterDesignOptions = {}
+): Promise<CharacterDesign[]> => {
+  const { onThinking, outputManager, logger } = options;
+
+  emitThinking('Generating character sprite sheets...', logger, onThinking);
+  const designs = await generateCharacterDesigns(
+    story.characters,
+    styleGuide,
+    { logger, onProgress: onThinking }
+  );
+
+  if (outputManager) {
+    emitThinking('Saving character sprite sheets...', logger, onThinking);
+    for (const design of designs) {
+      const localPath = await outputManager.saveCharacterDesign(design);
+      design.spriteSheetUrl = localPath;
+    }
+  }
+
+  return designs;
+};
+
+// ============================================================================
 // Composable pipelines
 // ============================================================================
 
@@ -211,26 +250,15 @@ export const executePipeline = async (
 
   emitThinking(`Starting pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
-  // Generate style guide and character designs first
+  // Generate style guide and character designs
   onProgress?.('setup', 'start');
   emitThinking('Generating style guide...', logger, onThinking);
   const styleGuide = await styleGuideAgent(storyWithPlot);
-
-  emitThinking('Generating character sprite sheets...', logger, onThinking);
-  const characterDesigns = await generateCharacterDesigns(
-    storyWithPlot.characters,
+  const characterDesigns = await generateAndSaveCharacterDesigns(
+    storyWithPlot,
     styleGuide,
-    { logger, onProgress: onThinking }
+    { onThinking, outputManager, logger }
   );
-
-  // Download and save sprite sheets to disk
-  if (outputManager) {
-    emitThinking('Saving character sprite sheets...', logger, onThinking);
-    for (const design of characterDesigns) {
-      const localPath = await outputManager.saveCharacterDesign(design);
-      design.spriteSheetUrl = localPath;
-    }
-  }
   onProgress?.('setup', 'complete');
 
   // Generate prose
@@ -277,23 +305,11 @@ export const executeIncrementalPipeline = async (
   onProgress?.('setup', 'start');
   const styleGuide = await styleGuideAgent(storyWithPlot);
   const proseSetup = await proseSetupAgent(storyWithPlot);
-
-  // Generate character sprite sheets for consistency
-  emitThinking('Generating character sprite sheets...', logger, onThinking);
-  const characterDesigns = await generateCharacterDesigns(
-    storyWithPlot.characters,
+  const characterDesigns = await generateAndSaveCharacterDesigns(
+    storyWithPlot,
     styleGuide,
-    { logger, onProgress: onThinking }
+    { onThinking, outputManager, logger }
   );
-
-  // Download and save sprite sheets to disk
-  if (outputManager) {
-    emitThinking('Saving character sprite sheets...', logger, onThinking);
-    for (const design of characterDesigns) {
-      const localPath = await outputManager.saveCharacterDesign(design);
-      design.spriteSheetUrl = localPath;
-    }
-  }
   onProgress?.('setup', 'complete');
 
   // Process each page completely before moving to next
