@@ -12,9 +12,68 @@ import { getModel, getFastModel } from '../config';
 import { createRepairFunction } from '../utils/repair';
 import type { Logger } from '../utils/logger';
 
+// ============================================================================
+// Story Quality Guidelines
+// ============================================================================
+
+const QUALITY_GUIDELINES = `STORY QUALITY GUIDELINES
+
+EMOTIONAL RESONANCE
+- Use conflicts children face: sharing, jealousy, new experiences, frustration
+- Show mixed emotions (excited but scared)
+- Make reactions believable for age level
+- Avoid: adult concerns, fake-happy responses
+
+STRUCTURE
+- Beginning: Introduce character + world (2-3 sentences)
+- Middle: One clear problem that escalates
+- End: Character-driven resolution + emotional closure
+- Each sentence advances plot
+- Avoid: exposition dumps, multiple problems, rushed endings
+
+CHARACTER GROWTH
+- Show traits through actions, not descriptions
+- Character makes mistakes → experiences consequences → learns gradually
+- Display emotional range throughout
+- Avoid: perfect characters, instant transformations
+
+MORAL TEACHING
+- Embed lessons in actions/consequences, never state explicitly
+- One lesson per story
+- Let story teach; characters don't lecture
+- Avoid: "And that's why you should..." endings
+
+LANGUAGE
+- Use sensory details (what they see/hear/feel)
+- Specific verbs ("tiptoed" not "walked quietly")
+- Vary sentence length for rhythm
+- Show don't tell ("hands shaking" not "was nervous")
+- Avoid: abstract language, clichés, purple prose
+
+AUTHENTIC VOICE
+- Write from child's perspective/worldview
+- Natural child dialogue: "That's not fair!" "I want a turn!"
+- Use child logic (immediate, concrete, self-focused)
+- Avoid: adult idioms, wise philosophical children, preachy tone
+
+CONFLICT RESOLUTION
+- Age-appropriate conflicts children recognize
+- Show attempts including failures before success
+- Resolution through character action, not luck/magic
+- Model healthy coping (asking for help, compromise, expressing feelings)`;
+
+const AGE_GUIDELINES = `AGE-SPECIFIC GUIDELINES
+- Ages 2-4: 50-100 words total | 3-8 words/sentence | Simple conflicts (lost toy, scared) | Concrete words, repetition
+- Ages 4-6: 200-400 words total | 5-10 words/sentence | Social situations, simple problem-solving | Mix simple + new words
+- Ages 6-8: 400-800 words total | 8-15 words/sentence | Internal conflicts, empathy, multi-step problems | Descriptive vocabulary`;
+
+// ============================================================================
+// Prompts
+// ============================================================================
+
 const SYSTEM_PROMPT = `Write prose content from a story with plot beats.
 
-The story contains 5-6 structural beats (setup, conflict, rising_action, climax, resolution).
+The story contains structural beats (setup, conflict, rising_action, climax, resolution).
 Expand each beat into multiple pages based on pageCount.
 
 For a 24-page book with 5 beats:
@@ -24,9 +83,9 @@ For a 24-page book with 5 beats:
 - Climax: ~4 pages (turning point)
 - Resolution: ~6 pages (ending and lesson)
 
-Writing guidelines:
-- Ages 2-5: Simple words, rhythmic patterns, 1-2 sentences per page
-- Ages 6-9: Longer sentences, more vocabulary, up to a paragraph
+${QUALITY_GUIDELINES}
+
+${AGE_GUIDELINES}
 
 Output only the prose fields:
 - logline: One-sentence story summary
@@ -69,12 +128,17 @@ const SETUP_PROMPT = `Establish the story's voice and narrative direction.
 
 Given a story with plot structure, define:
 - logline: One-sentence hook that captures the adventure
-- theme: Central message or emotional truth
+- theme: Central message or emotional truth (embed in story, never state explicitly)
 - styleNotes: Writing voice (warm, playful, lyrical, etc.)
 
-Writing voice by age:
-- Ages 2-5: Simple, rhythmic, repetitive patterns
-- Ages 6-9: More complex sentences, richer vocabulary`;
+VOICE GUIDELINES
+- Write from child's perspective/worldview
+- Use child logic (immediate, concrete, self-focused)
+- Natural child dialogue: "That's not fair!" "I want a turn!"
+- Show emotions through physical details ("hands shaking" not "was nervous")
+- Avoid: adult idioms, preachy tone, philosophical children
+
+${AGE_GUIDELINES}`;
 
 /**
  * ProseSetupAgent: Generates story-wide prose metadata (once, upfront)
@@ -109,12 +173,17 @@ You receive:
 - Page number and total page count
 - Previous pages (for continuity)
 
-Guidelines:
+WRITING GUIDELINES
 - Follow the established voice from styleNotes
 - Maintain narrative continuity with previous pages
 - Pace according to page position (early = setup, middle = action, late = resolution)
-- Ages 2-5: 1-2 sentences per page
-- Ages 6-9: Up to a paragraph
+- Each sentence advances plot - no filler
+- Show character emotions through actions ("hands shaking" not "was nervous")
+- Use sensory details and specific verbs ("tiptoed" not "walked quietly")
+- Never state the moral explicitly
+- Child-authentic voice: immediate, concrete, self-focused perspective
+
+${AGE_GUIDELINES}
 
 Output a single page with:
 - summary: Brief description of what happens
