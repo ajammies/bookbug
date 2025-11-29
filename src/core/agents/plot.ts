@@ -15,6 +15,17 @@ plotBeats: 4-7 beats (extend if instructions say to). Structure approximately:
 - The turning point or biggest moment
 - How it ends, what's learned
 
+STORY QUALITY PRINCIPLES
+- One clear problem that escalates (not multiple problems)
+- Character-driven resolution through action, not luck or magic
+- Character makes mistakes → experiences consequences → learns gradually
+- Age-appropriate conflicts children recognize:
+  - Ages 2-4: Lost toy, scared of dark, sharing
+  - Ages 4-6: Social situations, simple problem-solving
+  - Ages 6-8: Internal conflicts, empathy, multi-step problems
+- Embed moral in plot events; never state explicitly
+- End with emotional closure, not just problem solved
+
 characters: Return the input characters with visualDescription filled in. For each character, describe their visual appearance in detail for sprite generation:
 - Body type and proportions (round, lanky, small, etc.)
 - Colors (fur/skin/scales, clothing colors)
