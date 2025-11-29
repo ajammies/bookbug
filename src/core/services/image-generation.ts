@@ -42,7 +42,7 @@ export const createReplicateClient = (): Replicate => {
 /**
  * Type guard to check if a value is a FileOutput
  */
-const isFileOutput = (value: unknown): value is FileOutput => {
+export const isFileOutput = (value: unknown): value is FileOutput => {
   return (
     value !== null &&
     typeof value === 'object' &&
@@ -57,7 +57,7 @@ const isFileOutput = (value: unknown): value is FileOutput => {
  * Replicate returns FileOutput objects with a .url() method that returns a URL object.
  * The output is typically an array of FileOutput for image models.
  */
-const extractImageUrl = (output: unknown): string => {
+export const extractImageUrl = (output: unknown): string => {
   // Array of FileOutput objects (most common for image models)
   if (Array.isArray(output) && output.length > 0) {
     const first = output[0];
@@ -118,7 +118,7 @@ const getRetryAfterMs = (error: unknown): number | null => {
 /**
  * Run Replicate model with rate limit handling
  */
-const runWithRateLimit = async (
+export const runWithRateLimit = async (
   client: Replicate,
   input: Record<string, unknown>,
   logger?: Logger

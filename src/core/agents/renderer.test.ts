@@ -22,10 +22,15 @@ const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory =
   ageRange: { min: 4, max: 8 },
   pageCount: 2,
   characters: [
-    { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] },
-    { name: 'Pip', description: 'A friendly bird', traits: [], notes: [] },
+    { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [], visualDescription: 'Small white rabbit with big curious eyes' },
+    { name: 'Pip', description: 'A friendly bird', traits: [], notes: [], visualDescription: 'Small blue bird with orange beak' },
   ],
   interests: [],
+  // Character designs with sprite sheets
+  characterDesigns: [
+    { character: { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [], visualDescription: 'Small white rabbit with big curious eyes' }, spriteSheetUrl: 'https://example.com/luna-sprite.png' },
+    { character: { name: 'Pip', description: 'A friendly bird', traits: [], notes: [], visualDescription: 'Small blue bird with orange beak' }, spriteSheetUrl: 'https://example.com/pip-sprite.png' },
+  ],
   
   // PlotStructure
   plot: {
@@ -125,17 +130,17 @@ describe('filterStoryForPage', () => {
     expect(slice.style.art_direction.genre).toContain('whimsical');
   });
 
-  it('extracts only referenced characters', () => {
+  it('extracts only referenced character designs', () => {
     const story = createMinimalStory();
 
     // Page 1 only references 'Luna'
     const slice1 = filterStoryForPage(story, 1);
-    expect(Object.keys(slice1.characters)).toEqual(['Luna']);
-    expect(slice1.characters.Luna?.name).toBe('Luna');
+    expect(slice1.characterDesigns.map(d => d.character.name)).toEqual(['Luna']);
+    expect(slice1.characterDesigns[0]?.character.name).toBe('Luna');
 
     // Page 2 references both 'Luna' and 'Pip'
     const slice2 = filterStoryForPage(story, 2);
-    expect(Object.keys(slice2.characters).sort()).toEqual(['Luna', 'Pip']);
+    expect(slice2.characterDesigns.map(d => d.character.name).sort()).toEqual(['Luna', 'Pip']);
   });
 
   it('handles page with no beats gracefully', () => {
@@ -144,7 +149,7 @@ describe('filterStoryForPage', () => {
 
     const slice = filterStoryForPage(story, 1);
 
-    expect(slice.characters).toEqual({});
+    expect(slice.characterDesigns).toEqual([]);
     expect(slice.page.beats).toEqual([]);
   });
 
@@ -195,7 +200,7 @@ describe('filterStoryForPage', () => {
     const slice = filterStoryForPage(story, 1);
 
     // Should only have one 'Luna' entry despite duplicate references
-    expect(Object.keys(slice.characters)).toEqual(['Luna']);
+    expect(slice.characterDesigns.map(d => d.character.name)).toEqual(['Luna']);
   });
 
   it('handles non-existent character ID gracefully', () => {
@@ -220,8 +225,8 @@ describe('filterStoryForPage', () => {
 
     const slice = filterStoryForPage(story, 1);
 
-    // 'unknown' ID doesn't exist in story.characters, should be filtered out
-    expect(slice.characters).toEqual({});
+    // 'unknown' ID doesn't exist in story.characterDesigns, should be filtered out
+    expect(slice.characterDesigns).toEqual([]);
   });
 
   it('includes beats in the slice', () => {

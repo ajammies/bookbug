@@ -22,6 +22,7 @@ export const StoryCharacterSchema = z.object({
   role: z.string().optional().describe('Role in the story (e.g., "protagonist", "sidekick", "mentor")'),
   traits: z.array(z.string().min(1)).default([]).describe('Personality traits (e.g., "curious", "brave")'),
   notes: z.array(z.string().min(1)).default([]).describe('Additional notes for illustration consistency'),
+  visualDescription: z.string().optional().describe('Detailed visual appearance for sprite generation: body type, colors, clothing, props, distinguishing features'),
 });
 
 export type StoryCharacter = z.infer<typeof StoryCharacterSchema>;

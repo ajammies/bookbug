@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { StoryBriefSchema } from './brief';
 import { PlotStructureSchema } from './plot';
 import { ProseSchema } from './prose';
-import { VisualDirectionSchema } from './visuals';
+import { VisualDirectionSchema, CharacterDesignSchema } from './visuals';
 
 /**
  * Composed Types: Linear pipeline composition
@@ -30,11 +30,12 @@ export const StoryWithProseSchema = StoryWithPlotSchema.extend({
 export type StoryWithProse = z.infer<typeof StoryWithProseSchema>;
 
 /**
- * ComposedStory: StoryWithProse + VisualDirection
+ * ComposedStory: StoryWithProse + VisualDirection + CharacterDesigns
  * The complete story ready for rendering.
  */
 export const ComposedStorySchema = StoryWithProseSchema.extend({
   visuals: VisualDirectionSchema,
+  characterDesigns: z.array(CharacterDesignSchema).optional().describe('Sprite sheets for consistent character rendering'),
 });
 
 export type ComposedStory = z.infer<typeof ComposedStorySchema>;

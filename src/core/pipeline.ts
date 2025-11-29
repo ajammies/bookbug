@@ -11,6 +11,7 @@ import type {
   IllustratedPage,
   VisualStyleGuide,
   ProseSetup,
+  CharacterDesign,
 } from './schemas';
 import {
   proseAgent,
@@ -19,6 +20,7 @@ import {
   visualsAgent,
   styleGuideAgent,
   pageVisualsAgent,
+  generateCharacterDesigns,
   renderPage,
   renderPageMock,
   createBook,
@@ -70,9 +72,14 @@ const assembleStoryWithProse = (story: StoryWithPlot, prose: Prose): StoryWithPr
   prose,
 });
 
-const assembleComposedStory = (story: StoryWithProse, visuals: VisualDirection): ComposedStory => ({
+const assembleComposedStory = (
+  story: StoryWithProse,
+  visuals: VisualDirection,
+  characterDesigns?: CharacterDesign[]
+): ComposedStory => ({
   ...story,
   visuals,
+  characterDesigns,
 });
 
 // ============================================================================
@@ -241,11 +248,19 @@ export const executeIncrementalPipeline = async (
 
   emitThinking(`Starting incremental pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
-  // Setup phase: style guide + prose setup sequentially to avoid rate limits
+  // Setup phase: style guide + prose setup + character designs
   emitThinking('Setting up style guide and prose...', logger, onThinking);
   onProgress?.('setup', 'start');
   const styleGuide = await styleGuideAgent(storyWithPlot);
   const proseSetup = await proseSetupAgent(storyWithPlot);
+
+  // Generate character sprite sheets for consistency
+  emitThinking('Generating character sprite sheets...', logger, onThinking);
+  const characterDesigns = await generateCharacterDesigns(
+    storyWithPlot.characters,
+    styleGuide,
+    { logger, onProgress: onThinking }
+  );
   onProgress?.('setup', 'complete');
 
   // Process each page completely before moving to next
@@ -273,6 +288,7 @@ export const executeIncrementalPipeline = async (
       ...storyWithPlot,
       prose: assembleProse(proseSetup, prosePages),
       visuals: assembleVisuals(styleGuide, illustratedPages),
+      characterDesigns,
     };
 
     // Render this page
@@ -291,7 +307,7 @@ export const executeIncrementalPipeline = async (
   // Assemble final outputs
   const prose = assembleProse(proseSetup, prosePages);
   const visuals = assembleVisuals(styleGuide, illustratedPages);
-  const story = assembleComposedStory(assembleStoryWithProse(storyWithPlot, prose), visuals);
+  const story = assembleComposedStory(assembleStoryWithProse(storyWithPlot, prose), visuals, characterDesigns);
   const book = createBook(story, renderedPages, format);
 
   // Save final artifacts
