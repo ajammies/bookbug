@@ -11,7 +11,7 @@ import {
   type IllustratedPage,
   type ProsePage,
 } from '../schemas';
-import { getModel } from '../config';
+import { getModel, getFastModel } from '../config';
 import { createRepairFunction } from '../utils/repair';
 import type { Logger } from '../utils/logger';
 
@@ -51,7 +51,7 @@ export const visualsAgent = async (
 ): Promise<VisualDirection> => {
   return streamObjectWithProgress(
     {
-      model: getModel(),
+      model: getFastModel(),
       schema: VisualDirectionSchema,
       system: SYSTEM_PROMPT,
       prompt: JSON.stringify(story, null, 2),
