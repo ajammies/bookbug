@@ -11,7 +11,7 @@ export type PlotBeatPurpose = BeatPurpose;
 
 export const PlotBeatSchema = z.object({
   purpose: PlotBeatPurposeSchema.describe('Narrative function of this beat'),
-  description: z.string().min(1).describe('What happens in this beat'),
+  description: z.string().min(1).describe('One sentence summary of what happens'),
 });
 
 export type PlotBeat = z.infer<typeof PlotBeatSchema>;

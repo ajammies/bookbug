@@ -8,12 +8,12 @@ First capture the emotional, stylistic, and genre essence of what the user is de
 
 storyArcSummary: 1-2 sentences describing the arc, hero, and overall style/genre.
 
-plotBeats: 4-7 beats (extend if instructions say to). Structure approximately:
-- Introduce character, world, and status quo
-- The problem, challenge, or inciting incident
-- Attempts, obstacles, escalation (can have 1-2 of these)
-- The turning point or biggest moment
-- How it ends, what's learned
+plotBeats: 4-7 beats. KEEP EACH BEAT TO ONE SENTENCE. Structure:
+- Introduce character and world
+- The problem or inciting incident
+- Attempts and obstacles (1-2 beats)
+- The turning point
+- Resolution and what's learned
 
 STORY QUALITY PRINCIPLES
 - One clear problem that escalates (not multiple problems)
