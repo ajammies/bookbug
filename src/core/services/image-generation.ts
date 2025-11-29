@@ -139,11 +139,11 @@ export const runWithRateLimit = async (
 const buildPrompt = (context: PageRenderContext): string =>
   `${RENDER_INSTRUCTIONS}\n${JSON.stringify(context, null, 2)}`;
 
-/** Extract sprite sheet URLs from character designs for image_input */
+/** Extract sprite sheet URLs from character designs for image_input (only valid http URLs) */
 const extractReferenceImages = (context: PageRenderContext): string[] =>
   (context.characterDesigns ?? [])
     .map(design => design.spriteSheetUrl)
-    .filter((url): url is string => Boolean(url));
+    .filter((url): url is string => Boolean(url) && url.startsWith('http'));
 
 /**
  * Generate a page image using Google Nano Banana Pro via Replicate
