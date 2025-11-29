@@ -9,8 +9,10 @@ import {
   generateObject as aiGenerateObject,
   streamObject as aiStreamObject,
   generateText,
+  NoObjectGeneratedError,
   type GenerateObjectResult,
 } from 'ai';
+import type { JSONParseError, TypeValidationError } from '@ai-sdk/provider';
 import { anthropic } from '@ai-sdk/anthropic';
 import { sleep } from './retry';
 import { type Logger, logApiSuccess, logApiError, logRateLimit } from './logger';
@@ -62,6 +64,12 @@ export async function generateObject<T>(
 
 type StreamObjectParams = Parameters<typeof aiStreamObject>[0];
 
+/** Repair function type matching generateObject's experimental_repairText */
+export type RepairFunction = (opts: {
+  text: string;
+  error: JSONParseError | TypeValidationError;
+}) => Promise<string | null>;
+
 /** Summarize partial object into human-readable progress using Haiku */
 const summarizePartial = async (partial: unknown): Promise<string> => {
   const { text } = await generateText({
@@ -72,11 +80,12 @@ const summarizePartial = async (partial: unknown): Promise<string> => {
   return text.trim();
 };
 
-/** Stream object generation with progress callbacks */
+/** Stream object generation with progress callbacks and optional repair */
 export async function streamObjectWithProgress<T>(
   options: StreamObjectParams & { schema: { parse: (data: unknown) => T } },
   onProgress?: (message: string) => void,
-  sampleIntervalMs = 3000
+  sampleIntervalMs = 3000,
+  repair?: RepairFunction
 ): Promise<T> {
   const result = aiStreamObject(options);
 
@@ -96,5 +105,23 @@ export async function streamObjectWithProgress<T>(
     }
   }
 
-  return (await result.object) as T;
+  try {
+    return (await result.object) as T;
+  } catch (error) {
+    // Attempt repair if provided and error is a validation error with text
+    if (!repair || !NoObjectGeneratedError.isInstance(error) || !error.text) {
+      throw error;
+    }
+
+    const cause = error.cause as JSONParseError | TypeValidationError;
+    const repairedText = await repair({ text: error.text, error: cause });
+
+    if (!repairedText) {
+      throw error;
+    }
+
+    // Parse and validate repaired output
+    const parsed = JSON.parse(repairedText);
+    return options.schema.parse(parsed);
+  }
 }
