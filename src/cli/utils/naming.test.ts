@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { titleToFileSafeName, formatTimestamp, createStoryFolderName } from './naming';
+import {
+  titleToFileSafeName,
+  formatSortableTimestamp,
+  formatHumanDate,
+  createStoryFolderName,
+} from './naming';
 
 describe('titleToFileSafeName', () => {
   it('converts title to lowercase', () => {
@@ -44,28 +49,40 @@ describe('titleToFileSafeName', () => {
   });
 });
 
-describe('formatTimestamp', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
+describe('formatSortableTimestamp', () => {
   it('returns timestamp in YYYYMMDD-HHmmss format', () => {
-    vi.setSystemTime(new Date(2024, 10, 26, 14, 30, 52));
-    expect(formatTimestamp()).toBe('20241126-143052');
+    const date = new Date(2024, 10, 26, 14, 30, 52);
+    expect(formatSortableTimestamp(date)).toBe('20241126-143052');
   });
 
   it('pads single-digit values with zeros', () => {
-    vi.setSystemTime(new Date(2024, 0, 5, 9, 5, 3));
-    expect(formatTimestamp()).toBe('20240105-090503');
+    const date = new Date(2024, 0, 5, 9, 5, 3);
+    expect(formatSortableTimestamp(date)).toBe('20240105-090503');
   });
 
   it('handles end of year', () => {
-    vi.setSystemTime(new Date(2024, 11, 31, 23, 59, 59));
-    expect(formatTimestamp()).toBe('20241231-235959');
+    const date = new Date(2024, 11, 31, 23, 59, 59);
+    expect(formatSortableTimestamp(date)).toBe('20241231-235959');
+  });
+});
+
+describe('formatHumanDate', () => {
+  it('returns date in DD-Mon-YYYY format', () => {
+    const date = new Date(2024, 10, 26);
+    expect(formatHumanDate(date)).toBe('26-Nov-2024');
+  });
+
+  it('pads single-digit days with zeros', () => {
+    const date = new Date(2024, 0, 5);
+    expect(formatHumanDate(date)).toBe('05-Jan-2024');
+  });
+
+  it('handles all months', () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    months.forEach((month, index) => {
+      const date = new Date(2024, index, 15);
+      expect(formatHumanDate(date)).toBe(`15-${month}-2024`);
+    });
   });
 });
 
@@ -79,17 +96,17 @@ describe('createStoryFolderName', () => {
     vi.useRealTimers();
   });
 
-  it('combines name and timestamp', () => {
+  it('combines timestamp, name, and human date', () => {
     expect(createStoryFolderName('The Magic Garden')).toBe(
-      'the-magic-garden-20241126-143052'
+      '20241126-143052-the-magic-garden-26-Nov-2024'
     );
   });
 
   it('uses "untitled-story" for empty title', () => {
-    expect(createStoryFolderName('')).toBe('untitled-story-20241126-143052');
+    expect(createStoryFolderName('')).toBe('20241126-143052-untitled-story-26-Nov-2024');
   });
 
   it('uses "untitled-story" for title with only special characters', () => {
-    expect(createStoryFolderName('!@#$%')).toBe('untitled-story-20241126-143052');
+    expect(createStoryFolderName('!@#$%')).toBe('20241126-143052-untitled-story-26-Nov-2024');
   });
 });
