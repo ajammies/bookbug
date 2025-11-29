@@ -1,13 +1,15 @@
 import { Command } from 'commander';
 import path from 'path';
+import { select, Separator } from '@inquirer/prompts';
 import { executePipeline } from '../../core/pipeline';
-import { progressMessagesAgent } from '../../core/agents';
+import { progressMessagesAgent, type ArtDirectionPreset } from '../../core/agents';
 import { runStoryIntake } from '../prompts/story-intake';
 import { runPlotIntake } from '../prompts/plot-intake';
 import { createSpinner, createPipelineProgress } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
 import { createLogger } from '../../core/utils/logger';
+import { listStyles, loadArtDirection } from '../../core/services/style-loader';
 
 export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
@@ -19,6 +21,28 @@ export const createCommand = new Command('create')
     let outputManager: StoryOutputManager;
 
     try {
+      // Step 0: Select art style (or generate new)
+      let artDirectionPreset: ArtDirectionPreset | undefined;
+      const availableStyles = await listStyles();
+
+      if (availableStyles.length > 0) {
+        const styleChoices = [
+          ...availableStyles.map(name => ({ name, value: name })),
+          new Separator(),
+          { name: '✨ Generate new style', value: '__GENERATE__' },
+        ];
+
+        const selectedStyle = await select({
+          message: '🎨 Choose an art style:',
+          choices: styleChoices,
+        });
+
+        if (selectedStyle !== '__GENERATE__') {
+          artDirectionPreset = await loadArtDirection(selectedStyle);
+          console.log(`\nUsing style: ${selectedStyle}`);
+        }
+      }
+
       // Step 1: Get StoryBrief via chat intake
       const brief = await runStoryIntake(prompt);
 
@@ -51,6 +75,7 @@ export const createCommand = new Command('create')
 
       const { book } = await executePipeline(storyWithPlot, {
         logger,
+        artDirectionPreset,
         onProgress,
         onThinking,
         outputManager: options.save !== false ? outputManager : undefined,

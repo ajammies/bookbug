@@ -25,6 +25,7 @@ import {
   renderPageMock,
   createBook,
   type OnStepProgress,
+  type ArtDirectionPreset,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
 import { type Logger, logThinking } from './utils/logger';
@@ -39,6 +40,7 @@ export interface PipelineOptions {
   outputManager?: StoryOutputManager;
   format?: BookFormatKey;
   logger?: Logger;
+  artDirectionPreset?: ArtDirectionPreset;
 }
 
 /** Emit thinking status to both logger and callback */
@@ -248,14 +250,14 @@ export const executePipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, onThinking, outputManager, format, logger } = options;
+  const { onProgress, onThinking, outputManager, format, logger, artDirectionPreset } = options;
 
   emitThinking(`Starting pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
   // Generate style guide and character designs
   onProgress?.('setup', 'start');
-  emitThinking('Generating style guide...', logger, onThinking);
-  const styleGuide = await styleGuideAgent(storyWithPlot);
+  emitThinking(artDirectionPreset ? 'Applying style preset...' : 'Generating style guide...', logger, onThinking);
+  const styleGuide = await styleGuideAgent(storyWithPlot, artDirectionPreset);
   const characterDesigns = await generateAndSaveCharacterDesigns(
     storyWithPlot,
     styleGuide,
@@ -305,14 +307,14 @@ export const executeIncrementalPipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, onThinking, outputManager, format = 'square-large', logger } = options;
+  const { onProgress, onThinking, outputManager, format = 'square-large', logger, artDirectionPreset } = options;
 
   emitThinking(`Starting incremental pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
   // Setup phase: style guide + prose setup + character designs
-  emitThinking('Setting up style guide and prose...', logger, onThinking);
+  emitThinking(artDirectionPreset ? 'Applying style preset...' : 'Setting up style guide and prose...', logger, onThinking);
   onProgress?.('setup', 'start');
-  const styleGuide = await styleGuideAgent(storyWithPlot);
+  const styleGuide = await styleGuideAgent(storyWithPlot, artDirectionPreset);
   const proseSetup = await proseSetupAgent(storyWithPlot);
   const characterDesigns = await generateAndSaveCharacterDesigns(
     storyWithPlot,
