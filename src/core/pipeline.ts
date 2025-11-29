@@ -211,6 +211,28 @@ export const executePipeline = async (
 
   emitThinking(`Starting pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
 
+  // Generate style guide and character designs first
+  onProgress?.('setup', 'start');
+  emitThinking('Generating style guide...', logger, onThinking);
+  const styleGuide = await styleGuideAgent(storyWithPlot);
+
+  emitThinking('Generating character sprite sheets...', logger, onThinking);
+  const characterDesigns = await generateCharacterDesigns(
+    storyWithPlot.characters,
+    styleGuide,
+    { logger, onProgress: onThinking }
+  );
+
+  // Download and save sprite sheets to disk
+  if (outputManager) {
+    emitThinking('Saving character sprite sheets...', logger, onThinking);
+    for (const design of characterDesigns) {
+      const localPath = await outputManager.saveCharacterDesign(design);
+      design.spriteSheetUrl = localPath;
+    }
+  }
+  onProgress?.('setup', 'complete');
+
   // Generate prose
   onProgress?.('prose', 'start');
   const storyWithProse = await generateProse(storyWithPlot, { onProgress, onThinking, logger });
@@ -219,7 +241,9 @@ export const executePipeline = async (
 
   // Generate visuals
   onProgress?.('visuals', 'start');
-  const story = await generateVisuals(storyWithProse, { onProgress, onThinking, logger });
+  const storyWithVisuals = await generateVisuals(storyWithProse, { onProgress, onThinking, logger });
+  // Add character designs to the composed story
+  const story: ComposedStory = { ...storyWithVisuals, characterDesigns };
   await outputManager?.saveStory(story);
   onProgress?.('visuals', 'complete');
 
