@@ -164,8 +164,10 @@ export const generatePageImage = async (
     const referenceImages = extractReferenceImages(context);
 
     // Debug logging for reference images
-    console.log(`[imageGen] Page ${context.page.pageNumber}: ${context.characterDesigns?.length ?? 0} character designs`);
-    console.log(`[imageGen] Reference images to pass: ${referenceImages.length > 0 ? referenceImages.join(', ') : 'none'}`);
+    logger?.debug(
+      { pageNumber: context.page.pageNumber, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
+      'Preparing image generation'
+    );
 
     const input: Record<string, unknown> = {
       prompt: buildPrompt(context),

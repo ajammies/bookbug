@@ -64,6 +64,7 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - 2-3 params: direct arguments; 4+: options object
 - External services injectable via optional params with factory defaults
 - Zod schemas for external API responses
+- Use logger (pino) not console.log - pass logger via options, use `logger?.debug()` for debug info
 
 # Branch naming
 - `feat/` new features, `fix/` bug fixes, `refactor/` no behavior change, `docs/` documentation, 

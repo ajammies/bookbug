@@ -274,10 +274,10 @@ export const executePipeline = async (
   const story: ComposedStory = { ...storyWithVisuals, characterDesigns };
 
   // Debug: log character designs being added
-  console.log(`[pipeline] Adding ${characterDesigns.length} character designs to story`);
-  characterDesigns.forEach((d, i) => {
-    console.log(`[pipeline]   ${i + 1}. ${d.character.name}: ${d.spriteSheetUrl}`);
-  });
+  logger?.debug(
+    { count: characterDesigns.length, designs: characterDesigns.map(d => ({ name: d.character.name, url: d.spriteSheetUrl })) },
+    'Adding character designs to story'
+  );
 
   await outputManager?.saveStory(story);
   onProgress?.('visuals', 'complete');
