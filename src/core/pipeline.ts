@@ -261,6 +261,15 @@ export const executeIncrementalPipeline = async (
     styleGuide,
     { logger, onProgress: onThinking }
   );
+
+  // Download and save sprite sheets to disk
+  if (outputManager) {
+    emitThinking('Saving character sprite sheets...', logger, onThinking);
+    for (const design of characterDesigns) {
+      const localPath = await outputManager.saveCharacterDesign(design);
+      design.spriteSheetUrl = localPath;
+    }
+  }
   onProgress?.('setup', 'complete');
 
   // Process each page completely before moving to next

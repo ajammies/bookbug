@@ -139,10 +139,17 @@ export const runWithRateLimit = async (
 const buildPrompt = (context: PageRenderContext): string =>
   `${RENDER_INSTRUCTIONS}\n${JSON.stringify(context, null, 2)}`;
 
+/** Extract sprite sheet URLs from character designs for image_input */
+const extractReferenceImages = (context: PageRenderContext): string[] =>
+  (context.characterDesigns ?? [])
+    .map(design => design.spriteSheetUrl)
+    .filter((url): url is string => Boolean(url));
+
 /**
  * Generate a page image using Google Nano Banana Pro via Replicate
  *
  * Passes rendering instructions plus filtered Story JSON as the prompt.
+ * Character sprite sheets are passed as image_input for visual consistency.
  * Handles rate limits internally with retry-after.
  */
 export const generatePageImage = async (
@@ -154,16 +161,21 @@ export const generatePageImage = async (
   const agent = 'imageGen';
 
   try {
-    const output = await runWithRateLimit(
-      client,
-      {
-        prompt: buildPrompt(context),
-        aspect_ratio: getAspectRatio(format),
-        resolution: DEFAULT_RESOLUTION,
-        output_format: 'png',
-      },
-      logger
-    );
+    const referenceImages = extractReferenceImages(context);
+
+    const input: Record<string, unknown> = {
+      prompt: buildPrompt(context),
+      aspect_ratio: getAspectRatio(format),
+      resolution: DEFAULT_RESOLUTION,
+      output_format: 'png',
+    };
+
+    // Pass character sprite sheets as reference images for consistency
+    if (referenceImages.length > 0) {
+      input.image_input = referenceImages;
+    }
+
+    const output = await runWithRateLimit(client, input, logger);
 
     logApiSuccess(logger, agent);
     return { url: extractImageUrl(output) };

@@ -216,6 +216,7 @@ describe('renderBook', () => {
       saveStory: vi.fn(),
       saveBook: vi.fn(),
       savePageImage: vi.fn().mockResolvedValue('/test/folder/assets/page-1.png'),
+      saveCharacterDesign: vi.fn().mockResolvedValue('assets/characters/test.png'),
     };
 
     await renderBook(mockComposedStory, { outputManager });
@@ -302,6 +303,7 @@ describe('executePipeline', () => {
       saveStory: vi.fn(),
       saveBook: vi.fn(),
       savePageImage: vi.fn().mockResolvedValue('/test/folder/assets/page-1.png'),
+      saveCharacterDesign: vi.fn().mockResolvedValue('assets/characters/test.png'),
     };
 
     await executePipeline(mockStoryWithPlot, { outputManager });
