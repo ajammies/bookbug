@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { executePipeline, generateVisuals, renderBook } from '../../core/pipeline';
+import { progressMessagesAgent } from '../../core/agents';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -13,6 +14,7 @@ import {
 import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
+import { createProgressRotator, type ProgressRotator } from '../utils/progress-rotator';
 import { loadJson } from '../../utils';
 import { runPlotIntake } from '../prompts/plot-intake';
 
@@ -165,17 +167,37 @@ export const resumeCommand = new Command('resume')
           console.log('\n📍 Resuming from: blurb.json (prose + visuals + rendering)');
           const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(info.latestFile));
 
+          // Generate progress messages
+          spinner.start('Preparing progress messages...');
+          const progressMessages = await progressMessagesAgent(storyWithPlot);
+          spinner.succeed('Ready');
+
+          let rotator: ProgressRotator | null = null;
           const majorPhases = ['prose', 'visuals', 'render'];
+          const longRunningPhases = ['prose', 'visuals'];
+
           const result = await executePipeline(storyWithPlot, {
             onProgress: (step, status) => {
               if (status === 'start') {
                 spinner.start(formatStep(step));
-              } else if (status === 'complete' && majorPhases.includes(step)) {
-                spinner.succeed(formatStep(step, true));
+                if (longRunningPhases.includes(step)) {
+                  rotator = createProgressRotator(progressMessages, 3000, (msg) => {
+                    if (spinner.isSpinning) spinner.text = msg;
+                  });
+                  rotator.start();
+                }
+              } else if (status === 'complete') {
+                if (longRunningPhases.includes(step)) {
+                  rotator?.stop();
+                  rotator = null;
+                }
+                if (majorPhases.includes(step)) {
+                  spinner.succeed(formatStep(step, true));
+                }
               }
             },
             onThinking: (msg) => {
-              if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`;
+              if (spinner.isSpinning && !rotator) spinner.text = msg;
             },
             outputManager,
             format: options.format,
@@ -193,17 +215,37 @@ export const resumeCommand = new Command('resume')
           const storyWithPlot = await runPlotIntake(brief);
           await outputManager.saveBlurb(storyWithPlot);
 
+          // Generate progress messages
+          spinner.start('Preparing progress messages...');
+          const progressMessages = await progressMessagesAgent(storyWithPlot);
+          spinner.succeed('Ready');
+
+          let rotator: ProgressRotator | null = null;
           const majorPhases = ['prose', 'visuals', 'render'];
+          const longRunningPhases = ['prose', 'visuals'];
+
           const result = await executePipeline(storyWithPlot, {
             onProgress: (step, status) => {
               if (status === 'start') {
                 spinner.start(formatStep(step));
-              } else if (status === 'complete' && majorPhases.includes(step)) {
-                spinner.succeed(formatStep(step, true));
+                if (longRunningPhases.includes(step)) {
+                  rotator = createProgressRotator(progressMessages, 3000, (msg) => {
+                    if (spinner.isSpinning) spinner.text = msg;
+                  });
+                  rotator.start();
+                }
+              } else if (status === 'complete') {
+                if (longRunningPhases.includes(step)) {
+                  rotator?.stop();
+                  rotator = null;
+                }
+                if (majorPhases.includes(step)) {
+                  spinner.succeed(formatStep(step, true));
+                }
               }
             },
             onThinking: (msg) => {
-              if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`;
+              if (spinner.isSpinning && !rotator) spinner.text = msg;
             },
             outputManager,
             format: options.format,

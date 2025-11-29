@@ -143,7 +143,7 @@ describe('generateProse', () => {
     await generateProse(mockStoryWithPlot);
 
     expect(mockedProseAgent).toHaveBeenCalledTimes(1);
-    expect(mockedProseAgent).toHaveBeenCalledWith(mockStoryWithPlot, undefined, undefined);
+    expect(mockedProseAgent).toHaveBeenCalledWith(mockStoryWithPlot, undefined);
   });
 
   it('calls onProgress for prose stage', async () => {
@@ -174,7 +174,7 @@ describe('generateVisuals', () => {
     await generateVisuals(mockStoryWithProse);
 
     expect(mockedVisualsAgent).toHaveBeenCalledTimes(1);
-    expect(mockedVisualsAgent).toHaveBeenCalledWith(mockStoryWithProse, undefined, undefined);
+    expect(mockedVisualsAgent).toHaveBeenCalledWith(mockStoryWithProse, undefined);
   });
 
   it('calls onProgress for visuals stage', async () => {

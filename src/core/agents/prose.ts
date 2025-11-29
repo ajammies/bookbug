@@ -100,15 +100,10 @@ Output only the prose fields:
 /**
  * ProseAgent: Takes a StoryWithPlot and produces Prose
  *
- * Uses streaming to provide real-time progress updates via onProgress callback.
  * Output contains ONLY the new fields (logline, theme, styleNotes, pages).
  * Caller composes the result: StoryWithProse = { ...story, prose: result }
  */
-export const proseAgent = async (
-  story: StoryWithPlot,
-  onProgress?: (message: string) => void,
-  logger?: Logger
-): Promise<Prose> => {
+export const proseAgent = async (story: StoryWithPlot, logger?: Logger): Promise<Prose> => {
   return streamObjectWithProgress(
     {
       model: getModel(),
@@ -117,8 +112,6 @@ export const proseAgent = async (
       prompt: JSON.stringify(story, null, 2),
       maxOutputTokens: 64000,
     },
-    onProgress,
-    3000,
     createRepairFunction(),
     logger
   );

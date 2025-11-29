@@ -27,6 +27,9 @@ export { visualsAgent, styleGuideAgent, pageVisualsAgent, type PageVisualsInput 
 export { characterDesignAgent, generateCharacterDesigns } from './character-design';
 export { renderPage, renderPageMock, createBook, filterStoryForPage } from './renderer';
 
+// Progress messages for CLI display
+export { progressMessagesAgent } from './progress-messages';
+
 // Chat intake agents (StoryBrief)
 export { interpreterAgent } from './interpreter';
 export { conversationAgent, type Message, type MessageRole } from './conversation';
