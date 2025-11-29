@@ -8,7 +8,7 @@ import {
   type ProseSetup,
   type ProsePage,
 } from '../schemas';
-import { getModel, getFastModel } from '../config';
+import { getModel } from '../config';
 import { createRepairFunction } from '../utils/repair';
 import type { Logger } from '../utils/logger';
 
@@ -109,7 +109,7 @@ export const proseAgent = async (
 ): Promise<Prose> => {
   return streamObjectWithProgress(
     {
-      model: getFastModel(),
+      model: getModel(),
       schema: ProseSchema,
       system: SYSTEM_PROMPT,
       prompt: JSON.stringify(story, null, 2),
