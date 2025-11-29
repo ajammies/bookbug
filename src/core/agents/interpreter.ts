@@ -1,10 +1,12 @@
-import { generateObject } from 'ai';
+import { generateObject } from '../utils/ai';
 import { StoryBriefSchema, type StoryBrief } from '../schemas';
 import { getModel } from '../config';
 
 const SYSTEM_PROMPT = `Extract story details from user input into a StoryBrief.
 
-Only include fields the user explicitly mentioned or clearly implied. Omit fields entirely if not mentioned - don't invent details or use empty strings.`;
+Only include fields the user explicitly mentioned or clearly implied. Omit fields entirely if not mentioned - don't invent details or use empty strings.
+
+If the user provides detailed descriptions, extra context, pasted JSON, or special requests that don't fit neatly into other fields, capture everything in customInstructions.`;
 
 /**
  * InterpreterAgent: Extracts StoryBrief fields from any user input

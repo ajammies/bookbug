@@ -1,7 +1,8 @@
 import Replicate, { type FileOutput } from 'replicate';
 import type { PageRenderContext, BookFormat } from '../schemas';
 import { getAspectRatio } from '../schemas';
-import { RateLimitError } from '../utils/retry';
+import { sleep } from '../utils/retry';
+import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
 
 /**
  * Image generation service using Replicate API with Google Nano Banana Pro
@@ -12,6 +13,12 @@ import { RateLimitError } from '../utils/retry';
 
 const IMAGE_MODEL = 'google/nano-banana-pro';
 const DEFAULT_RESOLUTION = '2K'; // Options: '1K', '2K', '4K'
+
+const RENDER_INSTRUCTIONS = `Generate the image pricesly as described below.
+
+IMPORTANT: Render the page text directly on the image. Choose a font that befits the scene. You may make comic book onomonpia too where appropriate. Position the text in a clear area that doesn't obscure key visual elements.
+
+Page context:`;
 
 export interface GeneratedPage {
   /** Temporary URL from Replicate (expires after ~24h) */
@@ -91,54 +98,77 @@ const extractImageUrl = (output: unknown): string => {
 };
 
 /**
+ * Get retry-after delay from Replicate error response
+ */
+const getRetryAfterMs = (error: unknown): number | null => {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const apiError = error as {
+      response: { status: number; headers?: { get?: (key: string) => string | null } };
+    };
+
+    if (apiError.response.status === 429) {
+      const retryAfterHeader = apiError.response.headers?.get?.('retry-after');
+      const seconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 60;
+      return isNaN(seconds) ? 60000 : seconds * 1000;
+    }
+  }
+  return null;
+};
+
+/**
+ * Run Replicate model with rate limit handling
+ */
+const runWithRateLimit = async (
+  client: Replicate,
+  input: Record<string, unknown>,
+  logger?: Logger
+): Promise<unknown> => {
+  try {
+    return await client.run(IMAGE_MODEL, { input });
+  } catch (error) {
+    const retryAfter = getRetryAfterMs(error);
+    if (!retryAfter) throw error;
+
+    logRateLimit(logger, 'replicate', Math.ceil(retryAfter / 1000));
+    await sleep(retryAfter);
+    return await client.run(IMAGE_MODEL, { input });
+  }
+};
+
+/** Build the full prompt with rendering instructions */
+const buildPrompt = (context: PageRenderContext): string =>
+  `${RENDER_INSTRUCTIONS}\n${JSON.stringify(context, null, 2)}`;
+
+/**
  * Generate a page image using Google Nano Banana Pro via Replicate
  *
- * Passes the filtered Story JSON directly as the prompt.
- * Accepts optional client for dependency injection (useful for testing).
+ * Passes rendering instructions plus filtered Story JSON as the prompt.
+ * Handles rate limits internally with retry-after.
  */
 export const generatePageImage = async (
   context: PageRenderContext,
   format: BookFormat,
-  client: Replicate = createReplicateClient()
+  client: Replicate = createReplicateClient(),
+  logger?: Logger
 ): Promise<GeneratedPage> => {
+  const agent = 'imageGen';
+
   try {
-    const output = await client.run(IMAGE_MODEL, {
-      input: {
-        prompt: JSON.stringify(context),
+    const output = await runWithRateLimit(
+      client,
+      {
+        prompt: buildPrompt(context),
         aspect_ratio: getAspectRatio(format),
         resolution: DEFAULT_RESOLUTION,
         output_format: 'png',
       },
-    });
+      logger
+    );
 
+    logApiSuccess(logger, agent);
     return { url: extractImageUrl(output) };
   } catch (error) {
-    // Handle Replicate API errors
-    if (error && typeof error === 'object' && 'response' in error) {
-      const apiError = error as {
-        response: { status: number; headers?: { get?: (key: string) => string | null } };
-        message: string;
-      };
-
-      // Detect rate limit (429) and throw RateLimitError
-      if (apiError.response.status === 429) {
-        const retryAfterHeader = apiError.response.headers?.get?.('retry-after');
-        // Parse retry-after: could be seconds or a date
-        const delayMs = retryAfterHeader
-          ? parseInt(retryAfterHeader, 10) * 1000
-          : 60000; // Default to 60 seconds
-
-        throw new RateLimitError(
-          isNaN(delayMs) ? 60000 : delayMs,
-          `Replicate rate limit exceeded. Retry after ${delayMs / 1000}s`
-        );
-      }
-
-      throw new Error(
-        `Image generation failed (${apiError.response.status}): ${apiError.message}`
-      );
-    }
+    logApiError(logger, agent, error instanceof Error ? error.message : String(error));
     throw error;
   }
 };
-

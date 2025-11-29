@@ -1,8 +1,9 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { executePipeline, runVisuals, runBook } from '../../core/pipeline';
+import { executePipeline, generateVisuals, renderBook } from '../../core/pipeline';
 import {
+  StoryBriefSchema,
   StoryWithPlotSchema,
   StoryWithProseSchema,
   StorySchema,
@@ -13,10 +14,11 @@ import { createSpinner, formatStep } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
 import { loadJson } from '../../utils';
+import { runPlotIntake } from '../prompts/plot-intake';
 
 const OUTPUT_DIR = './output';
 
-type ResumeStage = 'blurb' | 'prose' | 'story' | 'complete';
+type ResumeStage = 'brief' | 'blurb' | 'prose' | 'story' | 'complete';
 
 interface StoryFolderInfo {
   folder: string;
@@ -72,6 +74,9 @@ const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
   if (files.includes('blurb.json')) {
     return { folder, stage: 'blurb', latestFile: path.join(folder, 'blurb.json') };
   }
+  if (files.includes('brief.json')) {
+    return { folder, stage: 'brief', latestFile: path.join(folder, 'brief.json') };
+  }
 
   throw new Error(`No resumable artifacts found in ${folder}`);
 };
@@ -108,18 +113,15 @@ export const resumeCommand = new Command('resume')
         }
 
         case 'story': {
-          // Has story.json, just needs rendering
           console.log('\n📍 Resuming from: story.json (rendering images)');
           const story = StorySchema.parse(await loadJson(info.latestFile));
 
           spinner.start('Rendering book...');
-          const book = await runBook(story, {
+          const book = await renderBook(story, {
             mock: options.mock,
             format: options.format,
             outputManager,
-            onPageRendered: (page) => {
-              spinner.text = `Rendered page ${page.pageNumber}/${story.visuals.illustratedPages.length}`;
-            },
+            onThinking: (msg) => { if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`; },
           });
           spinner.succeed('Book rendered');
 
@@ -134,21 +136,22 @@ export const resumeCommand = new Command('resume')
           console.log('\n📍 Resuming from: prose.json (visual direction + rendering)');
           const storyWithProse = StoryWithProseSchema.parse(await loadJson(info.latestFile));
 
+          const updateSpinner = (msg: string) => {
+            if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`;
+          };
+
           spinner.start('Creating visual direction...');
-          const visuals = await runVisuals(storyWithProse);
+          const story = await generateVisuals(storyWithProse, { onThinking: updateSpinner });
           spinner.succeed('Visual direction complete');
 
-          const story = { ...storyWithProse, visuals };
           await outputManager.saveStory(story);
 
           spinner.start('Rendering book...');
-          const book = await runBook(story, {
+          const book = await renderBook(story, {
             mock: options.mock,
             format: options.format,
             outputManager,
-            onPageRendered: (page) => {
-              spinner.text = `Rendered page ${page.pageNumber}/${story.visuals.illustratedPages.length}`;
-            },
+            onThinking: updateSpinner,
           });
           spinner.succeed('Book rendered');
 
@@ -159,27 +162,52 @@ export const resumeCommand = new Command('resume')
         }
 
         case 'blurb': {
-          // Has blurb.json, run full incremental pipeline
           console.log('\n📍 Resuming from: blurb.json (prose + visuals + rendering)');
           const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(info.latestFile));
 
+          const majorPhases = ['prose', 'visuals', 'render'];
           const result = await executePipeline(storyWithPlot, {
             onProgress: (step, status) => {
               if (status === 'start') {
                 spinner.start(formatStep(step));
-              } else if (status === 'complete') {
+              } else if (status === 'complete' && majorPhases.includes(step)) {
                 spinner.succeed(formatStep(step, true));
               }
             },
-            outputManager,
-            onPageComplete: (pageNumber) => {
-              console.log(`  ✓ Page ${pageNumber} complete`);
+            onThinking: (msg) => {
+              if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`;
             },
+            outputManager,
+            format: options.format,
           });
 
-          if (result.stage !== 'book') {
-            throw new Error('Pipeline did not complete');
-          }
+          displayBook(result.book);
+          console.log(`\nAll files saved to: ${folder}`);
+          break;
+        }
+
+        case 'brief': {
+          console.log('\n📍 Resuming from: brief.json (plot iteration + prose + visuals + rendering)');
+          const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
+
+          const storyWithPlot = await runPlotIntake(brief);
+          await outputManager.saveBlurb(storyWithPlot);
+
+          const majorPhases = ['prose', 'visuals', 'render'];
+          const result = await executePipeline(storyWithPlot, {
+            onProgress: (step, status) => {
+              if (status === 'start') {
+                spinner.start(formatStep(step));
+              } else if (status === 'complete' && majorPhases.includes(step)) {
+                spinner.succeed(formatStep(step, true));
+              }
+            },
+            onThinking: (msg) => {
+              if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`;
+            },
+            outputManager,
+            format: options.format,
+          });
 
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);

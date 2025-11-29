@@ -14,9 +14,9 @@ import type {
 } from './schemas';
 import {
   proseAgent,
-  visualsAgent,
   proseSetupAgent,
   prosePageAgent,
+  visualsAgent,
   styleGuideAgent,
   pageVisualsAgent,
   renderPage,
@@ -25,36 +25,32 @@ import {
   type OnStepProgress,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
-import { pRetry, RateLimitError, sleep } from './utils/retry';
+import { type Logger, logThinking } from './utils/logger';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type PipelineResult =
-  | { stage: 'prose'; storyWithPlot: StoryWithPlot; prose: Prose }
-  | { stage: 'visuals'; storyWithProse: StoryWithProse; visuals: VisualDirection }
-  | { stage: 'book'; story: ComposedStory; book: RenderedBook };
-
 export interface PipelineOptions {
   onProgress?: OnStepProgress;
-  stopAfter?: 'prose' | 'visuals' | 'book';
+  onThinking?: (message: string) => void;
   outputManager?: StoryOutputManager;
-  onPageComplete?: (pageNumber: number, page: RenderedPage) => void;
-  onRetry?: (pageNumber: number, attempt: number, error: Error, delayMs: number) => void;
-  maxRetries?: number;
+  format?: BookFormatKey;
+  logger?: Logger;
 }
 
-export interface RenderOptions {
-  format?: BookFormatKey;
-  maxRetries?: number;
-  outputManager?: StoryOutputManager;
-  onRetry?: (pageNumber: number, attempt: number, error: Error, delayMs: number) => void;
-  onPageRendered?: (page: RenderedPage) => void;
-}
+/** Emit thinking status to both logger and callback */
+const emitThinking = (
+  message: string,
+  logger?: Logger,
+  onThinking?: (msg: string) => void
+): void => {
+  logThinking(logger, message);
+  onThinking?.(message);
+};
 
 // ============================================================================
-// Pure helpers
+// Pure assembly functions
 // ============================================================================
 
 const assembleProse = (setup: ProseSetup, pages: ProsePage[]): Prose => ({
@@ -69,168 +65,245 @@ const assembleVisuals = (style: VisualStyleGuide, pages: IllustratedPage[]): Vis
   illustratedPages: pages,
 });
 
+const assembleStoryWithProse = (story: StoryWithPlot, prose: Prose): StoryWithProse => ({
+  ...story,
+  prose,
+});
+
+const assembleComposedStory = (story: StoryWithProse, visuals: VisualDirection): ComposedStory => ({
+  ...story,
+  visuals,
+});
+
 // ============================================================================
-// Render with retry (shared logic)
+// Pure page processors
 // ============================================================================
 
-const renderWithRetry = async (
-  story: ComposedStory,
+const generateProsePage = (
+  story: StoryWithPlot,
+  proseSetup: ProseSetup,
   pageNumber: number,
-  options: RenderOptions = {}
-): Promise<RenderedPage> => {
-  const { format = 'square-large', maxRetries = 5, outputManager, onRetry } = options;
+  previousPages: ProsePage[]
+): Promise<ProsePage> =>
+  prosePageAgent({ story, proseSetup, pageNumber, previousPages });
 
-  const page = await pRetry(
-    () => renderPage(story, pageNumber, format),
-    {
-      retries: maxRetries,
-      randomize: true,
-      onFailedAttempt: async ({ error, attemptNumber }) => {
-        const delayMs = error instanceof RateLimitError ? error.retryAfterMs : 0;
-        onRetry?.(pageNumber, attemptNumber, error, delayMs);
-        if (error instanceof RateLimitError) {
-          await sleep(error.retryAfterMs);
-        }
-      },
-    }
-  );
+const generateIllustratedPage = (
+  story: StoryWithPlot,
+  styleGuide: VisualStyleGuide,
+  pageNumber: number,
+  prosePage: ProsePage
+): Promise<IllustratedPage> =>
+  pageVisualsAgent({ story, styleGuide, pageNumber, prosePage });
 
-  if (outputManager) {
-    await outputManager.savePageImage(page);
+// ============================================================================
+// Sequential page accumulator
+// ============================================================================
+
+const processPages = async <T>(
+  count: number,
+  processor: (pageNumber: number, accumulated: T[]) => Promise<T>
+): Promise<T[]> => {
+  const results: T[] = [];
+  for (let i = 0; i < count; i++) {
+    const result = await processor(i + 1, [...results]);
+    results.push(result);
   }
-
-  return page;
+  return results;
 };
 
 // ============================================================================
-// Pipeline execution
+// Composable pipelines
 // ============================================================================
 
-export async function executePipeline(
+/**
+ * Generate prose for a story (StoryWithPlot → StoryWithProse)
+ *
+ * Uses single-call proseAgent to minimize API requests and avoid rate limits.
+ */
+export const generateProse = async (
+  story: StoryWithPlot,
+  options: { onProgress?: OnStepProgress; onThinking?: (msg: string) => void; logger?: Logger } = {}
+): Promise<StoryWithProse> => {
+  const { onProgress, onThinking, logger } = options;
+
+  emitThinking('Writing story prose...', logger, onThinking);
+  onProgress?.('prose', 'start');
+  const prose = await proseAgent(story, onThinking);
+  onProgress?.('prose', 'complete');
+
+  return assembleStoryWithProse(story, prose);
+};
+
+/**
+ * Generate visuals for a story (StoryWithProse → ComposedStory)
+ *
+ * Uses single-call visualsAgent to minimize API requests and avoid rate limits.
+ */
+export const generateVisuals = async (
+  story: StoryWithProse,
+  options: { onProgress?: OnStepProgress; onThinking?: (msg: string) => void; logger?: Logger } = {}
+): Promise<ComposedStory> => {
+  const { onProgress, onThinking, logger } = options;
+
+  emitThinking('Creating visual direction...', logger, onThinking);
+  onProgress?.('visuals', 'start');
+  const visuals = await visualsAgent(story, onThinking);
+  onProgress?.('visuals', 'complete');
+
+  return assembleComposedStory(story, visuals);
+};
+
+/**
+ * Render a book (ComposedStory → RenderedBook)
+ */
+export const renderBook = async (
+  story: ComposedStory,
+  options: {
+    format?: BookFormatKey;
+    mock?: boolean;
+    onProgress?: OnStepProgress;
+    onThinking?: (msg: string) => void;
+    outputManager?: StoryOutputManager;
+    logger?: Logger;
+  } = {}
+): Promise<RenderedBook> => {
+  const { format = 'square-large', mock = false, onProgress, onThinking, outputManager, logger } = options;
+  const totalPages = story.visuals.illustratedPages.length;
+
+  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber) => {
+    emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
+    onProgress?.(`render-page-${pageNumber}`, 'start');
+
+    const page = mock
+      ? renderPageMock(pageNumber)
+      : await renderPage(story, pageNumber, format);
+
+    if (outputManager) {
+      await outputManager.savePageImage(page);
+    }
+
+    onProgress?.(`render-page-${pageNumber}`, 'complete');
+    return page;
+  });
+
+  return createBook(story, pages, format);
+};
+
+// ============================================================================
+// Full pipeline (chains all three)
+// ============================================================================
+
+/**
+ * Run the complete pipeline: StoryWithPlot → RenderedBook
+ */
+export const executePipeline = async (
   storyWithPlot: StoryWithPlot,
   options: PipelineOptions = {}
-): Promise<PipelineResult> {
-  const { onProgress, stopAfter, outputManager, onPageComplete, onRetry, maxRetries = 5 } = options;
+): Promise<{ story: ComposedStory; book: RenderedBook }> => {
+  const { onProgress, onThinking, outputManager, format, logger } = options;
 
-  // Setup phase: generate style guide and prose setup in parallel
+  emitThinking(`Starting pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
+
+  // Generate prose
+  onProgress?.('prose', 'start');
+  const storyWithProse = await generateProse(storyWithPlot, { onProgress, onThinking, logger });
+  await outputManager?.saveProse(storyWithProse);
+  onProgress?.('prose', 'complete');
+
+  // Generate visuals
+  onProgress?.('visuals', 'start');
+  const story = await generateVisuals(storyWithProse, { onProgress, onThinking, logger });
+  await outputManager?.saveStory(story);
+  onProgress?.('visuals', 'complete');
+
+  // Render book
+  onProgress?.('render', 'start');
+  const book = await renderBook(story, { format, outputManager, onProgress, onThinking, logger });
+  await outputManager?.saveBook(book);
+  onProgress?.('render', 'complete');
+
+  return { story, book };
+};
+
+// ============================================================================
+// Incremental pipeline (processes each page fully before moving to next)
+// ============================================================================
+
+/**
+ * Process pages incrementally: prose → visuals → render for each page
+ * Useful for long-running jobs where you want to save progress as you go
+ */
+export const executeIncrementalPipeline = async (
+  storyWithPlot: StoryWithPlot,
+  options: PipelineOptions = {}
+): Promise<{ story: ComposedStory; book: RenderedBook }> => {
+  const { onProgress, onThinking, outputManager, format = 'square-large', logger } = options;
+
+  emitThinking(`Starting incremental pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
+
+  // Setup phase: style guide + prose setup sequentially to avoid rate limits
+  emitThinking('Setting up style guide and prose...', logger, onThinking);
   onProgress?.('setup', 'start');
-  const [styleGuide, proseSetup] = await Promise.all([
-    styleGuideAgent(storyWithPlot),
-    proseSetupAgent(storyWithPlot),
-  ]);
-  onProgress?.('setup', 'complete', { styleGuide, proseSetup });
+  const styleGuide = await styleGuideAgent(storyWithPlot);
+  const proseSetup = await proseSetupAgent(storyWithPlot);
+  onProgress?.('setup', 'complete');
 
-  // Page-by-page processing
+  // Process each page completely before moving to next
   const prosePages: ProsePage[] = [];
   const illustratedPages: IllustratedPage[] = [];
   const renderedPages: RenderedPage[] = [];
 
   for (let i = 0; i < storyWithPlot.pageCount; i++) {
     const pageNumber = i + 1;
+    const totalPages = storyWithPlot.pageCount;
     onProgress?.(`page-${pageNumber}`, 'start');
 
-    // Prose
-    const prosePage = await prosePageAgent({
-      story: storyWithPlot,
-      proseSetup,
-      pageNumber,
-      previousPages: [...prosePages],
-    });
+    // Prose for this page
+    emitThinking(`Writing prose for page ${pageNumber} of ${totalPages}...`, logger, onThinking);
+    const prosePage = await generateProsePage(storyWithPlot, proseSetup, pageNumber, prosePages);
     prosePages.push(prosePage);
 
-    if (stopAfter === 'prose') {
-      onProgress?.(`page-${pageNumber}`, 'complete', { prosePage });
-      continue;
-    }
-
-    // Visuals
-    const illustratedPage = await pageVisualsAgent({
-      story: storyWithPlot,
-      styleGuide,
-      pageNumber,
-      prosePage,
-    });
+    // Visuals for this page
+    emitThinking(`Creating visuals for page ${pageNumber} of ${totalPages}...`, logger, onThinking);
+    const illustratedPage = await generateIllustratedPage(storyWithPlot, styleGuide, pageNumber, prosePage);
     illustratedPages.push(illustratedPage);
 
-    if (stopAfter === 'visuals') {
-      onProgress?.(`page-${pageNumber}`, 'complete', { prosePage, illustratedPage });
-      continue;
-    }
-
-    // Render
+    // Build current story state for rendering
     const currentStory: ComposedStory = {
       ...storyWithPlot,
       prose: assembleProse(proseSetup, prosePages),
       visuals: assembleVisuals(styleGuide, illustratedPages),
     };
 
-    const renderedPage = await renderWithRetry(currentStory, pageNumber, {
-      maxRetries,
-      outputManager,
-      onRetry,
-    });
+    // Render this page
+    emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
+    const renderedPage = await renderPage(currentStory, pageNumber, format);
     renderedPages.push(renderedPage);
 
-    onProgress?.(`page-${pageNumber}`, 'complete', { prosePage, illustratedPage, renderedPage });
-    onPageComplete?.(pageNumber, renderedPage);
+    // Save incrementally
+    if (outputManager) {
+      await outputManager.savePageImage(renderedPage);
+    }
+
+    onProgress?.(`page-${pageNumber}`, 'complete');
   }
 
   // Assemble final outputs
   const prose = assembleProse(proseSetup, prosePages);
   const visuals = assembleVisuals(styleGuide, illustratedPages);
-  const storyWithProse: StoryWithProse = { ...storyWithPlot, prose };
-  const story: ComposedStory = { ...storyWithProse, visuals };
+  const story = assembleComposedStory(assembleStoryWithProse(storyWithPlot, prose), visuals);
+  const book = createBook(story, renderedPages, format);
 
-  // Early returns for partial runs
-  if (stopAfter === 'prose') {
-    await outputManager?.saveProse(storyWithProse);
-    return { stage: 'prose', storyWithPlot, prose };
-  }
-
-  if (stopAfter === 'visuals') {
-    await outputManager?.saveStory(story);
-    return { stage: 'visuals', storyWithProse, visuals };
-  }
-
-  // Full completion
-  const book = createBook(story, renderedPages);
-  await outputManager?.saveProse(storyWithProse);
+  // Save final artifacts
+  await outputManager?.saveProse({ ...storyWithPlot, prose });
   await outputManager?.saveStory(story);
   await outputManager?.saveBook(book);
 
-  onProgress?.('complete', 'complete', book);
-  return { stage: 'book', story, book };
-}
+  return { story, book };
+};
 
 // ============================================================================
-// Standalone functions for CLI
-// ============================================================================
-
-export const runProse = (storyWithPlot: StoryWithPlot): Promise<Prose> =>
-  proseAgent(storyWithPlot);
-
-export const runVisuals = (storyWithProse: StoryWithProse): Promise<VisualDirection> =>
-  visualsAgent(storyWithProse);
-
-export async function runBook(
-  story: ComposedStory,
-  options: RenderOptions & { mock?: boolean } = {}
-): Promise<RenderedBook> {
-  const { mock = false, format = 'square-large', onPageRendered, ...renderOpts } = options;
-
-  const pages: RenderedPage[] = [];
-
-  for (const storyPage of story.visuals.illustratedPages) {
-    const page = mock
-      ? renderPageMock(storyPage.pageNumber)
-      : await renderWithRetry(story, storyPage.pageNumber, { format, ...renderOpts });
-
-    pages.push(page);
-    onPageRendered?.(page);
-  }
-
-  return createBook(story, pages, format);
-}
-
 // Re-exports for CLI convenience
+// ============================================================================
+
 export { renderPage, renderPageMock, createBook } from './agents';

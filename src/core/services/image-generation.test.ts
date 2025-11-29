@@ -3,7 +3,6 @@ import { generatePageImage, createReplicateClient } from './image-generation';
 import { BOOK_FORMATS } from '../schemas';
 import type { PageRenderContext } from '../schemas';
 import type Replicate from 'replicate';
-import { RateLimitError } from '../utils/retry';
 
 describe('createReplicateClient', () => {
   const originalEnv = process.env;
@@ -118,7 +117,7 @@ describe('generatePageImage', () => {
     ).rejects.toThrow('Unexpected output format from Replicate model');
   });
 
-  it('passes story slice as JSON string prompt', async () => {
+  it('passes render instructions and story context as prompt', async () => {
     const mockRun = vi.fn().mockResolvedValue(['https://example.com/image.png']);
     const mockClient = createMockClient(mockRun);
 
@@ -127,9 +126,10 @@ describe('generatePageImage', () => {
     const callArgs = mockRun.mock.calls[0]?.[1] as { input: { prompt: string } };
     const prompt = callArgs.input.prompt;
 
-    const parsed = JSON.parse(prompt);
-    expect(parsed.storyTitle).toBe('The Magic Garden');
-    expect(parsed.page.text).toBe('Luna found an old garden gate.');
+    // Prompt includes render instructions followed by JSON context
+    expect(prompt).toContain('Render the page text directly on the image');
+    expect(prompt).toContain('"storyTitle": "The Magic Garden"');
+    expect(prompt).toContain('"text": "Luna found an old garden gate."');
   });
 
   it('uses correct aspect ratio for square format', async () => {
@@ -162,36 +162,42 @@ describe('generatePageImage', () => {
     expect(callArgs.input.aspect_ratio).toBe('3:4');
   });
 
-  it('throws RateLimitError for 429 responses', async () => {
+  it('retries on 429 rate limit and succeeds', async () => {
     const apiError = {
       message: 'Rate limit exceeded',
-      response: { status: 429, headers: { get: () => '30' } },
+      response: { status: 429, headers: { get: () => '1' } }, // 1 second
+    };
+    const mockRun = vi.fn()
+      .mockRejectedValueOnce(apiError)
+      .mockResolvedValueOnce(['https://example.com/retry-success.png']);
+    const mockClient = createMockClient(mockRun);
+
+    const result = await generatePageImage(
+      minimalContext,
+      BOOK_FORMATS['square-large'],
+      mockClient
+    );
+
+    expect(mockRun).toHaveBeenCalledTimes(2);
+    expect(result.url).toBe('https://example.com/retry-success.png');
+  });
+
+  it('throws after retry fails on 429', async () => {
+    const apiError = {
+      message: 'Rate limit exceeded',
+      response: { status: 429, headers: { get: () => '1' } },
     };
     const mockRun = vi.fn().mockRejectedValue(apiError);
     const mockClient = createMockClient(mockRun);
 
     await expect(
       generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
-    ).rejects.toThrow(RateLimitError);
+    ).rejects.toEqual(apiError);
+
+    expect(mockRun).toHaveBeenCalledTimes(2);
   });
 
-  it('uses default 60s delay when retry-after header is missing', async () => {
-    const apiError = {
-      message: 'Rate limit exceeded',
-      response: { status: 429 },
-    };
-    const mockRun = vi.fn().mockRejectedValue(apiError);
-    const mockClient = createMockClient(mockRun);
-
-    try {
-      await generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient);
-    } catch (error) {
-      expect(error).toBeInstanceOf(RateLimitError);
-      expect((error as RateLimitError).retryAfterMs).toBe(60000);
-    }
-  });
-
-  it('enhances error message for non-429 API errors', async () => {
+  it('throws immediately on non-429 API errors', async () => {
     const apiError = {
       message: 'Server error',
       response: { status: 500 },
@@ -201,7 +207,9 @@ describe('generatePageImage', () => {
 
     await expect(
       generatePageImage(minimalContext, BOOK_FORMATS['square-large'], mockClient)
-    ).rejects.toThrow('Image generation failed (500): Server error');
+    ).rejects.toEqual(apiError);
+
+    expect(mockRun).toHaveBeenCalledTimes(1);
   });
 
   it('re-throws non-API errors unchanged', async () => {
@@ -214,4 +222,3 @@ describe('generatePageImage', () => {
     ).rejects.toThrow('Network connection failed');
   });
 });
-

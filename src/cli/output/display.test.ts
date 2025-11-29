@@ -24,7 +24,7 @@ describe('displayBrief', () => {
       { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] },
     ],
     interests: [],
-    customInstructions: [],
+    
   };
 
   it('displays brief title', () => {
@@ -98,7 +98,7 @@ describe('displayStory', () => {
       { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] },
     ],
     interests: [],
-    customInstructions: [],
+    
     // PlotStructure
     plot: {
       storyArcSummary: 'A rabbit discovers wonder',

@@ -11,11 +11,11 @@ export const StoryBriefSchema = z.object({
   setting: z.string().min(1).describe('Where and when the story takes place'),
   ageRange: AgeRangeSchema,
   pageCount: z.number().int().min(8).max(32).default(24),
-  characters: z.array(StoryCharacterSchema).min(1),
+  characters: z.array(StoryCharacterSchema).min(1).describe('the characters traits, and also detailed physical description of the character'),
   tone: z.string().optional().describe('Emotional tone (e.g., "whimsical", "heartfelt")'),
   moral: z.string().optional().describe('Lesson or takeaway for the reader'),
   interests: z.array(z.string().min(1)).default([]).describe('Topics the child enjoys'),
-  customInstructions: z.array(z.string().min(1)).default([]).describe('Special requests from the user'),
+  customInstructions: z.string().optional().describe('Special requests or notes from the user'),
 });
 
 export type StoryBrief = z.infer<typeof StoryBriefSchema>;
@@ -25,7 +25,7 @@ export type StoryBrief = z.infer<typeof StoryBriefSchema>;
  */
 export const ConversationResponseSchema = z.object({
   question: z.string().min(1).describe('The next question to ask the user'),
-  chips: z.array(z.string().min(1)).describe('3-4 quick-reply suggestions for the user'),
+  chips: z.array(z.string().min(1)).min(3).max(4).describe('Exactly 3-4 short clickable suggestions'),
   isComplete: z.boolean().describe('True when all required StoryBrief fields are filled'),
 });
 
