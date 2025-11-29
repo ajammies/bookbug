@@ -189,7 +189,7 @@ describe('PlotBeatSchema', () => {
   });
 
   it('accepts all valid purposes', () => {
-    const purposes = ['setup', 'conflict', 'rising_action', 'climax', 'resolution'];
+    const purposes = ['setup', 'build', 'conflict', 'twist', 'climax', 'payoff', 'button'];
     for (const purpose of purposes) {
       const result = PlotBeatPurposeSchema.safeParse(purpose);
       expect(result.success).toBe(true);

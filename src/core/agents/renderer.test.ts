@@ -34,7 +34,7 @@ const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory =
       { purpose: 'setup', description: 'Luna finds the gate' },
       { purpose: 'conflict', description: 'She hesitates' },
       { purpose: 'climax', description: 'She enters' },
-      { purpose: 'resolution', description: 'She finds a friend' },
+      { purpose: 'payoff', description: 'She finds a friend' },
     ],
     allowCreativeLiberty: true,
   },

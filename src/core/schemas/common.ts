@@ -25,3 +25,18 @@ export const StoryCharacterSchema = z.object({
 });
 
 export type StoryCharacter = z.infer<typeof StoryCharacterSchema>;
+
+/**
+ * Unified beat purpose for narrative structure and visual pacing
+ */
+export const BeatPurposeSchema = z.enum([
+  'setup',      // Establish setting/characters
+  'build',      // Develop tension, rising action
+  'conflict',   // Obstacle, struggle, complication
+  'twist',      // Surprise, reversal
+  'climax',     // Peak moment
+  'payoff',     // Resolution, reward
+  'button',     // Final punctuation, closing beat
+]).describe('Narrative beat type: setup (establish), build (tension), conflict (obstacle), twist (surprise), climax (peak), payoff (resolution), button (closing)');
+
+export type BeatPurpose = z.infer<typeof BeatPurposeSchema>;

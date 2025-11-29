@@ -1,18 +1,13 @@
 import { z } from 'zod';
+import { BeatPurposeSchema, type BeatPurpose } from './common';
 
 /**
  * Stage 2: PlotStructure - Output of plotAgent
  */
 
-export const PlotBeatPurposeSchema = z.enum([
-  'setup',
-  'conflict',
-  'rising_action',
-  'climax',
-  'resolution',
-]);
-
-export type PlotBeatPurpose = z.infer<typeof PlotBeatPurposeSchema>;
+// Re-export for backwards compatibility
+export const PlotBeatPurposeSchema = BeatPurposeSchema;
+export type PlotBeatPurpose = BeatPurpose;
 
 export const PlotBeatSchema = z.object({
   purpose: PlotBeatPurposeSchema.describe('Narrative function of this beat'),

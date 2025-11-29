@@ -8,8 +8,10 @@
 export {
   AgeRangeSchema,
   StoryCharacterSchema,
+  BeatPurposeSchema,
   type AgeRange,
   type StoryCharacter,
+  type BeatPurpose,
 } from './common';
 
 // Stage 1: Brief (book builder)

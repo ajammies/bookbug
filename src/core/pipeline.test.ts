@@ -53,7 +53,7 @@ const mockStoryWithPlot: StoryWithPlot = {
       { purpose: 'setup', description: 'Hero starts journey' },
       { purpose: 'conflict', description: 'Hero faces challenge' },
       { purpose: 'climax', description: 'Hero overcomes' },
-      { purpose: 'resolution', description: 'Hero succeeds' },
+      { purpose: 'payoff', description: 'Hero succeeds' },
     ],
     allowCreativeLiberty: true,
   },
