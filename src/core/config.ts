@@ -4,12 +4,12 @@ import { anthropic } from '@ai-sdk/anthropic';
  * AI Model Configuration
  *
  * Centralized model configuration for all agents.
- * - Default model: claude-sonnet-4-5 (higher quality, slower)
- * - Fast model: claude-haiku-4-5 (faster TTFT, good for streaming)
+ * - Default model: claude-sonnet-4-5 (higher quality)
+ * - Fast model: claude-3-5-haiku (faster TTFT, good for streaming)
  */
 
 const DEFAULT_MODEL_ID = 'claude-sonnet-4-5-20250929';
-const FAST_MODEL_ID = 'claude-haiku-4-5-20250929';
+const FAST_MODEL_ID = 'claude-3-5-haiku-latest';
 
 /**
  * Get the configured model ID, with environment override support
