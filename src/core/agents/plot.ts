@@ -2,13 +2,13 @@ import { generateObject } from '../utils/ai';
 import { PlotStructureSchema, type StoryBrief, type PlotStructure } from '../schemas';
 import { getModel } from '../config';
 
-const SYSTEM_PROMPT = `Generate a story arc summary and 5-6 structural plot beats from a StoryBrief.
+const SYSTEM_PROMPT = `Generate a story arc summary and plot beats from a StoryBrief.
 
-storyArcSummary: 1-2 sentences capturing the core journey and theme.
+First capture the emotional, stylistic, and genre essence of what the user is describing.
 
-plotBeats try keep it around 4-7 beats, but you can extended if the instructions say too, or use your best judgement. Jus tnot too long for the user.
+storyArcSummary: 1-2 sentences describing the arc, hero, and overall style/genre.
 
-The structure shoudl approximately be
+plotBeats: 4-7 beats (extend if instructions say to). Structure approximately:
 - Introduce character, world, and status quo
 - The problem, challenge, or inciting incident
 - Attempts, obstacles, escalation (can have 1-2 of these)
