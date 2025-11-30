@@ -37,7 +37,7 @@ describe('generatePageImage', () => {
   const minimalContext: PageRenderContext = {
     storyTitle: 'The Magic Garden',
     style: {
-      art_direction: {
+      art_style: {
         genre: ['whimsical'],
         medium: ['watercolor'],
         technique: ['soft edges'],

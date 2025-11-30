@@ -10,7 +10,7 @@ import { loadJson } from '../../utils';
  */
 const displayVisuals = (visuals: VisualDirection): void => {
   console.log('\n🎨 Visual direction created:');
-  console.log(`  Style: ${visuals.style.art_direction.genre.join(', ') || 'custom'}`);
+  console.log(`  Style: ${visuals.style.art_style.genre.join(', ') || 'custom'}`);
   console.log(`  Pages: ${visuals.illustratedPages.length}`);
   const totalBeats = visuals.illustratedPages.reduce((sum, p) => sum + p.beats.length, 0);
   console.log(`  Total beats: ${totalBeats}`);

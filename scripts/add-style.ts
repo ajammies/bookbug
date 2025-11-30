@@ -1,6 +1,6 @@
 #!/usr/bin/env npx ts-node
 /**
- * Extract art_direction from a full prompt JSON and save as a style preset
+ * Extract art_style from a full prompt JSON and save as a style preset
  *
  * Usage:
  *   cat my-prompt.json | npx ts-node scripts/add-style.ts
@@ -11,10 +11,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as readline from 'readline';
 
-const STYLES_DIR = path.join(process.cwd(), 'prompts', 'styles');
+const PRESETS_DIR = path.join(process.cwd(), 'prompts', 'presets');
 
 interface FullPrompt {
-  art_direction?: {
+  art_style?: {
     genre?: string[];
     medium?: string[];
     technique?: string[];
@@ -24,7 +24,7 @@ interface FullPrompt {
 
 interface StylePreset {
   name: string;
-  art_direction: {
+  art_style: {
     genre: string[];
     medium: string[];
     technique: string[];
@@ -84,16 +84,16 @@ const main = async () => {
     process.exit(1);
   }
 
-  // Extract art_direction
-  const artDirection = fullPrompt.art_direction;
-  if (!artDirection) {
-    console.error('Error: No art_direction found in input');
+  // Extract art_style
+  const artStyle = fullPrompt.art_style;
+  if (!artStyle) {
+    console.error('Error: No art_style found in input');
     process.exit(1);
   }
 
   // Validate required fields
-  if (!artDirection.genre?.length || !artDirection.medium?.length || !artDirection.technique?.length) {
-    console.error('Error: art_direction must have genre, medium, and technique arrays');
+  if (!artStyle.genre?.length || !artStyle.medium?.length || !artStyle.technique?.length) {
+    console.error('Error: art_style must have genre, medium, and technique arrays');
     process.exit(1);
   }
 
@@ -107,20 +107,20 @@ const main = async () => {
   // Build preset
   const preset: StylePreset = {
     name: name.trim(),
-    art_direction: {
-      genre: artDirection.genre,
-      medium: artDirection.medium,
-      technique: artDirection.technique,
-      ...(artDirection.style_strength !== undefined && { style_strength: artDirection.style_strength }),
+    art_style: {
+      genre: artStyle.genre,
+      medium: artStyle.medium,
+      technique: artStyle.technique,
+      ...(artStyle.style_strength !== undefined && { style_strength: artStyle.style_strength }),
     },
   };
 
-  // Ensure styles directory exists
-  await fs.mkdir(STYLES_DIR, { recursive: true });
+  // Ensure presets directory exists
+  await fs.mkdir(PRESETS_DIR, { recursive: true });
 
   // Save to file
   const filename = `${toKebabCase(name)}.json`;
-  const filePath = path.join(STYLES_DIR, filename);
+  const filePath = path.join(PRESETS_DIR, filename);
   await fs.writeFile(filePath, JSON.stringify(preset, null, 2) + '\n');
 
   console.log(`\n✓ Saved to: ${filePath}`);

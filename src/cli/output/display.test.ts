@@ -121,7 +121,7 @@ describe('displayStory', () => {
     // VisualDirection
     visuals: {
       style: {
-        art_direction: {
+        art_style: {
           genre: ['fantasy', 'childrens'],
           medium: ['digital illustration'],
           technique: ['soft shading'],

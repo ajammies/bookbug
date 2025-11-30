@@ -26,11 +26,11 @@ Requirements:
 Character details:`;
 
 const buildSpritePrompt = (character: StoryCharacter, styleGuide: VisualStyleGuide): string => {
-  const { art_direction } = styleGuide;
+  const { art_style } = styleGuide;
   const styleDescription = [
-    art_direction.genre?.join(', '),
-    art_direction.medium?.join(', '),
-    art_direction.technique?.join(', '),
+    art_style.genre?.join(', '),
+    art_style.medium?.join(', '),
+    art_style.technique?.join(', '),
   ].filter(Boolean).join(' - ');
 
   return `${SPRITE_SHEET_INSTRUCTIONS}

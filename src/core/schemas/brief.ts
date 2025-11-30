@@ -16,7 +16,7 @@ export const StoryBriefSchema = z.object({
   moral: z.string().optional().describe('Lesson or takeaway for the reader'),
   interests: z.array(z.string().min(1)).default([]).describe('Topics the child enjoys'),
   customInstructions: z.string().optional().describe('Special requests or notes from the user'),
-  artStyle: z.string().optional().describe('Name of art style preset to use, or undefined to generate new'),
+  stylePreset: z.string().optional().describe('Name of style preset to use, or undefined to generate new'),
 });
 
 export type StoryBrief = z.infer<typeof StoryBriefSchema>;

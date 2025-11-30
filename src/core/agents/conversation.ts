@@ -7,21 +7,20 @@ import {
 import { getModel } from '../config';
 
 const buildSystemPrompt = (availableStyles: string[]): string => {
-  const stylesList = availableStyles.length > 0
-    ? `Available art styles: ${availableStyles.join(', ')}, or "generate new"`
-    : 'No preset styles available yet - will generate a new style.';
+  const hasPresets = availableStyles.length > 0;
+  const styleChips = hasPresets
+    ? `Use these EXACT chips: ${availableStyles.map(s => `"${s}"`).join(', ')}, "Generate new style"`
+    : '';
 
   return `Guide users through creating a StoryBrief by asking about what's missing.
 
-${stylesList}
+${hasPresets ? `IMPORTANT: Your FIRST question MUST be about stylePreset. ${styleChips}` : ''}
 
-Ask one focused question at a time, prioritizing: artStyle (ask first if styles available!), storyArc, characters, setting, ageRange, pageCount, title. Provide 3-4 specific chip suggestions that fit their emerging story.
-
-When asking about art style, use the available style names as chips (plus "Generate new style" as an option).
+After stylePreset (if presets available), ask about: storyArc, characters, setting, ageRange, pageCount, title. Ask one focused question at a time. Provide 3-4 specific chip suggestions that fit their emerging story.
 
 If they are very descriptive, or even paste json, add the entire thing to customInstructions field.
 
-Required fields: title, storyArc, setting, ageRange, characters (at least 1), pageCount. artStyle is optional. Set isComplete=true when all required fields are filled.`;
+Required fields: title, storyArc, setting, ageRange, characters (at least 1), pageCount. stylePreset is optional. Set isComplete=true when all required fields are filled.`;
 };
 
 export type MessageRole = 'user' | 'assistant';

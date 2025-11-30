@@ -1,6 +1,6 @@
 {
   "name": "Crayon",
-  "art_direction": {
+  "art_style": {
     "genre": ["childrens-illustration", "storybook"],
     "medium": ["digital-crayon", "pastel"],
     "technique": ["naive-art", "childlike-drawing", "bold-outlines", "soft-fills"],

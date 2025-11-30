@@ -23,7 +23,7 @@ export type OnStepProgress = (step: string, status: 'start' | 'complete' | 'erro
 
 // Re-export agents (named after their output)
 export { proseAgent, proseSetupAgent, prosePageAgent, type ProsePageInput } from './prose';
-export { visualsAgent, styleGuideAgent, pageVisualsAgent, type PageVisualsInput, type ArtDirectionPreset } from './visuals';
+export { visualsAgent, styleGuideAgent, pageVisualsAgent, type PageVisualsInput, type StylePreset } from './visuals';
 export { characterDesignAgent, generateCharacterDesigns } from './character-design';
 export { renderPage, renderPageMock, createBook, filterStoryForPage } from './renderer';
 

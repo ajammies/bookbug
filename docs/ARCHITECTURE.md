@@ -117,7 +117,7 @@ erDiagram
     }
 
     VisualStyleGuide {
-        ArtDirection art_direction
+        ArtStyle art_style
         Setting setting
         Lighting lighting "optional"
         ColorScript color_script "optional"
@@ -125,7 +125,7 @@ erDiagram
         AtmosphereFx atmosphere_fx "optional"
     }
 
-    ArtDirection {
+    ArtStyle {
         string[] genre
         string[] medium
         string[] technique
@@ -204,7 +204,7 @@ erDiagram
     IllustrationBeat ||--|{ BeatCharacter : has
     IllustrationBeat ||--o| Setting : "optional override"
     IllustrationBeat ||--|| ShotComposition : has
-    VisualStyleGuide ||--|| ArtDirection : contains
+    VisualStyleGuide ||--|| ArtStyle : contains
     VisualStyleGuide ||--|| Setting : contains
     RenderedBook ||--|| AgeRange : contains
     RenderedBook ||--|{ RenderedPage : has
