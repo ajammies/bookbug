@@ -28,7 +28,7 @@ export async function runStoryIntake(
   // Handle optional initial message (e.g., full story paste)
   if (initialMessage) {
     const spinner = ora('Understanding your story...').start();
-    currentBrief = await interpreterAgent(initialMessage, currentBrief);
+    currentBrief = await interpreterAgent(initialMessage, currentBrief, { availableStyles });
     spinner.stop();
 
     history.push(
@@ -65,7 +65,7 @@ export async function runStoryIntake(
 
     // Interpret user's answer and update brief
     const updateSpinner = ora('Processing...').start();
-    currentBrief = await interpreterAgent(finalAnswer, currentBrief);
+    currentBrief = await interpreterAgent(finalAnswer, currentBrief, { availableStyles });
     updateSpinner.stop();
 
     // Update conversation history
