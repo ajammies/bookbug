@@ -1,4 +1,4 @@
-import { generateObject } from '../utils/ai';
+import { generateObject } from '../services/ai';
 import { StoryBriefSchema, type StoryBrief } from '../schemas';
 import { getModel } from '../config';
 

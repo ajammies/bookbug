@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StoryWithPlot } from '../schemas';
 
 // Mock the ai utils wrapper
-vi.mock('../utils/ai', () => ({
+vi.mock('../services/ai', () => ({
   generateObject: vi.fn(),
 }));
 
@@ -11,7 +11,7 @@ vi.mock('@ai-sdk/anthropic', () => ({
   anthropic: vi.fn(() => 'mock-model'),
 }));
 
-import { generateObject } from '../utils/ai';
+import { generateObject } from '../services/ai';
 import { progressMessagesAgent } from './progress-messages';
 
 const mockStory: StoryWithPlot = {

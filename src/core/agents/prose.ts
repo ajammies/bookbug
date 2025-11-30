@@ -1,4 +1,4 @@
-import { generateObject, streamObjectWithProgress } from '../utils/ai';
+import { generateObject, streamObjectWithProgress } from '../services/ai';
 import {
   ProseSchema,
   ProseSetupSchema,

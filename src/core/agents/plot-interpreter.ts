@@ -1,4 +1,4 @@
-import { generateObject } from '../utils/ai';
+import { generateObject } from '../services/ai';
 import { PlotStructureSchema, type StoryWithPlot, type PlotStructure } from '../schemas';
 import { getModel } from '../config';
 
