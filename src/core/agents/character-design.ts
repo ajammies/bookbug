@@ -13,34 +13,31 @@ import { type Logger, logThinking } from '../utils/logger';
 
 const IMAGE_MODEL = 'google/nano-banana-pro';
 
-const SPRITE_SHEET_INSTRUCTIONS = `Generate a character sprite sheet with full body turnarounds.
+const buildSpritePrompt = (character: StoryCharacter, styleGuide: VisualStyleGuide): string => {
+  const { art_style } = styleGuide;
+  const genre = art_style.genre?.join(', ') || 'childrens-illustration';
+  const medium = art_style.medium?.join(', ') || 'digital illustration';
+  const technique = art_style.technique?.join(', ') || 'soft edges';
+
+  return `ART STYLE (CRITICAL - must match exactly):
+Genre: ${genre}
+Medium: ${medium}
+Technique: ${technique}
+
+Generate a character sprite sheet in the EXACT style above.
+
+Character: ${character.name}
+Description: ${character.visualDescription || character.description}
+Role: ${character.role || 'character'}
+Traits: ${character.traits?.join(', ') || 'none specified'}
 
 Requirements:
-- Show the character from 4 angles: front, 3/4 view, side profile, back
+- Show character from 4 angles: front, 3/4 view, side profile, back
 - Full body visible in each pose
 - Consistent proportions, clothing, and colors across all views
 - Clean white or neutral background
 - Arrange poses in a horizontal strip
-- Style should match the art direction provided
-
-Character details:`;
-
-const buildSpritePrompt = (character: StoryCharacter, styleGuide: VisualStyleGuide): string => {
-  const { art_style } = styleGuide;
-  const styleDescription = [
-    art_style.genre?.join(', '),
-    art_style.medium?.join(', '),
-    art_style.technique?.join(', '),
-  ].filter(Boolean).join(' - ');
-
-  return `${SPRITE_SHEET_INSTRUCTIONS}
-
-Name: ${character.name}
-Visual Description: ${character.visualDescription || character.description}
-Role: ${character.role || 'character'}
-Traits: ${character.traits?.join(', ') || 'none specified'}
-
-Art Style: ${styleDescription || 'children\'s picture book illustration'}`;
+- MUST render in ${medium} style with ${technique}`;
 };
 
 /**
