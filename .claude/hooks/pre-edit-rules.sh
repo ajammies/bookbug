@@ -1,7 +1,7 @@
 #!/bin/bash
-# Remind Claude to invoke code-rules skill before complex edits
+# Remind Claude to follow code-rules before editing
 cat << 'EOF'
 {
-  "additionalContext": "REMINDER: For complex edits (new agents, multi-file changes, refactoring), invoke the code-rules skill first to review guidelines."
+  "additionalContext": "Before editing, follow code-rules skill: 🔴 Read file first | 🔴 Pure functions, no side effects | 🔴 NEVER hardcode chips/suggestions - use generateObject | Simple > clever | Check data shapes"
 }
 EOF

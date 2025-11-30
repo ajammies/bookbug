@@ -7,6 +7,7 @@ import {
   type BlurbMessage,
 } from '../../core/agents/plot-conversation';
 import { plotInterpreterAgent } from '../../core/agents/plot-interpreter';
+import { blurbConfirmationAgent } from '../../core/agents/blurb-confirmation';
 
 /**
  * LLM-driven plot iteration flow
@@ -28,28 +29,40 @@ export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
   console.log(`\nHere's the essence of your story:\n`);
   console.log(`"${plot.storyArcSummary}"\n`);
 
-  const blurbAnswer = await select({
-    message: 'Does this capture what you\'re going for?',
-    choices: [
-      { name: 'Yes, let\'s refine the beats', value: 'approve' },
-      { name: 'Make it more playful/lighthearted', value: 'playful' },
-      { name: 'Make it more heartfelt/emotional', value: 'heartfelt' },
-      { name: 'Make it more adventurous/exciting', value: 'adventurous' },
+  // Use LLM to generate story-specific tone adjustment suggestions
+  const blurbSpinner = ora('Preparing options...').start();
+  let blurbResponse = await blurbConfirmationAgent(brief, plot);
+  blurbSpinner.stop();
+
+  while (!blurbResponse.isApproved) {
+    console.log(`\n${blurbResponse.message}\n`);
+
+    const choices = [
+      ...blurbResponse.chips.map(chip => ({ name: chip, value: chip })),
       new Separator(),
       { name: 'Enter custom adjustment', value: '__CUSTOM__' },
-    ],
-  });
+    ];
 
-  if (blurbAnswer !== 'approve') {
+    const blurbAnswer = await select({
+      message: 'What would you like to do?',
+      choices,
+    });
+
     const adjustment = blurbAnswer === '__CUSTOM__'
       ? await input({ message: 'How should we adjust the tone?' })
-      : `Make the story more ${blurbAnswer}`;
+      : blurbAnswer;
 
+    // Regenerate plot with tone adjustment
     const adjustSpinner = ora('Adjusting story essence...').start();
     plot = await plotAgent({ ...brief, customInstructions: `${brief.customInstructions ?? ''} TONE ADJUSTMENT: ${adjustment}` });
     adjustSpinner.stop();
 
     console.log(`\nUpdated essence:\n"${plot.storyArcSummary}"\n`);
+
+    // Get new suggestions for the updated plot
+    const nextSpinner = ora('Preparing options...').start();
+    blurbResponse = await blurbConfirmationAgent(brief, plot, adjustment);
+    nextSpinner.stop();
   }
 
   // Step 3: Compose StoryWithPlot

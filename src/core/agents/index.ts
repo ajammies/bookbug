@@ -38,3 +38,4 @@ export { conversationAgent, type Message, type MessageRole, type ConversationAge
 export { plotAgent } from './plot';
 export { plotConversationAgent, type BlurbMessage } from './plot-conversation';
 export { plotInterpreterAgent } from './plot-interpreter';
+export { blurbConfirmationAgent, type BlurbConfirmationResponse } from './blurb-confirmation';
