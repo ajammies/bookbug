@@ -25,6 +25,16 @@ description: Code editing rules. Reference before complex edits.
 - Use 2-3 params as direct arguments; 4+ use options object
 - Always use logger (pino) not console.log
 
+## Agent Design (LLM-driven features)
+
+- 🔴 NEVER hardcode what an LLM can decide - use `generateObject` with Zod schema
+- 🔴 NEVER hardcode chip/suggestion arrays - LLM should generate contextual options
+- Agents should be like pure functions - single transformation, no side effects
+- Name agents after their OUTPUT type (e.g., `proseAgent` outputs `Prose`)
+- Schema-first - define Zod schema before prompt, schema IS the contract
+- Add .describe() to Zod fields to guide LLM on ambiguous fields
+- Trust the model - don't over-prescribe what it already understands
+
 ## Refactoring
 
 - Always check data shapes when connecting different parts of system (id vs name mismatches)
@@ -76,4 +86,26 @@ const userHandler = createHandler('user');
 
 // CORRECT - direct and simple
 function handleUser(data: unknown) { return process('user', data); }
+```
+
+### Agent Design - Hardcoded vs LLM-generated
+
+```ts
+// 🔴 INCORRECT - hardcoded suggestions
+const answer = await select({
+  message: 'Adjust the tone?',
+  choices: [
+    { name: 'Make it more playful', value: 'playful' },
+    { name: 'Make it more heartfelt', value: 'heartfelt' },
+  ],
+});
+
+// ✅ CORRECT - LLM generates contextual suggestions
+const ToneResponseSchema = z.object({
+  chips: z.array(z.string()).describe('Story-specific tone suggestions'),
+});
+const response = await generateObject({ schema: ToneResponseSchema, ... });
+const answer = await select({
+  choices: response.chips.map(chip => ({ name: chip, value: chip })),
+});
 ```
