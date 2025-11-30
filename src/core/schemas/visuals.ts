@@ -167,12 +167,12 @@ export type IllustrationBeat = z.infer<typeof IllustrationBeatSchema>;
 
 // VisualStyleGuide: Global visual style
 export const VisualStyleGuideSchema = z.object({
-  art_direction: z.object({
+  art_style: z.object({
     genre: z.array(z.string().min(1)).default([]).describe('Art genres (e.g., "picture book", "storybook", "whimsical")'),
     medium: z.array(z.string().min(1)).default([]).describe('Artistic mediums (e.g., "watercolor", "digital", "gouache")'),
     technique: z.array(z.string().min(1)).default([]).describe('Rendering techniques (e.g., "soft edges", "bold outlines")'),
     style_strength: z.number().min(0).max(1).optional().describe('How strongly to apply style (0=subtle, 1=dominant)'),
-  }).describe('Overall artistic style direction'),
+  }).describe('Overall artistic style'),
   setting: SettingSchema.describe('Default setting for the story'),
   lighting: LightingSchema.optional().describe('Default lighting setup'),
   color_script: ColorScriptSchema.optional().describe('Color palette and mood'),

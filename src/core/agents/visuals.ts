@@ -64,7 +64,7 @@ export const visualsAgent = async (story: StoryWithProse, logger?: Logger): Prom
 const STYLE_GUIDE_PROMPT = `Design a cohesive visual style guide for a children's picture book.
 
 Given a story with plot, establish:
-- art_direction: Genre, medium, technique (e.g., watercolor, digital, gouache)
+- art_style: Genre, medium, technique (e.g., watercolor, digital, gouache)
 - setting: Default environment, time of day, season, landmarks
 - lighting: Scheme, direction, quality, color temperature
 - color_script: Palette, harmony, saturation, accent colors
@@ -77,17 +77,54 @@ Visual style should complement:
 - Target age range (simpler for younger, more detail for older)
 - Setting and genre expectations`;
 
+const STYLE_GUIDE_WITH_PRESET_PROMPT = `Design a cohesive visual style guide for a children's picture book.
+
+IMPORTANT: The art_style has been pre-selected. Use it EXACTLY as provided.
+Generate the remaining fields to complement the chosen art style:
+- setting: Default environment, time of day, season, landmarks
+- lighting: Scheme, direction, quality, color temperature
+- color_script: Palette, harmony, saturation, accent colors
+- mood_narrative: Overall emotional tone
+- atmosphere_fx: Fog, particles, bloom effects
+- constraints: Things to avoid (scary imagery, inappropriate content)
+
+Visual style should complement:
+- The chosen art direction style
+- The story's emotional arc
+- Target age range (simpler for younger, more detail for older)
+- Setting and genre expectations`;
+
+export interface StylePreset {
+  genre: string[];
+  medium: string[];
+  technique: string[];
+  style_strength?: number;
+}
+
 /**
  * StyleGuideAgent: Generates global visual style (once, upfront)
+ * If stylePreset is provided, uses it and generates remaining fields
  */
-export const styleGuideAgent = async (story: StoryWithPlot): Promise<VisualStyleGuide> => {
+export const styleGuideAgent = async (
+  story: StoryWithPlot,
+  stylePreset?: StylePreset
+): Promise<VisualStyleGuide> => {
+  const prompt = stylePreset
+    ? JSON.stringify({ story, stylePreset }, null, 2)
+    : JSON.stringify(story, null, 2);
+
   const { object } = await generateObject({
     model: getModel(),
     schema: VisualStyleGuideSchema,
-    system: STYLE_GUIDE_PROMPT,
-    prompt: JSON.stringify(story, null, 2),
+    system: stylePreset ? STYLE_GUIDE_WITH_PRESET_PROMPT : STYLE_GUIDE_PROMPT,
+    prompt,
     experimental_repairText: createRepairFunction(),
   });
+
+  // If preset provided, ensure it's used exactly
+  if (stylePreset) {
+    object.art_style = stylePreset;
+  }
 
   return object;
 };

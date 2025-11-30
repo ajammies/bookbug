@@ -35,9 +35,9 @@ export function displayStory(story: Story): void {
   console.log(chalk.bold('Total Beats:'), totalBeats);
 
   console.log(chalk.bold('\nArt Direction:'));
-  console.log(`  Genre: ${story.visuals.style.art_direction.genre.join(', ')}`);
-  console.log(`  Medium: ${story.visuals.style.art_direction.medium.join(', ')}`);
-  console.log(`  Technique: ${story.visuals.style.art_direction.technique.join(', ')}`);
+  console.log(`  Genre: ${story.visuals.style.art_style.genre.join(', ')}`);
+  console.log(`  Medium: ${story.visuals.style.art_style.medium.join(', ')}`);
+  console.log(`  Technique: ${story.visuals.style.art_style.technique.join(', ')}`);
 
   console.log(chalk.bold('\nFirst Page Beats:'));
   const firstPage = story.visuals.illustratedPages[0];

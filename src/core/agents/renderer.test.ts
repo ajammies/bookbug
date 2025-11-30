@@ -55,7 +55,7 @@ const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory =
   // VisualDirection
   visuals: {
     style: {
-      art_direction: {
+      art_style: {
         genre: ['whimsical'],
         medium: ['watercolor'],
         technique: ['soft edges'],
@@ -127,7 +127,7 @@ describe('filterStoryForPage', () => {
     const slice = filterStoryForPage(story, 1);
 
     expect(slice.storyTitle).toBe('The Magic Garden');
-    expect(slice.style.art_direction.genre).toContain('whimsical');
+    expect(slice.style.art_style.genre).toContain('whimsical');
   });
 
   it('includes all character designs for consistent reference', () => {

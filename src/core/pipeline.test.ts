@@ -75,7 +75,7 @@ const mockProse: Prose = {
 };
 
 const mockStyleGuide: VisualStyleGuide = {
-  art_direction: {
+  art_style: {
     genre: ['fantasy'],
     medium: ['watercolor'],
     technique: ['soft edges'],

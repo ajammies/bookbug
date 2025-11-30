@@ -1,0 +1,9 @@
+{
+  "name": "Watercolor",
+  "art_style": {
+    "genre": ["childrens-illustration", "cozy-fantasy"],
+    "medium": ["watercolor", "colored-pencil"],
+    "technique": ["luminous-wash", "soft-edges", "value-contrast"],
+    "style_strength": 0.9
+  }
+}

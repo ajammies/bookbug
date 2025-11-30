@@ -19,7 +19,7 @@ export const createCommand = new Command('create')
     let outputManager: StoryOutputManager;
 
     try {
-      // Step 1: Get StoryBrief via chat intake
+      // Step 1: Get StoryBrief via chat intake (includes art style selection)
       const brief = await runStoryIntake(prompt);
 
       // Create output folder and logger after we have a title
