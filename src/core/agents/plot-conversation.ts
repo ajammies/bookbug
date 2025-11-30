@@ -29,7 +29,7 @@ APPROVAL DETECTION (isApproved field):
 - Set FALSE for any feedback requesting changes
 - When in doubt, set FALSE and ask for clarification`;
 
-export type BlurbMessage = {
+export type PlotMessage = {
   role: 'user' | 'assistant';
   content: string;
 };
@@ -41,7 +41,7 @@ export type BlurbMessage = {
  */
 export const plotConversationAgent = async (
   story: StoryWithPlot,
-  history: BlurbMessage[]
+  history: PlotMessage[]
 ): Promise<PlotConversationResponse> => {
   const storyContext = `Current Story:\n${JSON.stringify(story, null, 2)}`;
 

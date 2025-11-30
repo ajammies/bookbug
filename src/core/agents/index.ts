@@ -36,5 +36,5 @@ export { conversationAgent, type Message, type MessageRole, type ConversationAge
 
 // Plot iteration agents (PlotStructure)
 export { plotAgent } from './plot';
-export { plotConversationAgent, type BlurbMessage } from './plot-conversation';
+export { plotConversationAgent, type PlotMessage } from './plot-conversation';
 export { plotInterpreterAgent } from './plot-interpreter';

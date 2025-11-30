@@ -19,7 +19,7 @@ import { runPlotIntake } from '../prompts/plot-intake';
 
 const OUTPUT_DIR = './output';
 
-type ResumeStage = 'brief' | 'blurb' | 'prose' | 'story' | 'complete';
+type ResumeStage = 'brief' | 'plot' | 'prose' | 'story' | 'complete';
 
 interface StoryFolderInfo {
   folder: string;
@@ -72,8 +72,8 @@ const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
   if (files.includes('prose.json')) {
     return { folder, stage: 'prose', latestFile: path.join(folder, 'prose.json') };
   }
-  if (files.includes('blurb.json')) {
-    return { folder, stage: 'blurb', latestFile: path.join(folder, 'blurb.json') };
+  if (files.includes('plot.json')) {
+    return { folder, stage: 'plot', latestFile: path.join(folder, 'plot.json') };
   }
   if (files.includes('brief.json')) {
     return { folder, stage: 'brief', latestFile: path.join(folder, 'brief.json') };
@@ -162,8 +162,8 @@ export const resumeCommand = new Command('resume')
           break;
         }
 
-        case 'blurb': {
-          console.log('\n📍 Resuming from: blurb.json (prose + visuals + rendering)');
+        case 'plot': {
+          console.log('\n📍 Resuming from: plot.json (prose + visuals + rendering)');
           const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(info.latestFile));
 
           // Generate progress messages
@@ -193,7 +193,7 @@ export const resumeCommand = new Command('resume')
           const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
 
           const storyWithPlot = await runPlotIntake(brief);
-          await outputManager.saveBlurb(storyWithPlot);
+          await outputManager.savePlot(storyWithPlot);
 
           // Generate progress messages
           spinner.start('Preparing progress messages...');

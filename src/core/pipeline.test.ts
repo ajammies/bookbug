@@ -217,7 +217,7 @@ describe('renderBook', () => {
     const outputManager: StoryOutputManager = {
       folder: '/test/folder',
       saveBrief: vi.fn(),
-      saveBlurb: vi.fn(),
+      savePlot: vi.fn(),
       saveProse: vi.fn(),
       saveStory: vi.fn(),
       saveBook: vi.fn(),
@@ -310,7 +310,7 @@ describe('executePipeline', () => {
     const outputManager: StoryOutputManager = {
       folder: '/test/folder',
       saveBrief: vi.fn(),
-      saveBlurb: vi.fn(),
+      savePlot: vi.fn(),
       saveProse: vi.fn(),
       saveStory: vi.fn(),
       saveBook: vi.fn(),

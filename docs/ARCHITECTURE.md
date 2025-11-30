@@ -296,7 +296,7 @@ Agents are named after their output for clarity.
 | `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
 | `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
 | `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
-| `plotConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `PlotConversationResponse` | Guide plot refinement |
+| `plotConversationAgent` | `StoryWithPlot` + `PlotMessage[]` | `PlotConversationResponse` | Guide plot refinement |
 | `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
 
 ### Batch Agents (used by CLI commands)
