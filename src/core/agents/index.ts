@@ -30,6 +30,9 @@ export { renderPage, renderPageMock, createBook, filterStoryForPage } from './re
 // Progress messages for CLI display
 export { progressMessagesAgent } from './progress-messages';
 
+// Unified extractor (replaces interpreter + plotInterpreter)
+export { extractorAgent, type ExtractorAgentOptions } from './extractor';
+
 // Chat intake agents (StoryBrief)
 export { interpreterAgent, type InterpreterAgentOptions } from './interpreter';
 export { conversationAgent, type Message, type MessageRole, type ConversationAgentOptions } from './conversation';
