@@ -12,8 +12,32 @@ import {
   type GenerateObjectResult,
 } from 'ai';
 import type { JSONParseError, TypeValidationError } from '@ai-sdk/provider';
+import { z, type ZodRawShape, type ZodObject } from 'zod';
 import { sleep } from '../utils/retry';
 import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
+
+// ============================================================================
+// Composable Chip Response Pattern
+// ============================================================================
+
+/**
+ * Prompt fragment for chip-based conversational responses.
+ * Include in agent system prompts that use withChipResponse schemas.
+ */
+export const CHIP_PROMPT = `Generate 2-8 short, clickable chip suggestions based on the conversation context.
+Set isComplete=true only when all required information has been gathered.`;
+
+/**
+ * Extends a Zod object schema with chip response fields.
+ * Use for any agent that returns conversational responses with suggestions.
+ */
+export const withChipResponse = <T extends ZodRawShape>(inner: ZodObject<T>) =>
+  inner.extend({
+    chips: z.array(z.string().min(1)).min(2).max(8)
+      .describe('2-8 short clickable suggestions for user response'),
+    isComplete: z.boolean()
+      .describe('True when conversation can end'),
+  });
 
 type GenerateObjectParams = Parameters<typeof aiGenerateObject>[0];
 

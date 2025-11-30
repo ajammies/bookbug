@@ -35,7 +35,7 @@ export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
     const response = await plotConversationAgent(currentStory, history);
     responseSpinner.stop();
 
-    if (response.isApproved) {
+    if (response.isComplete) {
       console.log('\nPlot approved! Moving on to writing...\n');
       return currentStory;
     }
