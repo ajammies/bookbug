@@ -1,4 +1,6 @@
 import type {
+  StoryBrief,
+  PlotStructure,
   StoryWithPlot,
   StoryWithProse,
   ComposedStory,
@@ -44,6 +46,29 @@ export interface PipelineOptions {
   stylePreset?: StylePreset;
 }
 
+/**
+ * Pipeline state - pass what exists, pipeline fills in what's missing.
+ * Enables both fresh runs (only brief) and resume (partial artifacts).
+ */
+export interface PipelineState {
+  // Foundation (brief required to start)
+  brief: StoryBrief;
+  plot?: PlotStructure;
+
+  // Setup artifacts
+  styleGuide?: VisualStyleGuide;
+  proseSetup?: ProseSetup;
+  characterDesigns?: CharacterDesign[];
+
+  // Content (per-page)
+  prosePages?: ProsePage[];
+  illustratedPages?: IllustratedPage[];
+
+  // Rendered
+  renderedPages?: RenderedPage[];
+  heroPage?: RenderedPage;
+}
+
 /** Emit thinking status to both logger and callback */
 const emitThinking = (
   message: string,
@@ -83,6 +108,11 @@ const assembleComposedStory = (
   ...story,
   visuals,
   characterDesigns,
+});
+
+const assembleStoryWithPlot = (brief: StoryBrief, plot: PlotStructure): StoryWithPlot => ({
+  ...brief,
+  plot,
 });
 
 // ============================================================================
@@ -248,106 +278,59 @@ export const renderBook = async (
 };
 
 // ============================================================================
-// Full pipeline (chains all three)
+// Incremental pipeline (fill-in-the-nulls)
 // ============================================================================
 
 /**
- * Run the complete pipeline: StoryWithPlot → RenderedBook
+ * Run pipeline incrementally: use what exists, generate what's missing.
+ * Processes each page fully (prose → visuals → render) before moving to next.
  */
-export const executePipeline = async (
-  storyWithPlot: StoryWithPlot,
-  options: PipelineOptions = {}
-): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onProgress, onThinking, outputManager, format, logger, stylePreset: optionsPreset } = options;
-
-  emitThinking(`Starting pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
-
-  // Load style preset from options, story brief, or generate new
-  const stylePreset = optionsPreset
-    ?? (storyWithPlot.stylePreset ? await loadStylePreset(storyWithPlot.stylePreset) : undefined);
-
-  // Generate style guide and character designs
-  onProgress?.('setup', 'start');
-  emitThinking(stylePreset ? `Applying style: ${storyWithPlot.stylePreset ?? 'preset'}...` : 'Generating style guide...', logger, onThinking);
-  const styleGuide = await styleGuideAgent(storyWithPlot, stylePreset);
-  const characterDesigns = await generateAndSaveCharacterDesigns(
-    storyWithPlot,
-    styleGuide,
-    { onThinking, outputManager, logger }
-  );
-  onProgress?.('setup', 'complete');
-
-  // Generate prose
-  onProgress?.('prose', 'start');
-  const storyWithProse = await generateProse(storyWithPlot, { onProgress, onThinking, logger });
-  await outputManager?.saveProse(storyWithProse);
-  onProgress?.('prose', 'complete');
-
-  // Generate visuals
-  onProgress?.('visuals', 'start');
-  const storyWithVisuals = await generateVisuals(storyWithProse, { onProgress, onThinking, logger });
-  // Add character designs to the composed story
-  const story: ComposedStory = { ...storyWithVisuals, characterDesigns };
-
-  // Debug: log character designs being added
-  logger?.debug(
-    { count: characterDesigns.length, designs: characterDesigns.map(d => ({ name: d.character.name, url: d.spriteSheetUrl })) },
-    'Adding character designs to story'
-  );
-
-  await outputManager?.saveStory(story);
-  onProgress?.('visuals', 'complete');
-
-  // Render book
-  onProgress?.('render', 'start');
-  const book = await renderBook(story, { format, outputManager, onProgress, onThinking, logger });
-  await outputManager?.saveBook(book);
-  onProgress?.('render', 'complete');
-
-  return { story, book };
-};
-
-// ============================================================================
-// Incremental pipeline (processes each page fully before moving to next)
-// ============================================================================
-
-/**
- * Process pages incrementally: prose → visuals → render for each page
- * Useful for long-running jobs where you want to save progress as you go
- */
-export const executeIncrementalPipeline = async (
-  storyWithPlot: StoryWithPlot,
+export const runPipelineIncremental = async (
+  state: PipelineState,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
   const { onProgress, onThinking, outputManager, format = 'square-large', logger, stylePreset: optionsPreset } = options;
 
-  emitThinking(`Starting incremental pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
+  // Require plot to proceed
+  if (!state.plot) {
+    throw new Error('PipelineState requires plot to run pipeline');
+  }
 
-  // Load style preset from options, story brief, or generate new
+  const storyWithPlot = assembleStoryWithPlot(state.brief, state.plot);
+  emitThinking(`Starting pipeline for "${storyWithPlot.title}"...`, logger, onThinking);
+
+  // Load style preset
   const stylePreset = optionsPreset
     ?? (storyWithPlot.stylePreset ? await loadStylePreset(storyWithPlot.stylePreset) : undefined);
 
-  // Setup phase: style guide + prose setup + character designs
-  emitThinking(stylePreset ? `Applying style: ${storyWithPlot.stylePreset ?? 'preset'}...` : 'Setting up style guide and prose...', logger, onThinking);
+  // Setup: use existing or generate
   onProgress?.('setup', 'start');
-  const styleGuide = await styleGuideAgent(storyWithPlot, stylePreset);
-  const proseSetup = await proseSetupAgent(storyWithPlot);
-  const characterDesigns = await generateAndSaveCharacterDesigns(
+
+  const styleGuide = state.styleGuide ?? await (async () => {
+    emitThinking(stylePreset ? `Applying style: ${storyWithPlot.stylePreset ?? 'preset'}...` : 'Generating style guide...', logger, onThinking);
+    return styleGuideAgent(storyWithPlot, stylePreset);
+  })();
+
+  const proseSetup = state.proseSetup ?? await proseSetupAgent(storyWithPlot);
+
+  const characterDesigns = state.characterDesigns ?? await generateAndSaveCharacterDesigns(
     storyWithPlot,
     styleGuide,
     { onThinking, outputManager, logger }
   );
+
   onProgress?.('setup', 'complete');
 
-  // Process each page completely before moving to next
-  const prosePages: ProsePage[] = [];
-  const illustratedPages: IllustratedPage[] = [];
-  const renderedPages: RenderedPage[] = [];
-  let heroPage: RenderedPage | undefined;
+  // Page processing: use existing pages, generate remaining
+  const prosePages = [...(state.prosePages ?? [])];
+  const illustratedPages = [...(state.illustratedPages ?? [])];
+  const renderedPages = [...(state.renderedPages ?? [])];
+  let heroPage = state.heroPage ?? renderedPages[0];
 
-  for (let i = 0; i < storyWithPlot.pageCount; i++) {
-    const pageNumber = i + 1;
-    const totalPages = storyWithPlot.pageCount;
+  const startPage = renderedPages.length + 1;
+  const totalPages = storyWithPlot.pageCount;
+
+  for (let pageNumber = startPage; pageNumber <= totalPages; pageNumber++) {
     onProgress?.(`page-${pageNumber}`, 'start');
 
     // Prose for this page
@@ -368,7 +351,7 @@ export const executeIncrementalPipeline = async (
       characterDesigns,
     };
 
-    // Render this page (hero page anchors style, last page provides continuity)
+    // Render this page
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
     const renderedPage = await renderPage(currentStory, pageNumber, {
       format,

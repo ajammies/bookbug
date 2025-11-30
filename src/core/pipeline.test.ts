@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  executePipeline,
+  runPipelineIncremental,
   generateProse,
   generateVisuals,
   renderBook,
+  type PipelineState,
 } from './pipeline';
 import type {
   StoryWithPlot,
@@ -22,6 +23,9 @@ vi.mock('./agents', async (importOriginal) => {
   return {
     ...actual,
     proseAgent: vi.fn(),
+    proseSetupAgent: vi.fn(),
+    prosePageAgent: vi.fn(),
+    pageVisualsAgent: vi.fn(),
     visualsAgent: vi.fn(),
     styleGuideAgent: vi.fn(),
     generateCharacterDesigns: vi.fn(),
@@ -31,6 +35,9 @@ vi.mock('./agents', async (importOriginal) => {
 
 import {
   proseAgent,
+  proseSetupAgent,
+  prosePageAgent,
+  pageVisualsAgent,
   visualsAgent,
   styleGuideAgent,
   generateCharacterDesigns,
@@ -38,6 +45,9 @@ import {
 } from './agents';
 
 const mockedProseAgent = vi.mocked(proseAgent);
+const mockedProseSetupAgent = vi.mocked(proseSetupAgent);
+const mockedProsePageAgent = vi.mocked(prosePageAgent);
+const mockedPageVisualsAgent = vi.mocked(pageVisualsAgent);
 const mockedVisualsAgent = vi.mocked(visualsAgent);
 const mockedStyleGuideAgent = vi.mocked(styleGuideAgent);
 const mockedGenerateCharacterDesigns = vi.mocked(generateCharacterDesigns);
@@ -254,15 +264,29 @@ describe('renderBook', () => {
   });
 });
 
-describe('executePipeline', () => {
+describe('runPipelineIncremental', () => {
+  const mockProseSetup = {
+    logline: mockProse.logline,
+    theme: mockProse.theme,
+    styleNotes: mockProse.styleNotes,
+  };
+
+  const mockPipelineState: PipelineState = {
+    brief: mockStoryWithPlot,
+    plot: mockStoryWithPlot.plot,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockedStyleGuideAgent.mockResolvedValue(mockStyleGuide);
+    mockedProseSetupAgent.mockResolvedValue(mockProseSetup);
     mockedGenerateCharacterDesigns.mockResolvedValue([
       { character: mockStoryWithPlot.characters[0]!, spriteSheetUrl: 'https://example.com/sprite.png' },
     ]);
-    mockedProseAgent.mockResolvedValue(mockProse);
-    mockedVisualsAgent.mockResolvedValue(mockVisuals);
+    mockedProsePageAgent.mockImplementation(async ({ pageNumber }) => mockProse.pages[pageNumber - 1]!);
+    mockedPageVisualsAgent.mockImplementation(async ({ pageNumber }) =>
+      pageNumber === 1 ? mockIllustratedPage1 : mockIllustratedPage2
+    );
     mockedRenderPage.mockImplementation(async (_story, pageNumber) => ({
       pageNumber,
       url: `https://example.com/page${pageNumber}.png`,
@@ -270,7 +294,7 @@ describe('executePipeline', () => {
   });
 
   it('runs full pipeline and returns story and book', async () => {
-    const result = await executePipeline(mockStoryWithPlot);
+    const result = await runPipelineIncremental(mockPipelineState);
 
     expect(result.story.title).toBe('Test Story');
     expect(result.story.prose.logline).toBe('A hero saves the day');
@@ -278,32 +302,30 @@ describe('executePipeline', () => {
     expect(result.book.pages).toHaveLength(2);
   });
 
-  it('chains prose, visuals, and render stages', async () => {
-    await executePipeline(mockStoryWithPlot);
+  it('processes pages incrementally', async () => {
+    await runPipelineIncremental(mockPipelineState);
 
-    // Prose stage (single call)
-    expect(mockedProseAgent).toHaveBeenCalledTimes(1);
+    // Per-page prose generation
+    expect(mockedProsePageAgent).toHaveBeenCalledTimes(2);
 
-    // Visuals stage (single call)
-    expect(mockedVisualsAgent).toHaveBeenCalledTimes(1);
+    // Per-page visuals generation
+    expect(mockedPageVisualsAgent).toHaveBeenCalledTimes(2);
 
     // Render stage
     expect(mockedRenderPage).toHaveBeenCalledTimes(2);
   });
 
-  it('calls onProgress for each stage', async () => {
+  it('calls onProgress for each page', async () => {
     const onProgress = vi.fn();
 
-    await executePipeline(mockStoryWithPlot, { onProgress });
+    await runPipelineIncremental(mockPipelineState, { onProgress });
 
     expect(onProgress).toHaveBeenCalledWith('setup', 'start');
     expect(onProgress).toHaveBeenCalledWith('setup', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('prose', 'start');
-    expect(onProgress).toHaveBeenCalledWith('prose', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('visuals', 'start');
-    expect(onProgress).toHaveBeenCalledWith('visuals', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('render', 'start');
-    expect(onProgress).toHaveBeenCalledWith('render', 'complete');
+    expect(onProgress).toHaveBeenCalledWith('page-1', 'start');
+    expect(onProgress).toHaveBeenCalledWith('page-1', 'complete');
+    expect(onProgress).toHaveBeenCalledWith('page-2', 'start');
+    expect(onProgress).toHaveBeenCalledWith('page-2', 'complete');
   });
 
   it('saves artifacts when outputManager is provided', async () => {
@@ -318,7 +340,7 @@ describe('executePipeline', () => {
       saveCharacterDesign: vi.fn().mockResolvedValue('assets/characters/test.png'),
     };
 
-    await executePipeline(mockStoryWithPlot, { outputManager });
+    await runPipelineIncremental(mockPipelineState, { outputManager });
 
     expect(outputManager.saveProse).toHaveBeenCalledWith(
       expect.objectContaining({ prose: expect.objectContaining({ logline: 'A hero saves the day' }) })
@@ -331,10 +353,26 @@ describe('executePipeline', () => {
     );
   });
 
-  it('does not save when outputManager is not provided', async () => {
-    const result = await executePipeline(mockStoryWithPlot);
+  it('uses existing state when provided', async () => {
+    const stateWithExistingArtifacts: PipelineState = {
+      ...mockPipelineState,
+      styleGuide: mockStyleGuide,
+      proseSetup: mockProseSetup,
+    };
 
-    // No errors thrown, pipeline completes successfully
-    expect(result.book.pages).toHaveLength(2);
+    await runPipelineIncremental(stateWithExistingArtifacts);
+
+    // Should not regenerate style guide or prose setup
+    expect(mockedStyleGuideAgent).not.toHaveBeenCalled();
+    expect(mockedProseSetupAgent).not.toHaveBeenCalled();
+  });
+
+  it('throws when plot is missing', async () => {
+    const stateWithoutPlot: PipelineState = {
+      brief: mockStoryWithPlot,
+      plot: undefined,
+    };
+
+    await expect(runPipelineIncremental(stateWithoutPlot)).rejects.toThrow('requires plot');
   });
 });
