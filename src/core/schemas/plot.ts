@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { BeatPurposeSchema, type BeatPurpose, StoryCharacterSchema } from './common';
-import { withChipResponse } from '../services/ai';
+import { withOptionsResponse } from '../services/ai';
 
 /**
  * Stage 2: PlotStructure - Output of plotAgent
@@ -29,7 +29,7 @@ export type PlotStructure = z.infer<typeof PlotStructureSchema>;
 /**
  * PlotConversationResponse: Output of plotConversationAgent during plot refinement
  */
-export const PlotConversationResponseSchema = withChipResponse(z.object({
+export const PlotConversationResponseSchema = withOptionsResponse(z.object({
   message: z.string().min(1).describe('Response to the user about their story plot'),
 }));
 

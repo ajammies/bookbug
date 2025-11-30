@@ -28,7 +28,7 @@ description: Code editing rules. Reference before complex edits.
 ## Agent Design (LLM-driven features)
 
 - 🔴 NEVER hardcode what an LLM can decide - use `generateObject` with Zod schema
-- 🔴 NEVER hardcode chip/suggestion arrays - LLM should generate contextual options
+- 🔴 NEVER hardcode option/suggestion arrays - LLM should generate contextual options
 - Agents should be like pure functions - single transformation, no side effects
 - Name agents after their OUTPUT type (e.g., `proseAgent` outputs `Prose`)
 - Schema-first - define Zod schema before prompt, schema IS the contract
@@ -40,6 +40,7 @@ description: Code editing rules. Reference before complex edits.
 - Always check data shapes when connecting different parts of system (id vs name mismatches)
 - Always keep intuitive file organization - things live where you'd expect
 - Always make external services injectable via optional params with factory defaults
+- 🔴 Utils must have zero imports from project code - only external dependencies allowed
 
 ## Testing
 
@@ -102,10 +103,11 @@ const answer = await select({
 
 // ✅ CORRECT - LLM generates contextual suggestions
 const ToneResponseSchema = z.object({
-  chips: z.array(z.string()).describe('Story-specific tone suggestions'),
+  options: z.array(z.string()).describe('Story-specific tone suggestions'),
 });
 const response = await generateObject({ schema: ToneResponseSchema, ... });
-const answer = await select({
-  choices: response.chips.map(chip => ({ name: chip, value: chip })),
+const answer = await showSelector({
+  question: 'Adjust the tone?',
+  options: response.options,
 });
 ```

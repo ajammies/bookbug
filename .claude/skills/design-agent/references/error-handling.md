@@ -45,5 +45,5 @@ composition: z.enum([...]).describe('Shot framing'),
 moral: z.string().nullable().describe('Story moral, null if none'),
 
 // Clarify array expectations
-chips: z.array(z.string()).describe('Response suggestions as string array'),
+options: z.array(z.string()).describe('Response suggestions as string array'),
 ```

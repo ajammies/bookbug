@@ -1,4 +1,3 @@
-import { input, select, Separator } from '@inquirer/prompts';
 import ora from 'ora';
 import type { StoryBrief, StoryWithPlot } from '../../core/schemas';
 import { plotAgent } from '../../core/agents/plot';
@@ -7,13 +6,14 @@ import {
   type PlotMessage,
 } from '../../core/agents/plot-conversation';
 import { plotInterpreterAgent } from '../../core/agents/plot-interpreter';
+import { showSelector } from '../../utils/cli';
 
 /**
  * LLM-driven plot iteration flow
  *
  * 1. Generate initial plot beats from StoryBrief
  * 2. Compose StoryWithPlot = { ...brief, plot: PlotStructure }
- * 3. Present to user with chips for improvements
+ * 3. Present to user with options for improvements
  * 4. Apply changes and iterate until approved
  */
 export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
@@ -40,23 +40,13 @@ export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
       return currentStory;
     }
 
-    // Display message and chips
+    // Display message and options
     console.log(`\n${response.message}\n`);
 
-    const choices = [
-      ...response.chips.map(chip => ({ name: chip, value: chip })),
-      new Separator(),
-      { name: 'Enter custom feedback', value: '__CUSTOM__' },
-    ];
-
-    const answer = await select({
-      message: 'What would you like to do?',
-      choices,
+    const finalAnswer = await showSelector({
+      question: 'What would you like to do?',
+      options: response.options,
     });
-
-    const finalAnswer = answer === '__CUSTOM__'
-      ? await input({ message: 'Your feedback:' })
-      : answer;
 
     // Apply changes - interpreter returns partial updates
     const updateSpinner = ora('Updating story...').start();
