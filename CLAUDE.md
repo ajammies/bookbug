@@ -79,7 +79,6 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - Provide domain knowledge, not step-by-step instructions - the model knows how to converse
 
 # Skills
-- Use code-rules skill before complex edits (multi-file changes, new agents, refactoring)
 - Use create-skill skill when creating or updating skills
 - Use reflect skill at session end or after significant work
 - Use design-agent skill when implementing or reviewing agents
