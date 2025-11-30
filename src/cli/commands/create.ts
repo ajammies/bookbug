@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import path from 'path';
-import { executePipeline } from '../../core/pipeline';
+import { runPipelineIncremental, type PipelineState } from '../../core/pipeline';
 import { progressMessagesAgent } from '../../core/agents';
 import { runStoryIntake } from '../prompts/story-intake';
 import { runPlotIntake } from '../prompts/plot-intake';
@@ -49,7 +49,12 @@ export const createCommand = new Command('create')
         progressMessages,
       });
 
-      const { book } = await executePipeline(storyWithPlot, {
+      const pipelineState: PipelineState = {
+        brief: storyWithPlot,
+        plot: storyWithPlot.plot,
+      };
+
+      const { book } = await runPipelineIncremental(pipelineState, {
         logger,
         onProgress,
         onThinking,
