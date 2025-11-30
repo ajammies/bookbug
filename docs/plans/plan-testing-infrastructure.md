@@ -46,7 +46,7 @@ src/
 tests/
 └── fixtures/                     # Shared test data only
     ├── brief.json
-    ├── blurb.json
+    ├── plot.json
     └── manuscript.json
 ```
 

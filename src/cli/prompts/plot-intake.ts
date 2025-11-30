@@ -4,7 +4,7 @@ import type { StoryBrief, StoryWithPlot } from '../../core/schemas';
 import { plotAgent } from '../../core/agents/plot';
 import {
   plotConversationAgent,
-  type BlurbMessage,
+  type PlotMessage,
 } from '../../core/agents/plot-conversation';
 import { plotInterpreterAgent } from '../../core/agents/plot-interpreter';
 
@@ -27,7 +27,7 @@ export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
   // Step 2: Compose StoryWithPlot
   let currentStory: StoryWithPlot = { ...brief, plot };
 
-  const history: BlurbMessage[] = [];
+  const history: PlotMessage[] = [];
 
   // Step 3: Iterate until approved
   while (true) {

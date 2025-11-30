@@ -17,7 +17,7 @@ const displayProse = (prose: Prose): void => {
 
 export const writeCommand = new Command('write')
   .description('Write prose from a StoryWithPlot')
-  .argument('<story-file>', 'Path to StoryWithPlot JSON file (blurb.json)')
+  .argument('<story-file>', 'Path to StoryWithPlot JSON file (plot.json)')
   .option('-o, --output <path>', 'Output file path for JSON')
   .action(async (storyFile: string, options: { output?: string }) => {
     const spinner = createSpinner();

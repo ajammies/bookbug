@@ -36,7 +36,7 @@ export const createCommand = new Command('create')
 
       // Step 2: Get StoryWithPlot via plot iteration
       const storyWithPlot = await runPlotIntake(brief);
-      await outputManager.saveBlurb(storyWithPlot);
+      await outputManager.savePlot(storyWithPlot);
 
       // Step 3: Generate witty progress messages for prose/visuals phases
       spinner.start('Preparing witty progress messages...');

@@ -52,15 +52,15 @@ describe('createOutputManager', () => {
     );
   });
 
-  it('saveBlurb writes to blurb.json', async () => {
+  it('savePlot writes to plot.json', async () => {
     const manager = await createOutputManager('Test Story');
-    const blurb = { brief: {} } as any;
+    const plot = { brief: {} } as any;
 
-    await manager.saveBlurb(blurb);
+    await manager.savePlot(plot);
 
     expect(mockedFs.writeFile).toHaveBeenCalledWith(
-      'output/test-story-20241126-143052/blurb.json',
-      JSON.stringify(blurb, null, 2)
+      'output/test-story-20241126-143052/plot.json',
+      JSON.stringify(plot, null, 2)
     );
   });
 
@@ -134,10 +134,10 @@ describe('loadOutputManager', () => {
     ).rejects.toThrow('Not a valid story folder');
   });
 
-  it('accepts folder with blurb.json', async () => {
-    mockedFs.readdir.mockResolvedValue(['blurb.json'] as any);
+  it('accepts folder with plot.json', async () => {
+    mockedFs.readdir.mockResolvedValue(['plot.json'] as any);
 
-    const manager = await loadOutputManager('/path/blurb.json');
+    const manager = await loadOutputManager('/path/plot.json');
     expect(manager.folder).toBe('/path');
   });
 
