@@ -7,7 +7,6 @@ import {
   type BlurbMessage,
 } from '../../core/agents/plot-conversation';
 import { plotInterpreterAgent } from '../../core/agents/plot-interpreter';
-import { detectApproval } from '../../core/agents/approval-detector';
 
 /**
  * LLM-driven plot iteration flow
@@ -58,16 +57,6 @@ export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
     const finalAnswer = answer === '__CUSTOM__'
       ? await input({ message: 'Your feedback:' })
       : answer;
-
-    // Use LLM to detect if user approved (handles natural language variations)
-    const approvalSpinner = ora('Processing...').start();
-    const isApproval = await detectApproval(finalAnswer);
-    approvalSpinner.stop();
-
-    if (isApproval) {
-      console.log('\nPlot approved! Moving on to writing...\n');
-      return currentStory;
-    }
 
     // Apply changes - interpreter returns new PlotStructure
     const updateSpinner = ora('Updating plot...').start();
