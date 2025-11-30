@@ -14,12 +14,6 @@ import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/
 const IMAGE_MODEL = 'google/nano-banana-pro';
 const DEFAULT_RESOLUTION = '2K'; // Options: '1K', '2K', '4K'
 
-const RENDER_INSTRUCTIONS = `Generate the image pricesly as described below.
-
-IMPORTANT: Render the page text directly on the image. Choose a font that befits the scene. You may make comic book onomonpia too where appropriate. Position the text in a clear area that doesn't obscure key visual elements.
-
-Page context:`;
-
 export interface GeneratedPage {
   /** Temporary URL from Replicate (expires after ~24h) */
   url: string;
@@ -135,9 +129,27 @@ export const runWithRateLimit = async (
   }
 };
 
-/** Build the full prompt with rendering instructions */
-const buildPrompt = (context: PageRenderContext): string =>
-  `${RENDER_INSTRUCTIONS}\n${JSON.stringify(context, null, 2)}`;
+/** Build the full prompt with rendering instructions - style at top for emphasis */
+const buildPrompt = (context: PageRenderContext): string => {
+  const { art_style } = context.style;
+  const genre = art_style.genre?.join(', ') || 'childrens-illustration';
+  const medium = art_style.medium?.join(', ') || 'digital illustration';
+  const technique = art_style.technique?.join(', ') || 'soft edges';
+
+  return `ART STYLE (CRITICAL - must match exactly):
+Genre: ${genre}
+Medium: ${medium}
+Technique: ${technique}
+
+Generate this page illustration in the EXACT style above.
+
+Render the page text directly on the image. Choose a font that befits the scene. You may make comic book onomatopoeia where appropriate. Position text in a clear area that doesn't obscure key visual elements.
+
+MUST render in ${medium} style with ${technique}.
+
+Page context:
+${JSON.stringify(context, null, 2)}`;
+};
 
 /** Extract reference image URLs for image_input (sprite sheets + previously rendered pages) */
 const extractReferenceImages = (context: PageRenderContext, previousPages?: RenderedPage[]): string[] => {
