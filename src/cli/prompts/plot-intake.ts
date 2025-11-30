@@ -58,10 +58,10 @@ export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
       ? await input({ message: 'Your feedback:' })
       : answer;
 
-    // Apply changes - interpreter returns new PlotStructure
-    const updateSpinner = ora('Updating plot...').start();
-    const updatedPlot = await plotInterpreterAgent(finalAnswer, currentStory);
-    currentStory = { ...currentStory, plot: updatedPlot };
+    // Apply changes - interpreter returns partial updates
+    const updateSpinner = ora('Updating story...').start();
+    const updates = await plotInterpreterAgent(finalAnswer, currentStory);
+    currentStory = { ...currentStory, ...updates };
     updateSpinner.stop();
 
     // Update history
