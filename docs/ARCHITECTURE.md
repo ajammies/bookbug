@@ -298,6 +298,7 @@ Agents are named after their output for clarity.
 | `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
 | `plotConversationAgent` | `StoryWithPlot` + `BlurbMessage[]` | `PlotConversationResponse` | Guide plot refinement |
 | `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
+| `detectApproval` | `string` | `boolean` | Detect user approval intent |
 
 ### Batch Agents (used by CLI commands)
 | Agent | Input | Output | Purpose |
