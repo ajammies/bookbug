@@ -25,45 +25,43 @@ export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
   let plot = await plotAgent(brief);
   spinner.stop();
 
-  // Step 2: Blurb confirmation - let user adjust the essence before beat iteration
+  // Step 2: Blurb confirmation - agent handles all logic, CLI just displays
   console.log(`\nHere's the essence of your story:\n`);
   console.log(`"${plot.storyArcSummary}"\n`);
 
-  // Use LLM to generate story-specific tone adjustment suggestions
-  const blurbSpinner = ora('Preparing options...').start();
+  let blurbSpinner = ora('Preparing options...').start();
   let blurbResponse = await blurbConfirmationAgent(brief, plot);
   blurbSpinner.stop();
 
   while (!blurbResponse.isApproved) {
     console.log(`\n${blurbResponse.message}\n`);
 
-    const choices = [
-      ...blurbResponse.chips.map(chip => ({ name: chip, value: chip })),
-      new Separator(),
-      { name: 'Enter custom adjustment', value: '__CUSTOM__' },
-    ];
-
-    const blurbAnswer = await select({
+    const answer = await select({
       message: 'What would you like to do?',
-      choices,
+      choices: [
+        ...blurbResponse.chips.map(chip => ({ name: chip, value: chip })),
+        new Separator(),
+        { name: 'Enter custom feedback', value: '__CUSTOM__' },
+      ],
     });
 
-    const adjustment = blurbAnswer === '__CUSTOM__'
-      ? await input({ message: 'How should we adjust the tone?' })
-      : blurbAnswer;
+    const userResponse = answer === '__CUSTOM__'
+      ? await input({ message: 'Your feedback:' })
+      : answer;
 
-    // Regenerate plot with tone adjustment
-    const adjustSpinner = ora('Adjusting story essence...').start();
-    plot = await plotAgent({ ...brief, customInstructions: `${brief.customInstructions ?? ''} TONE ADJUSTMENT: ${adjustment}` });
-    adjustSpinner.stop();
+    // Agent handles everything: decision-making, plot regeneration, new chips
+    blurbSpinner = ora('Processing...').start();
+    blurbResponse = await blurbConfirmationAgent(brief, blurbResponse.plot, userResponse);
+    blurbSpinner.stop();
 
-    console.log(`\nUpdated essence:\n"${plot.storyArcSummary}"\n`);
-
-    // Get new suggestions for the updated plot
-    const nextSpinner = ora('Preparing options...').start();
-    blurbResponse = await blurbConfirmationAgent(brief, plot, adjustment);
-    nextSpinner.stop();
+    // Show updated essence if plot changed
+    if (blurbResponse.plot.storyArcSummary !== plot.storyArcSummary) {
+      plot = blurbResponse.plot;
+      console.log(`\nUpdated essence:\n"${plot.storyArcSummary}"\n`);
+    }
   }
+
+  plot = blurbResponse.plot;
 
   // Step 3: Compose StoryWithPlot
   let currentStory: StoryWithPlot = { ...brief, plot };
