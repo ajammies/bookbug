@@ -187,15 +187,16 @@ export const generatePageImage = async (
 
   try {
     const referenceImages = extractReferenceImages(context, previousPages);
+    const prompt = buildPrompt(context);
 
-    // Debug logging for reference images
+    // Debug logging for prompt and reference images
     logger?.debug(
-      { pageNumber: context.page.pageNumber, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
+      { pageNumber: context.page.pageNumber, prompt, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
       'Preparing image generation'
     );
 
     const input: Record<string, unknown> = {
-      prompt: buildPrompt(context),
+      prompt,
       aspect_ratio: getAspectRatio(format),
       resolution: DEFAULT_RESOLUTION,
       output_format: 'png',
