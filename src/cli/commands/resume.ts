@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, renderBook, type PipelineState } from '../../core/pipeline';
-import { progressMessagesAgent } from '../../core/agents';
+import { runPipelineIncremental, renderBook, type PipelineState, type OnStep } from '../../core/pipeline';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -11,7 +10,7 @@ import {
   RenderedBookSchema,
   type BookFormatKey,
 } from '../../core/schemas';
-import { createSpinner, createPipelineProgress } from '../output/progress';
+import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
 import { loadJson } from '../../utils';
@@ -27,84 +26,48 @@ interface StoryFolderInfo {
   latestFile: string;
 }
 
-/**
- * Find the latest story folder in output directory by modification time
- */
 const findLatestStoryFolder = async (): Promise<string | null> => {
   try {
     const entries = await fs.readdir(OUTPUT_DIR, { withFileTypes: true });
     const folders = entries.filter((e) => e.isDirectory()).map((e) => e.name);
-
     if (folders.length === 0) return null;
 
-    // Get modification times for each folder
     const foldersWithTimes = await Promise.all(
       folders.map(async (name) => {
-        const folderPath = path.join(OUTPUT_DIR, name);
-        const stat = await fs.stat(folderPath);
+        const stat = await fs.stat(path.join(OUTPUT_DIR, name));
         return { name, mtime: stat.mtimeMs };
       })
     );
-
-    // Sort by modification time, most recent first
     foldersWithTimes.sort((a, b) => b.mtime - a.mtime);
-
-    const latest = foldersWithTimes[0];
-    if (!latest) return null;
-    return path.join(OUTPUT_DIR, latest.name);
+    return foldersWithTimes[0] ? path.join(OUTPUT_DIR, foldersWithTimes[0].name) : null;
   } catch {
     return null;
   }
 };
 
-/**
- * Detect which stage a story folder is at based on existing files
- */
 const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
   const files = await fs.readdir(folder);
-
-  if (files.includes('book.json')) {
-    return { folder, stage: 'complete', latestFile: path.join(folder, 'book.json') };
-  }
-  if (files.includes('story.json')) {
-    return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
-  }
-  if (files.includes('prose.json')) {
-    return { folder, stage: 'prose', latestFile: path.join(folder, 'prose.json') };
-  }
-  if (files.includes('plot.json')) {
-    return { folder, stage: 'plot', latestFile: path.join(folder, 'plot.json') };
-  }
-  if (files.includes('brief.json')) {
-    return { folder, stage: 'brief', latestFile: path.join(folder, 'brief.json') };
-  }
-
+  if (files.includes('book.json')) return { folder, stage: 'complete', latestFile: path.join(folder, 'book.json') };
+  if (files.includes('story.json')) return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
+  if (files.includes('prose.json')) return { folder, stage: 'prose', latestFile: path.join(folder, 'prose.json') };
+  if (files.includes('plot.json')) return { folder, stage: 'plot', latestFile: path.join(folder, 'plot.json') };
+  if (files.includes('brief.json')) return { folder, stage: 'brief', latestFile: path.join(folder, 'brief.json') };
   throw new Error(`No resumable artifacts found in ${folder}`);
 };
 
-/**
- * Load PipelineState from a story folder.
- * Reads whatever artifacts exist and builds state from them.
- */
 const loadPipelineState = async (folder: string): Promise<PipelineState | null> => {
   const files = await fs.readdir(folder);
 
-  // Try to load the most advanced artifact that contains plot
   if (files.includes('story.json')) {
     const story = StorySchema.parse(await loadJson(path.join(folder, 'story.json')));
     return {
-      brief: story, // StoryBrief fields are spread into composed types
+      brief: story,
       plot: story.plot,
       styleGuide: story.visuals.style,
-      proseSetup: {
-        logline: story.prose.logline,
-        theme: story.prose.theme,
-        styleNotes: story.prose.styleNotes,
-      },
+      proseSetup: { logline: story.prose.logline, theme: story.prose.theme, styleNotes: story.prose.styleNotes },
       characterDesigns: story.characterDesigns,
       prosePages: story.prose.pages,
       illustratedPages: story.visuals.illustratedPages,
-      // No rendered pages yet if we're at story stage
     };
   }
 
@@ -113,27 +76,33 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
     return {
       brief: storyWithProse,
       plot: storyWithProse.plot,
-      proseSetup: {
-        logline: storyWithProse.prose.logline,
-        theme: storyWithProse.prose.theme,
-        styleNotes: storyWithProse.prose.styleNotes,
-      },
+      proseSetup: { logline: storyWithProse.prose.logline, theme: storyWithProse.prose.theme, styleNotes: storyWithProse.prose.styleNotes },
       prosePages: storyWithProse.prose.pages,
-      // No visuals yet
     };
   }
 
   if (files.includes('plot.json')) {
     const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
-    return {
-      brief: storyWithPlot,
-      plot: storyWithPlot.plot,
-      // Nothing else exists yet
-    };
+    return { brief: storyWithPlot, plot: storyWithPlot.plot };
   }
 
-  // brief.json only - need to run plot intake first
   return null;
+};
+
+const stepMessage = (step: string): string => {
+  const messages: Record<string, string> = {
+    'style-guide': 'Creating style guide...',
+    'prose-setup': 'Setting up prose...',
+    'character-designs': 'Generating character designs...',
+  };
+  if (messages[step]) return messages[step];
+  const match = step.match(/^(?:page-(\d+)-(.+)|render-(\d+))$/);
+  if (match?.[3]) return `Rendering page ${match[3]}...`;
+  if (match?.[1] && match[2]) {
+    const phaseNames: Record<string, string> = { prose: 'Writing', visuals: 'Directing', render: 'Rendering' };
+    return `${phaseNames[match[2]] ?? match[2]} page ${match[1]}...`;
+  }
+  return `${step}...`;
 };
 
 export const resumeCommand = new Command('resume')
@@ -145,19 +114,18 @@ export const resumeCommand = new Command('resume')
     const spinner = createSpinner();
 
     try {
-      // Find story folder
       const folder = folderArg ?? (await findLatestStoryFolder());
       if (!folder) {
         console.error('No story folders found in output/');
         process.exit(1);
       }
 
-      // Detect current stage
       spinner.start('Detecting story progress...');
       const info = await detectStage(folder);
       spinner.succeed(`Found story at: ${info.folder}`);
 
       const outputManager = await loadOutputManager(info.latestFile);
+      const onStep: OnStep = (step) => spinner.start(stepMessage(step));
 
       switch (info.stage) {
         case 'complete': {
@@ -170,16 +138,8 @@ export const resumeCommand = new Command('resume')
         case 'story': {
           console.log('\n📍 Resuming from: story.json (rendering images)');
           const story = StorySchema.parse(await loadJson(info.latestFile));
-
-          spinner.start('Rendering book...');
-          const book = await renderBook(story, {
-            mock: options.mock,
-            format: options.format,
-            outputManager,
-            onThinking: (msg) => { if (spinner.isSpinning) spinner.text = `Thinking: ${msg}`; },
-          });
+          const book = await renderBook(story, { mock: options.mock, format: options.format, outputManager, onStep });
           spinner.succeed('Book rendered');
-
           await outputManager.saveBook(book);
           displayBook(book);
           console.log(`\nBook saved to: ${folder}/book.json`);
@@ -190,62 +150,22 @@ export const resumeCommand = new Command('resume')
         case 'plot': {
           console.log(`\n📍 Resuming from: ${info.stage}.json`);
           const pipelineState = await loadPipelineState(folder);
-          if (!pipelineState) {
-            throw new Error('Failed to load pipeline state');
-          }
-
-          // Generate progress messages
-          const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
-          spinner.start('Preparing progress messages...');
-          const progressMessages = await progressMessagesAgent(storyWithPlot);
-          spinner.succeed('Ready');
-
-          const { onProgress, onThinking } = createPipelineProgress({
-            spinner,
-            progressMessages,
-          });
-
-          const result = await runPipelineIncremental(pipelineState, {
-            onProgress,
-            onThinking,
-            outputManager,
-            format: options.format,
-          });
-
+          if (!pipelineState) throw new Error('Failed to load pipeline state');
+          const result = await runPipelineIncremental(pipelineState, { onStep, outputManager, format: options.format });
+          spinner.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);
           break;
         }
 
         case 'brief': {
-          console.log('\n📍 Resuming from: brief.json (plot iteration + prose + visuals + rendering)');
+          console.log('\n📍 Resuming from: brief.json');
           const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
-
           const storyWithPlot = await runPlotIntake(brief);
           await outputManager.savePlot(storyWithPlot);
-
-          // Generate progress messages
-          spinner.start('Preparing progress messages...');
-          const progressMessages = await progressMessagesAgent(storyWithPlot);
-          spinner.succeed('Ready');
-
-          const { onProgress, onThinking } = createPipelineProgress({
-            spinner,
-            progressMessages,
-          });
-
-          const pipelineState: PipelineState = {
-            brief: storyWithPlot,
-            plot: storyWithPlot.plot,
-          };
-
-          const result = await runPipelineIncremental(pipelineState, {
-            onProgress,
-            onThinking,
-            outputManager,
-            format: options.format,
-          });
-
+          const pipelineState: PipelineState = { brief: storyWithPlot, plot: storyWithPlot.plot };
+          const result = await runPipelineIncremental(pipelineState, { onStep, outputManager, format: options.format });
+          spinner.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);
           break;
