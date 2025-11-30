@@ -1,7 +1,7 @@
 ---
 name: pr-workflow
 description: |
-  ALWAYS use this skill when the user asks to: create a feature, fix a bug, make changes, add something, implement anything, or create a PR. This skill MUST be invoked before making any code changes. Provides the standard workflow for branching, commits, and PRs.
+  ALWAYS use this skill when the user asks to: start an issue, work on an issue, do an issue, create a feature, fix a bug, make changes, add something, implement anything, or create a PR. This skill MUST be invoked before making any code changes. Provides the standard workflow for branching, commits, and PRs.
 ---
 
 # PR Workflow
