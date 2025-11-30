@@ -21,15 +21,43 @@ export async function runPlotIntake(brief: StoryBrief): Promise<StoryWithPlot> {
 
   // Step 1: Generate initial plot structure
   const spinner = ora('Creating plot outline...').start();
-  const plot = await plotAgent(brief);
+  let plot = await plotAgent(brief);
   spinner.stop();
 
-  // Step 2: Compose StoryWithPlot
+  // Step 2: Blurb confirmation - let user adjust the essence before beat iteration
+  console.log(`\nHere's the essence of your story:\n`);
+  console.log(`"${plot.storyArcSummary}"\n`);
+
+  const blurbAnswer = await select({
+    message: 'Does this capture what you\'re going for?',
+    choices: [
+      { name: 'Yes, let\'s refine the beats', value: 'approve' },
+      { name: 'Make it more playful/lighthearted', value: 'playful' },
+      { name: 'Make it more heartfelt/emotional', value: 'heartfelt' },
+      { name: 'Make it more adventurous/exciting', value: 'adventurous' },
+      new Separator(),
+      { name: 'Enter custom adjustment', value: '__CUSTOM__' },
+    ],
+  });
+
+  if (blurbAnswer !== 'approve') {
+    const adjustment = blurbAnswer === '__CUSTOM__'
+      ? await input({ message: 'How should we adjust the tone?' })
+      : `Make the story more ${blurbAnswer}`;
+
+    const adjustSpinner = ora('Adjusting story essence...').start();
+    plot = await plotAgent({ ...brief, customInstructions: `${brief.customInstructions ?? ''} TONE ADJUSTMENT: ${adjustment}` });
+    adjustSpinner.stop();
+
+    console.log(`\nUpdated essence:\n"${plot.storyArcSummary}"\n`);
+  }
+
+  // Step 3: Compose StoryWithPlot
   let currentStory: StoryWithPlot = { ...brief, plot };
 
   const history: BlurbMessage[] = [];
 
-  // Step 3: Iterate until approved
+  // Step 4: Iterate until approved
   while (true) {
     const responseSpinner = ora('Preparing...').start();
     const response = await plotConversationAgent(currentStory, history);
