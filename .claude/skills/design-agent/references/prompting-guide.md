@@ -139,10 +139,10 @@ Guidelines by [context variable]:
 ### 3. Conditional Logic in Prompts
 ```
 // Bad - hardcoding decisions
-"If the user mentions approval words like 'yes', 'okay', 'looks good', set isApproved to true."
+"If the user mentions approval words like 'yes', 'okay', 'looks good', set isComplete to true."
 
 // Good - let model understand intent
-"Set isApproved=true when the user approves the current state."
+"Set isComplete=true when the user approves the current state."
 ```
 
 

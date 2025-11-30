@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AgeRangeSchema, StoryCharacterSchema } from './common';
+import { withChipResponse } from '../services/ai';
 
 /**
  * Stage 1: StoryBrief - User requirements from book builder
@@ -24,10 +25,8 @@ export type StoryBrief = z.infer<typeof StoryBriefSchema>;
 /**
  * ConversationResponse: Output of conversation agent during story intake
  */
-export const ConversationResponseSchema = z.object({
+export const ConversationResponseSchema = withChipResponse(z.object({
   question: z.string().min(1).describe('The next question to ask the user'),
-  chips: z.array(z.string().min(1)).min(2).max(8).describe('2-8 short clickable suggestions'),
-  isComplete: z.boolean().describe('True when all required StoryBrief fields are filled'),
-});
+}));
 
 export type ConversationResponse = z.infer<typeof ConversationResponseSchema>;

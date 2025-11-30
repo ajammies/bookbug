@@ -331,7 +331,7 @@ ConversationResponse {
 PlotConversationResponse {
     message: string
     chips: string[]
-    isApproved: boolean
+    isComplete: boolean
 }
 ```
 
