@@ -26,7 +26,7 @@ export type StoryBrief = z.infer<typeof StoryBriefSchema>;
  */
 export const ConversationResponseSchema = z.object({
   question: z.string().min(1).describe('The next question to ask the user'),
-  chips: z.array(z.string().min(1)).min(3).max(4).describe('Exactly 3-4 short clickable suggestions'),
+  chips: z.array(z.string().min(1)).min(2).max(8).describe('2-8 short clickable suggestions'),
   isComplete: z.boolean().describe('True when all required StoryBrief fields are filled'),
 });
 
