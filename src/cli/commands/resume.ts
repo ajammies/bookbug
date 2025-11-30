@@ -11,10 +11,9 @@ import {
   RenderedBookSchema,
   type BookFormatKey,
 } from '../../core/schemas';
-import { createSpinner, formatStep } from '../output/progress';
+import { createSpinner, createPipelineProgress } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
-import { createProgressRotator, type ProgressRotator } from '../utils/progress-rotator';
 import { loadJson } from '../../utils';
 import { runPlotIntake } from '../prompts/plot-intake';
 
@@ -172,33 +171,14 @@ export const resumeCommand = new Command('resume')
           const progressMessages = await progressMessagesAgent(storyWithPlot);
           spinner.succeed('Ready');
 
-          let rotator: ProgressRotator | null = null;
-          const majorPhases = ['prose', 'visuals', 'render'];
-          const longRunningPhases = ['prose', 'visuals'];
+          const { onProgress, onThinking } = createPipelineProgress({
+            spinner,
+            progressMessages,
+          });
 
           const result = await executePipeline(storyWithPlot, {
-            onProgress: (step, status) => {
-              if (status === 'start') {
-                spinner.start(formatStep(step));
-                if (longRunningPhases.includes(step)) {
-                  rotator = createProgressRotator(progressMessages, 3000, (msg) => {
-                    if (spinner.isSpinning) spinner.text = msg;
-                  });
-                  rotator.start();
-                }
-              } else if (status === 'complete') {
-                if (longRunningPhases.includes(step)) {
-                  rotator?.stop();
-                  rotator = null;
-                }
-                if (majorPhases.includes(step)) {
-                  spinner.succeed(formatStep(step, true));
-                }
-              }
-            },
-            onThinking: (msg) => {
-              if (spinner.isSpinning && !rotator) spinner.text = msg;
-            },
+            onProgress,
+            onThinking,
             outputManager,
             format: options.format,
           });
@@ -220,33 +200,14 @@ export const resumeCommand = new Command('resume')
           const progressMessages = await progressMessagesAgent(storyWithPlot);
           spinner.succeed('Ready');
 
-          let rotator: ProgressRotator | null = null;
-          const majorPhases = ['prose', 'visuals', 'render'];
-          const longRunningPhases = ['prose', 'visuals'];
+          const { onProgress, onThinking } = createPipelineProgress({
+            spinner,
+            progressMessages,
+          });
 
           const result = await executePipeline(storyWithPlot, {
-            onProgress: (step, status) => {
-              if (status === 'start') {
-                spinner.start(formatStep(step));
-                if (longRunningPhases.includes(step)) {
-                  rotator = createProgressRotator(progressMessages, 3000, (msg) => {
-                    if (spinner.isSpinning) spinner.text = msg;
-                  });
-                  rotator.start();
-                }
-              } else if (status === 'complete') {
-                if (longRunningPhases.includes(step)) {
-                  rotator?.stop();
-                  rotator = null;
-                }
-                if (majorPhases.includes(step)) {
-                  spinner.succeed(formatStep(step, true));
-                }
-              }
-            },
-            onThinking: (msg) => {
-              if (spinner.isSpinning && !rotator) spinner.text = msg;
-            },
+            onProgress,
+            onThinking,
             outputManager,
             format: options.format,
           });

@@ -1,4 +1,6 @@
 import ora, { type Ora } from 'ora';
+import { createProgressRotator, type ProgressRotator } from '../utils/progress-rotator';
+import type { OnStepProgress } from '../../core/agents';
 
 /**
  * Create a spinner for CLI progress indication
@@ -7,6 +9,69 @@ export function createSpinner(): Ora {
   return ora({
     spinner: 'dots',
   });
+}
+
+/**
+ * Callbacks for pipeline progress handling
+ */
+export interface PipelineProgressCallbacks {
+  onProgress: OnStepProgress;
+  onThinking: (message: string) => void;
+}
+
+/**
+ * Options for createPipelineProgress
+ */
+export interface CreatePipelineProgressOptions {
+  spinner: Ora;
+  progressMessages: string[];
+  intervalMs?: number;
+  majorPhases?: string[];
+  longRunningPhases?: string[];
+}
+
+/**
+ * Create progress callbacks for executePipeline.
+ * Coordinates spinner updates with progress message rotation during long phases.
+ */
+export function createPipelineProgress(
+  options: CreatePipelineProgressOptions
+): PipelineProgressCallbacks {
+  const {
+    spinner,
+    progressMessages,
+    intervalMs = 3000,
+    majorPhases = ['prose', 'visuals', 'render'],
+    longRunningPhases = ['prose', 'visuals'],
+  } = options;
+
+  let rotator: ProgressRotator | null = null;
+
+  const onProgress: OnStepProgress = (step, status) => {
+    if (status === 'start') {
+      spinner.start(formatStep(step));
+      if (longRunningPhases.includes(step)) {
+        rotator = createProgressRotator(progressMessages, intervalMs, (msg) => {
+          if (spinner.isSpinning) spinner.text = msg;
+        });
+        rotator.start();
+      }
+    } else if (status === 'complete') {
+      if (longRunningPhases.includes(step)) {
+        rotator?.stop();
+        rotator = null;
+      }
+      if (majorPhases.includes(step)) {
+        spinner.succeed(formatStep(step, true));
+      }
+    }
+  };
+
+  const onThinking = (msg: string): void => {
+    if (spinner.isSpinning && !rotator) spinner.text = msg;
+  };
+
+  return { onProgress, onThinking };
 }
 
 /**
