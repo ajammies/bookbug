@@ -5,30 +5,19 @@ import { generatePageImage } from '../services/image-generation';
 export interface RenderPageOptions {
   format?: BookFormatKey;
   heroPageUrl?: string;
-  lastPage?: RenderedPage;
 }
 
-/**
- * Render a single page image from a ComposedStory
- *
- * Returns a RenderedPage with a temporary URL from Replicate.
- * Call this for each page to have full control over the generation process.
- * Pass heroPageUrl (page 1) for style consistency, lastPage for scene continuity.
- */
+/** Render a single page image. Pass heroPageUrl (page 1) for style consistency. */
 export const renderPage = async (
   story: ComposedStory,
   pageNumber: number,
   options: RenderPageOptions = {}
 ): Promise<RenderedPage> => {
-  const { format = 'square-large', heroPageUrl, lastPage } = options;
+  const { format = 'square-large', heroPageUrl } = options;
   const storySlice = filterStoryForPage(story, pageNumber);
   const formatSpec = BOOK_FORMATS[format];
-  const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl, lastPage });
-
-  return {
-    pageNumber,
-    url: result.url,
-  };
+  const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl });
+  return { pageNumber, url: result.url };
 };
 
 /**

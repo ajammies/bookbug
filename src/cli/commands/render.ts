@@ -49,11 +49,7 @@ export const renderCommand = new Command('render')
 
         const page = options.mock
           ? renderPageMock(storyPage.pageNumber)
-          : await renderPage(story, storyPage.pageNumber, {
-              format,
-              heroPageUrl: heroPage?.url,
-              lastPage: pages[pages.length - 1],
-            });
+          : await renderPage(story, storyPage.pageNumber, { format, heroPageUrl: heroPage?.url });
 
         pages.push(page);
         if (!heroPage) heroPage = page;

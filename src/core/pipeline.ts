@@ -133,7 +133,7 @@ export const renderBook = async (
 
     const page = mock
       ? renderPageMock(pageNumber)
-      : await renderPage(story, pageNumber, { format, heroPageUrl: heroPage?.url, lastPage: pages[pages.length - 1] });
+      : await renderPage(story, pageNumber, { format, heroPageUrl: heroPage?.url });
 
     pages.push(page);
     if (!heroPage) heroPage = page;
@@ -194,11 +194,7 @@ export const runPipelineIncremental = async (
       visuals: assembleVisuals(styleGuide, illustratedPages),
       characterDesigns,
     };
-    const renderedPage = await renderPage(currentStory, pageNumber, {
-      format,
-      heroPageUrl: heroPage?.url,
-      lastPage: renderedPages[renderedPages.length - 1],
-    });
+    const renderedPage = await renderPage(currentStory, pageNumber, { format, heroPageUrl: heroPage?.url });
     renderedPages.push(renderedPage);
     if (!heroPage) heroPage = renderedPage;
     if (outputManager) await outputManager.savePageImage(renderedPage);

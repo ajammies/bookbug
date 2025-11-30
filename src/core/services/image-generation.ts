@@ -1,5 +1,5 @@
 import Replicate, { type FileOutput } from 'replicate';
-import type { PageRenderContext, BookFormat, RenderedPage } from '../schemas';
+import type { PageRenderContext, BookFormat } from '../schemas';
 import { getAspectRatio } from '../schemas';
 import { sleep } from '../utils/retry';
 import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
@@ -151,32 +151,19 @@ Page context:
 ${JSON.stringify(context, null, 2)}`;
 };
 
-/** Extract reference image URLs for image_input (hero page + sprite sheets + last page) */
-const extractReferenceImages = (
-  context: PageRenderContext,
-  heroPageUrl: string | undefined,
-  lastPage: RenderedPage | undefined
-): string[] => {
+/** Extract reference image URLs for image_input (hero page + sprite sheets) */
+const extractReferenceImages = (context: PageRenderContext, heroPageUrl: string | undefined): string[] => {
   const refs: string[] = [];
-
-  // Hero page first (style anchor)
   if (heroPageUrl) refs.push(heroPageUrl);
-
-  // Character sheets (character consistency)
   const spriteUrls = (context.characterDesigns ?? [])
     .map(d => d.spriteSheetUrl)
     .filter((url): url is string => Boolean(url) && url.startsWith('http'));
   refs.push(...spriteUrls);
-
-  // Last page only (scene continuity)
-  if (lastPage?.url?.startsWith('http')) refs.push(lastPage.url);
-
   return refs;
 };
 
 export interface GeneratePageImageOptions {
   heroPageUrl?: string;
-  lastPage?: RenderedPage;
   client?: Replicate;
   logger?: Logger;
 }
@@ -185,19 +172,17 @@ export interface GeneratePageImageOptions {
  * Generate a page image using Google Nano Banana Pro via Replicate
  *
  * Passes rendering instructions plus filtered Story JSON as the prompt.
- * Hero page, character sprite sheets, and last page are passed as image_input for visual consistency.
- * Handles rate limits internally with retry-after.
+ * Hero page and character sprite sheets are passed as image_input for visual consistency.
  */
 export const generatePageImage = async (
   context: PageRenderContext,
   format: BookFormat,
   options: GeneratePageImageOptions = {}
 ): Promise<GeneratedPage> => {
-  const { heroPageUrl, lastPage, client = createReplicateClient(), logger } = options;
-  const agent = 'imageGen';
+  const { heroPageUrl, client = createReplicateClient(), logger } = options;
 
   try {
-    const referenceImages = extractReferenceImages(context, heroPageUrl, lastPage);
+    const referenceImages = extractReferenceImages(context, heroPageUrl);
     const prompt = buildPrompt(context);
 
     // Debug logging for prompt and reference images
@@ -220,10 +205,10 @@ export const generatePageImage = async (
 
     const output = await runWithRateLimit(client, input, logger);
 
-    logApiSuccess(logger, agent);
+    logApiSuccess(logger, 'imageGen');
     return { url: extractImageUrl(output) };
   } catch (error) {
-    logApiError(logger, agent, error instanceof Error ? error.message : String(error));
+    logApiError(logger, 'imageGen', error instanceof Error ? error.message : String(error));
     throw error;
   }
 };
