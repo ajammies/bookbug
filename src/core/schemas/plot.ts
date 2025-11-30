@@ -30,8 +30,8 @@ export type PlotStructure = z.infer<typeof PlotStructureSchema>;
  */
 export const PlotConversationResponseSchema = z.object({
   message: z.string().min(1).describe('Response to the user about their story plot'),
-  chips: z.array(z.string().min(1)).describe('3-4 suggestions including an approval option'),
-  isApproved: z.boolean().describe('True when the user approves the plot beats'),
+  chips: z.array(z.string().min(1)).min(3).max(4).describe('3-4 suggestions. Last chip must be approval like "Looks good - let\'s write it!"'),
+  isApproved: z.boolean().describe('True ONLY when user explicitly approves (clicks approval chip, says "yes", "approved", "looks good", "let\'s go"). NOT for "I like the suggestions" which means incorporate them.'),
 });
 
 export type PlotConversationResponse = z.infer<typeof PlotConversationResponseSchema>;
