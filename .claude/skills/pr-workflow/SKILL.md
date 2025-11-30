@@ -17,7 +17,7 @@ description: |
    ```
    Prefixes: `feat/` `fix/` `refactor/` `docs/`
 
-2. **Plan** - Enter planning mode, propose the plan
+2. **Plan** - Invoke `code-rules` skill, enter planning mode, propose the plan
    ⏸️ Wait for user approval of plan
 
 3. **Write plan** - Exit plan mode, write plan to `docs/plans/plan-<feature>.md`
