@@ -221,6 +221,38 @@ erDiagram
 
 ## Pipeline Flow
 
+### Unified Pipeline (`runPipeline`)
+
+The pipeline uses `PartialStory` for progressive filling. Pass any partial story and the pipeline fills what's missing:
+
+```
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                    runPipeline(initialInput, options)                              │
+├───────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                    │
+│  Input: string | PartialStory                                                      │
+│    ↓                                                                               │
+│  extractorAgent (fills PartialStory from any input format)                         │
+│    ↓                                                                               │
+│  ┌─────────────────┐  hasCompleteBrief? ──No──▶ Intake Stage (conversation loop)  │
+│  │ Intake Stage    │  ◀─────Yes─────────────────────────────────────────────────┐ │
+│  └────────┬────────┘                                                             │ │
+│           ↓                                                                       │ │
+│  ┌─────────────────┐  hasCompletePlot? ───No──▶ Plot Stage (generate + refine)   │ │
+│  │ Plot Stage      │  ◀─────Yes─────────────────────────────────────────────────┐│ │
+│  └────────┬────────┘                                                             ││ │
+│           ↓                                                                       ││ │
+│  runPipelineIncremental (prose → visuals → render)                                ││ │
+│           ↓                                                                       ││ │
+│  { story: ComposedStory, book: RenderedBook }                                     ││ │
+└───────────────────────────────────────────────────────────────────────────────────┘│ │
+                                                                                     │ │
+  Stage validators: hasCompleteBrief, hasCompletePlot, hasCompleteProse ─────────────┘ │
+  If stage is complete, skip to next ─────────────────────────────────────────────────┘
+```
+
+### Stage Composition
+
 ```
                               Stage Outputs (NEW fields only)
                               ─────────────────────────────────
@@ -229,8 +261,8 @@ erDiagram
 └─────────────┘     └───────────────┘     └─────────────────┘     └─────────────────┘     └──────────────┘
        │                   │                       │                       │                    │
        ▼                   ▼                       ▼                       ▼                    ▼
-  Chat Intake          plotAgent             proseAgent            visualsAgent           renderPage
-  (conversation)      → PlotStructure        → Prose               → VisualDirection      → RenderedBook
+  extractorAgent +     plotAgent             proseAgent            visualsAgent           renderPage
+  conversationAgent   → PlotStructure        → Prose               → VisualDirection      → RenderedBook
 ```
 
 ## Incremental Pipeline (executePipeline)
@@ -290,13 +322,24 @@ type Story = ComposedStory
 
 Agents are named after their output for clarity.
 
-### Intake Agents
+### Unified Extractor
 | Agent | Input | Output | Purpose |
 |-------|-------|--------|---------|
-| `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
+| `extractorAgent` | `string` + `PartialStory` | `PartialStory` | Parse any input (natural language, JSON) into story fields |
+
+The extractor handles all story field extraction, replacing the need for separate intake/plot interpreters.
+
+### Conversation Agents
+| Agent | Input | Output | Purpose |
+|-------|-------|--------|---------|
 | `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
 | `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
 | `plotConversationAgent` | `StoryWithPlot` + `PlotMessage[]` | `PlotConversationResponse` | Guide plot refinement |
+
+### Legacy Intake Agents (deprecated, use extractorAgent)
+| Agent | Input | Output | Purpose |
+|-------|-------|--------|---------|
+| `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
 | `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
 
 ### Batch Agents (used by CLI commands)
