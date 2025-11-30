@@ -42,15 +42,21 @@ export const renderCommand = new Command('render')
       const totalPages = story.visuals.illustratedPages.length;
       const format = options.format ?? 'square-large';
       const pages: RenderedPage[] = [];
+      let heroPage: RenderedPage | undefined;
 
       for (const storyPage of story.visuals.illustratedPages) {
         spinner.start(`Rendering page ${storyPage.pageNumber}/${totalPages}${options.mock ? ' (mock)' : ''}...`);
 
         const page = options.mock
           ? renderPageMock(storyPage.pageNumber)
-          : await renderPage(story, storyPage.pageNumber, { format, previousPages: pages });
+          : await renderPage(story, storyPage.pageNumber, {
+              format,
+              heroPageUrl: heroPage?.url,
+              lastPage: pages[pages.length - 1],
+            });
 
         pages.push(page);
+        if (!heroPage) heroPage = page;
         spinner.succeed(`Rendered page ${storyPage.pageNumber}/${totalPages}`);
       }
 

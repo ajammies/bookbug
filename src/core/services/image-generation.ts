@@ -151,21 +151,32 @@ Page context:
 ${JSON.stringify(context, null, 2)}`;
 };
 
-/** Extract reference image URLs for image_input (sprite sheets + previously rendered pages) */
-const extractReferenceImages = (context: PageRenderContext, previousPages?: RenderedPage[]): string[] => {
+/** Extract reference image URLs for image_input (hero page + sprite sheets + last page) */
+const extractReferenceImages = (
+  context: PageRenderContext,
+  heroPageUrl: string | undefined,
+  lastPage: RenderedPage | undefined
+): string[] => {
+  const refs: string[] = [];
+
+  // Hero page first (style anchor)
+  if (heroPageUrl) refs.push(heroPageUrl);
+
+  // Character sheets (character consistency)
   const spriteUrls = (context.characterDesigns ?? [])
-    .map(design => design.spriteSheetUrl)
+    .map(d => d.spriteSheetUrl)
     .filter((url): url is string => Boolean(url) && url.startsWith('http'));
+  refs.push(...spriteUrls);
 
-  const pageUrls = (previousPages ?? [])
-    .map(page => page.url)
-    .filter(url => url.startsWith('http'));
+  // Last page only (scene continuity)
+  if (lastPage?.url?.startsWith('http')) refs.push(lastPage.url);
 
-  return [...spriteUrls, ...pageUrls];
+  return refs;
 };
 
 export interface GeneratePageImageOptions {
-  previousPages?: RenderedPage[];
+  heroPageUrl?: string;
+  lastPage?: RenderedPage;
   client?: Replicate;
   logger?: Logger;
 }
@@ -174,7 +185,7 @@ export interface GeneratePageImageOptions {
  * Generate a page image using Google Nano Banana Pro via Replicate
  *
  * Passes rendering instructions plus filtered Story JSON as the prompt.
- * Character sprite sheets and previous pages are passed as image_input for visual consistency.
+ * Hero page, character sprite sheets, and last page are passed as image_input for visual consistency.
  * Handles rate limits internally with retry-after.
  */
 export const generatePageImage = async (
@@ -182,11 +193,11 @@ export const generatePageImage = async (
   format: BookFormat,
   options: GeneratePageImageOptions = {}
 ): Promise<GeneratedPage> => {
-  const { previousPages, client = createReplicateClient(), logger } = options;
+  const { heroPageUrl, lastPage, client = createReplicateClient(), logger } = options;
   const agent = 'imageGen';
 
   try {
-    const referenceImages = extractReferenceImages(context, previousPages);
+    const referenceImages = extractReferenceImages(context, heroPageUrl, lastPage);
     const prompt = buildPrompt(context);
 
     // Debug logging for prompt and reference images

@@ -220,14 +220,21 @@ export const renderBook = async (
 ): Promise<RenderedBook> => {
   const { format = 'square-large', mock = false, onProgress, onThinking, outputManager, logger } = options;
   const totalPages = story.visuals.illustratedPages.length;
+  let heroPage: RenderedPage | undefined;
 
-  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber, previousPages) => {
+  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber, renderedPages) => {
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
     onProgress?.(`render-page-${pageNumber}`, 'start');
 
     const page = mock
       ? renderPageMock(pageNumber)
-      : await renderPage(story, pageNumber, { format, previousPages });
+      : await renderPage(story, pageNumber, {
+          format,
+          heroPageUrl: heroPage?.url,
+          lastPage: renderedPages[renderedPages.length - 1],
+        });
+
+    if (!heroPage) heroPage = page;
 
     if (outputManager) {
       await outputManager.savePageImage(page);
@@ -336,6 +343,7 @@ export const executeIncrementalPipeline = async (
   const prosePages: ProsePage[] = [];
   const illustratedPages: IllustratedPage[] = [];
   const renderedPages: RenderedPage[] = [];
+  let heroPage: RenderedPage | undefined;
 
   for (let i = 0; i < storyWithPlot.pageCount; i++) {
     const pageNumber = i + 1;
@@ -360,10 +368,15 @@ export const executeIncrementalPipeline = async (
       characterDesigns,
     };
 
-    // Render this page
+    // Render this page (hero page anchors style, last page provides continuity)
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
-    const renderedPage = await renderPage(currentStory, pageNumber, { format, previousPages: renderedPages });
+    const renderedPage = await renderPage(currentStory, pageNumber, {
+      format,
+      heroPageUrl: heroPage?.url,
+      lastPage: renderedPages[renderedPages.length - 1],
+    });
     renderedPages.push(renderedPage);
+    if (!heroPage) heroPage = renderedPage;
 
     // Save incrementally
     if (outputManager) {
