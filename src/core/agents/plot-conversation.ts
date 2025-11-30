@@ -19,7 +19,15 @@ Format your message as:
 
 Which beat would you like to change?
 
-Chips should reference specific beats (e.g., "Strengthen the climax", "Add tension to beat 3") or offer approval. Set isApproved=true when the user approves.`;
+CHIPS: Generate 3-4 suggestions:
+- Reference specific beats (e.g., "Strengthen the climax", "Add tension to beat 3")
+- LAST chip must be approval: "Looks good - let's write it!"
+
+APPROVAL DETECTION (isApproved field):
+- Set TRUE when user explicitly approves: clicks approval chip, says "yes", "approved", "looks good", "let's go", "perfect"
+- Set FALSE for "I like the suggestions" - this means INCORPORATE them, not approve
+- Set FALSE for any feedback requesting changes
+- When in doubt, set FALSE and ask for clarification`;
 
 export type BlurbMessage = {
   role: 'user' | 'assistant';
