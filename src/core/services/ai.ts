@@ -12,8 +12,8 @@ import {
   type GenerateObjectResult,
 } from 'ai';
 import type { JSONParseError, TypeValidationError } from '@ai-sdk/provider';
-import { sleep } from './retry';
-import { type Logger, logApiSuccess, logApiError, logRateLimit } from './logger';
+import { sleep } from '../utils/retry';
+import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
 
 type GenerateObjectParams = Parameters<typeof aiGenerateObject>[0];
 

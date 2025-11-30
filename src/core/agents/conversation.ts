@@ -1,4 +1,4 @@
-import { generateObject } from '../utils/ai';
+import { generateObject } from '../services/ai';
 import {
   ConversationResponseSchema,
   type ConversationResponse,

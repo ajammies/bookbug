@@ -12,12 +12,12 @@ vi.mock('ai', () => ({
 }));
 
 // Mock retry
-vi.mock('./retry', () => ({
+vi.mock('../utils/retry', () => ({
   sleep: vi.fn(),
 }));
 
 // Mock logger
-vi.mock('./logger', () => ({
+vi.mock('../utils/logger', () => ({
   logApiSuccess: vi.fn(),
   logApiError: vi.fn(),
   logRateLimit: vi.fn(),

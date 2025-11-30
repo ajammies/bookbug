@@ -4,7 +4,7 @@
  * Generates witty progress messages based on story context.
  * Used to display engaging updates during prose/visuals generation.
  */
-import { generateObject } from '../utils/ai';
+import { generateObject } from '../services/ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import type { StoryWithPlot } from '../schemas';
