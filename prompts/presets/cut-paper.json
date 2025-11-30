@@ -1,0 +1,9 @@
+{
+  "name": "Cut Paper",
+  "art_style": {
+    "genre": ["childrens-illustration", "storybook"],
+    "medium": ["cut-paper-collage", "digital-texture"],
+    "technique": ["bold-graphic-shapes", "layered-composition", "textured-elements"],
+    "style_strength": 1.0
+  }
+}

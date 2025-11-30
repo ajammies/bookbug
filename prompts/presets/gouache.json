@@ -1,0 +1,9 @@
+{
+  "name": "Gouache",
+  "art_style": {
+    "genre": ["childrens-illustration", "storybook"],
+    "medium": ["gouache", "tempera", "pencil-line"],
+    "technique": ["flat-shapes", "tactile-grain", "clear-silhouettes"],
+    "style_strength": 1.0
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Claymation",
+  "art_style": {
+    "genre": ["childrens-illustration", "whimsical-fantasy"],
+    "medium": ["digital-claymation", "stop-motion-inspired"],
+    "technique": ["sculpted-textures", "soft-lighting", "tactile-detail"],
+    "style_strength": 0.95
+  }
+}
