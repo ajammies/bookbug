@@ -8,15 +8,15 @@ import { getModel } from '../config';
 
 const buildSystemPrompt = (availableStyles: string[]): string => {
   const hasPresets = availableStyles.length > 0;
-  const styleChips = hasPresets
-    ? `Use these EXACT chips: ${availableStyles.map(s => `"${s}"`).join(', ')}, "Generate new style"`
+  const styleOptions = hasPresets
+    ? `Use these EXACT options: ${availableStyles.map(s => `"${s}"`).join(', ')}, "Generate new style"`
     : '';
 
   return `Guide users through creating a StoryBrief by asking about what's missing.
 
-${hasPresets ? `IMPORTANT: Your FIRST question MUST be about stylePreset. ${styleChips}` : ''}
+${hasPresets ? `IMPORTANT: Your FIRST question MUST be about stylePreset. ${styleOptions}` : ''}
 
-After stylePreset (if presets available), ask about: storyArc, characters, setting, ageRange, pageCount, title. Ask one focused question at a time. Provide 3-4 specific chip suggestions that fit their emerging story.
+After stylePreset (if presets available), ask about: storyArc, characters, setting, ageRange, pageCount, title. Ask one focused question at a time. Provide 3-4 specific option suggestions that fit their emerging story.
 
 If they are very descriptive, or even paste json, add the entire thing to customInstructions field.
 

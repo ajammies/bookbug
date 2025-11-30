@@ -1,4 +1,3 @@
-import { input, select, Separator } from '@inquirer/prompts';
 import ora from 'ora';
 import { StoryBriefSchema, type StoryBrief } from '../../core/schemas';
 import {
@@ -7,6 +6,7 @@ import {
   type Message,
 } from '../../core/agents';
 import { listStyles } from '../../core/services/style-loader';
+import { showSelector } from '../../utils/cli';
 
 /**
  * LLM-driven conversational story intake
@@ -47,21 +47,11 @@ export async function runStoryIntake(
       return buildFinalBrief(currentBrief);
     }
 
-    // Display question and chips
-    const choices = [
-      ...response.chips.map(chip => ({ name: chip, value: chip })),
-      new Separator(),
-      { name: 'Enter custom response', value: '__CUSTOM__' },
-    ];
-
-    const answer = await select({
-      message: response.question,
-      choices,
+    // Display question and options
+    const finalAnswer = await showSelector({
+      question: response.question,
+      options: response.options,
     });
-
-    const finalAnswer = answer === '__CUSTOM__'
-      ? await input({ message: 'Your response:' })
-      : answer;
 
     // Interpret user's answer and update brief
     const updateSpinner = ora('Processing...').start();

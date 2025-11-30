@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AgeRangeSchema, StoryCharacterSchema } from './common';
-import { withChipResponse } from '../services/ai';
+import { withOptionsResponse } from '../services/ai';
 
 /**
  * Stage 1: StoryBrief - User requirements from book builder
@@ -25,7 +25,7 @@ export type StoryBrief = z.infer<typeof StoryBriefSchema>;
 /**
  * ConversationResponse: Output of conversation agent during story intake
  */
-export const ConversationResponseSchema = withChipResponse(z.object({
+export const ConversationResponseSchema = withOptionsResponse(z.object({
   question: z.string().min(1).describe('The next question to ask the user'),
 }));
 

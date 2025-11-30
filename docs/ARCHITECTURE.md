@@ -324,13 +324,13 @@ Agents are named after their output for clarity.
 ```typescript
 ConversationResponse {
     question: string
-    chips: string[]
+    options: string[]
     isComplete: boolean
 }
 
 PlotConversationResponse {
     message: string
-    chips: string[]
+    options: string[]
     isComplete: boolean
 }
 ```

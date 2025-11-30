@@ -1,5 +1,5 @@
 import ora, { type Ora } from 'ora';
-import { createProgressRotator, type ProgressRotator } from '../utils/progress-rotator';
+import { createProgressRotator, type ProgressRotator } from '../../utils/cli';
 import type { OnStepProgress } from '../../core/agents';
 
 /**

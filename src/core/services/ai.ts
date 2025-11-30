@@ -17,23 +17,23 @@ import { sleep } from '../utils/retry';
 import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
 
 // ============================================================================
-// Composable Chip Response Pattern
+// Composable Options Response Pattern
 // ============================================================================
 
 /**
- * Prompt fragment for chip-based conversational responses.
- * Include in agent system prompts that use withChipResponse schemas.
+ * Prompt fragment for options-based conversational responses.
+ * Include in agent system prompts that use withOptionsResponse schemas.
  */
-export const CHIP_PROMPT = `Generate 2-8 short, clickable chip suggestions based on the conversation context.
+export const OPTIONS_PROMPT = `Generate 2-8 short, clickable option suggestions based on the conversation context.
 Set isComplete=true only when all required information has been gathered.`;
 
 /**
- * Extends a Zod object schema with chip response fields.
+ * Extends a Zod object schema with options response fields.
  * Use for any agent that returns conversational responses with suggestions.
  */
-export const withChipResponse = <T extends ZodRawShape>(inner: ZodObject<T>) =>
+export const withOptionsResponse = <T extends ZodRawShape>(inner: ZodObject<T>) =>
   inner.extend({
-    chips: z.array(z.string().min(1)).min(2).max(8)
+    options: z.array(z.string().min(1)).min(2).max(8)
       .describe('2-8 short clickable suggestions for user response'),
     isComplete: z.boolean()
       .describe('True when conversation can end'),
