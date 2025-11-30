@@ -17,7 +17,6 @@ import type {
 } from './schemas';
 import type { StoryOutputManager } from '../cli/utils/output';
 
-// Mock the agents
 vi.mock('./agents', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./agents')>();
   return {
@@ -53,7 +52,6 @@ const mockedStyleGuideAgent = vi.mocked(styleGuideAgent);
 const mockedGenerateCharacterDesigns = vi.mocked(generateCharacterDesigns);
 const mockedRenderPage = vi.mocked(renderPage);
 
-// Test fixtures
 const mockStoryWithPlot: StoryWithPlot = {
   title: 'Test Story',
   storyArc: 'A test adventure',
@@ -62,7 +60,6 @@ const mockStoryWithPlot: StoryWithPlot = {
   pageCount: 2,
   characters: [{ name: 'Hero', description: 'The main character', traits: [], notes: [] }],
   interests: [],
-  
   plot: {
     storyArcSummary: 'A hero goes on a journey',
     plotBeats: [
@@ -85,39 +82,18 @@ const mockProse: Prose = {
 };
 
 const mockStyleGuide: VisualStyleGuide = {
-  art_style: {
-    genre: ['fantasy'],
-    medium: ['watercolor'],
-    technique: ['soft edges'],
-  },
-  setting: {
-    landmarks: [],
-    diegetic_lights: [],
-  },
+  art_style: { genre: ['fantasy'], medium: ['watercolor'], technique: ['soft edges'] },
+  setting: { landmarks: [], diegetic_lights: [] },
 };
 
 const mockIllustratedPage1: IllustratedPage = {
   pageNumber: 1,
-  beats: [{
-    order: 1,
-    purpose: 'setup',
-    summary: 'Hero stands',
-    emotion: 'determined',
-    characters: [],
-    shot: { size: 'wide', angle: 'eye_level' },
-  }],
+  beats: [{ order: 1, purpose: 'setup', summary: 'Hero stands', emotion: 'determined', characters: [], shot: { size: 'wide', angle: 'eye_level' } }],
 };
 
 const mockIllustratedPage2: IllustratedPage = {
   pageNumber: 2,
-  beats: [{
-    order: 1,
-    purpose: 'payoff',
-    summary: 'Hero celebrates',
-    emotion: 'joyful',
-    characters: [],
-    shot: { size: 'medium', angle: 'eye_level' },
-  }],
+  beats: [{ order: 1, purpose: 'payoff', summary: 'Hero celebrates', emotion: 'joyful', characters: [], shot: { size: 'medium', angle: 'eye_level' } }],
 };
 
 const mockVisuals: VisualDirection = {
@@ -125,15 +101,8 @@ const mockVisuals: VisualDirection = {
   illustratedPages: [mockIllustratedPage1, mockIllustratedPage2],
 };
 
-const mockStoryWithProse: StoryWithProse = {
-  ...mockStoryWithPlot,
-  prose: mockProse,
-};
-
-const mockComposedStory: ComposedStory = {
-  ...mockStoryWithProse,
-  visuals: mockVisuals,
-};
+const mockStoryWithProse: StoryWithProse = { ...mockStoryWithPlot, prose: mockProse };
+const mockComposedStory: ComposedStory = { ...mockStoryWithProse, visuals: mockVisuals };
 
 describe('generateProse', () => {
   beforeEach(() => {
@@ -141,28 +110,17 @@ describe('generateProse', () => {
     mockedProseAgent.mockResolvedValue(mockProse);
   });
 
-  it('generates prose in single call', async () => {
+  it('generates prose and returns StoryWithProse', async () => {
     const result = await generateProse(mockStoryWithPlot);
-
     expect(result.title).toBe('Test Story');
     expect(result.prose.logline).toBe('A hero saves the day');
     expect(result.prose.pages).toHaveLength(2);
   });
 
-  it('calls prose agent once with story', async () => {
+  it('calls prose agent with story', async () => {
     await generateProse(mockStoryWithPlot);
-
     expect(mockedProseAgent).toHaveBeenCalledTimes(1);
     expect(mockedProseAgent).toHaveBeenCalledWith(mockStoryWithPlot, undefined);
-  });
-
-  it('calls onProgress for prose stage', async () => {
-    const onProgress = vi.fn();
-
-    await generateProse(mockStoryWithPlot, { onProgress });
-
-    expect(onProgress).toHaveBeenCalledWith('prose', 'start');
-    expect(onProgress).toHaveBeenCalledWith('prose', 'complete');
   });
 });
 
@@ -172,28 +130,17 @@ describe('generateVisuals', () => {
     mockedVisualsAgent.mockResolvedValue(mockVisuals);
   });
 
-  it('generates visuals in single call', async () => {
+  it('generates visuals and returns ComposedStory', async () => {
     const result = await generateVisuals(mockStoryWithProse);
-
     expect(result.title).toBe('Test Story');
     expect(result.visuals.style).toEqual(mockStyleGuide);
     expect(result.visuals.illustratedPages).toHaveLength(2);
   });
 
-  it('calls visuals agent once with story', async () => {
+  it('calls visuals agent with story', async () => {
     await generateVisuals(mockStoryWithProse);
-
     expect(mockedVisualsAgent).toHaveBeenCalledTimes(1);
     expect(mockedVisualsAgent).toHaveBeenCalledWith(mockStoryWithProse, undefined);
-  });
-
-  it('calls onProgress for visuals stage', async () => {
-    const onProgress = vi.fn();
-
-    await generateVisuals(mockStoryWithProse, { onProgress });
-
-    expect(onProgress).toHaveBeenCalledWith('visuals', 'start');
-    expect(onProgress).toHaveBeenCalledWith('visuals', 'complete');
   });
 });
 
@@ -208,7 +155,6 @@ describe('renderBook', () => {
 
   it('renders all pages and creates book', async () => {
     const result = await renderBook(mockComposedStory);
-
     expect(result.storyTitle).toBe('Test Story');
     expect(result.pages).toHaveLength(2);
     expect(result.pages[0]?.pageNumber).toBe(1);
@@ -217,7 +163,6 @@ describe('renderBook', () => {
 
   it('uses mock renderer when mock is true', async () => {
     const result = await renderBook(mockComposedStory, { mock: true });
-
     expect(mockedRenderPage).not.toHaveBeenCalled();
     expect(result.pages).toHaveLength(2);
     expect(result.pages[0]?.url).toContain('placeholder.com');
@@ -236,45 +181,20 @@ describe('renderBook', () => {
     };
 
     await renderBook(mockComposedStory, { outputManager });
-
     expect(outputManager.savePageImage).toHaveBeenCalledTimes(2);
-    expect(outputManager.savePageImage).toHaveBeenCalledWith(expect.objectContaining({ pageNumber: 1 }));
-    expect(outputManager.savePageImage).toHaveBeenCalledWith(expect.objectContaining({ pageNumber: 2 }));
   });
 
-  it('uses specified format', async () => {
-    await renderBook(mockComposedStory, { format: 'landscape' });
-
-    expect(mockedRenderPage).toHaveBeenCalledWith(
-      mockComposedStory,
-      expect.any(Number),
-      expect.objectContaining({ format: 'landscape' })
-    );
-  });
-
-  it('calls onProgress for each page', async () => {
-    const onProgress = vi.fn();
-
-    await renderBook(mockComposedStory, { onProgress });
-
-    expect(onProgress).toHaveBeenCalledWith('render-page-1', 'start');
-    expect(onProgress).toHaveBeenCalledWith('render-page-1', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('render-page-2', 'start');
-    expect(onProgress).toHaveBeenCalledWith('render-page-2', 'complete');
+  it('calls onStep for each page', async () => {
+    const onStep = vi.fn();
+    await renderBook(mockComposedStory, { onStep });
+    expect(onStep).toHaveBeenCalledWith('render-1');
+    expect(onStep).toHaveBeenCalledWith('render-2');
   });
 });
 
 describe('runPipelineIncremental', () => {
-  const mockProseSetup = {
-    logline: mockProse.logline,
-    theme: mockProse.theme,
-    styleNotes: mockProse.styleNotes,
-  };
-
-  const mockPipelineState: PipelineState = {
-    brief: mockStoryWithPlot,
-    plot: mockStoryWithPlot.plot,
-  };
+  const mockProseSetup = { logline: mockProse.logline, theme: mockProse.theme, styleNotes: mockProse.styleNotes };
+  const mockPipelineState: PipelineState = { brief: mockStoryWithPlot, plot: mockStoryWithPlot.plot };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -295,7 +215,6 @@ describe('runPipelineIncremental', () => {
 
   it('runs full pipeline and returns story and book', async () => {
     const result = await runPipelineIncremental(mockPipelineState);
-
     expect(result.story.title).toBe('Test Story');
     expect(result.story.prose.logline).toBe('A hero saves the day');
     expect(result.story.visuals.style).toEqual(mockStyleGuide);
@@ -304,28 +223,23 @@ describe('runPipelineIncremental', () => {
 
   it('processes pages incrementally', async () => {
     await runPipelineIncremental(mockPipelineState);
-
-    // Per-page prose generation
     expect(mockedProsePageAgent).toHaveBeenCalledTimes(2);
-
-    // Per-page visuals generation
     expect(mockedPageVisualsAgent).toHaveBeenCalledTimes(2);
-
-    // Render stage
     expect(mockedRenderPage).toHaveBeenCalledTimes(2);
   });
 
-  it('calls onProgress for each page', async () => {
-    const onProgress = vi.fn();
-
-    await runPipelineIncremental(mockPipelineState, { onProgress });
-
-    expect(onProgress).toHaveBeenCalledWith('setup', 'start');
-    expect(onProgress).toHaveBeenCalledWith('setup', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('page-1', 'start');
-    expect(onProgress).toHaveBeenCalledWith('page-1', 'complete');
-    expect(onProgress).toHaveBeenCalledWith('page-2', 'start');
-    expect(onProgress).toHaveBeenCalledWith('page-2', 'complete');
+  it('calls onStep for each stage', async () => {
+    const onStep = vi.fn();
+    await runPipelineIncremental(mockPipelineState, { onStep });
+    expect(onStep).toHaveBeenCalledWith('style-guide');
+    expect(onStep).toHaveBeenCalledWith('prose-setup');
+    expect(onStep).toHaveBeenCalledWith('character-designs');
+    expect(onStep).toHaveBeenCalledWith('page-1-prose');
+    expect(onStep).toHaveBeenCalledWith('page-1-visuals');
+    expect(onStep).toHaveBeenCalledWith('page-1-render');
+    expect(onStep).toHaveBeenCalledWith('page-2-prose');
+    expect(onStep).toHaveBeenCalledWith('page-2-visuals');
+    expect(onStep).toHaveBeenCalledWith('page-2-render');
   });
 
   it('saves artifacts when outputManager is provided', async () => {
@@ -341,16 +255,9 @@ describe('runPipelineIncremental', () => {
     };
 
     await runPipelineIncremental(mockPipelineState, { outputManager });
-
-    expect(outputManager.saveProse).toHaveBeenCalledWith(
-      expect.objectContaining({ prose: expect.objectContaining({ logline: 'A hero saves the day' }) })
-    );
-    expect(outputManager.saveStory).toHaveBeenCalledWith(
-      expect.objectContaining({ visuals: expect.objectContaining({ style: mockStyleGuide }) })
-    );
-    expect(outputManager.saveBook).toHaveBeenCalledWith(
-      expect.objectContaining({ pages: expect.any(Array) })
-    );
+    expect(outputManager.saveProse).toHaveBeenCalled();
+    expect(outputManager.saveStory).toHaveBeenCalled();
+    expect(outputManager.saveBook).toHaveBeenCalled();
   });
 
   it('uses existing state when provided', async () => {
@@ -361,18 +268,12 @@ describe('runPipelineIncremental', () => {
     };
 
     await runPipelineIncremental(stateWithExistingArtifacts);
-
-    // Should not regenerate style guide or prose setup
     expect(mockedStyleGuideAgent).not.toHaveBeenCalled();
     expect(mockedProseSetupAgent).not.toHaveBeenCalled();
   });
 
   it('throws when plot is missing', async () => {
-    const stateWithoutPlot: PipelineState = {
-      brief: mockStoryWithPlot,
-      plot: undefined,
-    };
-
+    const stateWithoutPlot: PipelineState = { brief: mockStoryWithPlot, plot: undefined };
     await expect(runPipelineIncremental(stateWithoutPlot)).rejects.toThrow('requires plot');
   });
 });

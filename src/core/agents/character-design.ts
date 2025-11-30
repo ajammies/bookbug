@@ -72,20 +72,13 @@ export const characterDesignAgent = async (
 export const generateCharacterDesigns = async (
   characters: StoryCharacter[],
   styleGuide: VisualStyleGuide,
-  options: {
-    client?: Replicate;
-    logger?: Logger;
-    onProgress?: (message: string) => void;
-  } = {}
+  options: { client?: Replicate; logger?: Logger } = {}
 ): Promise<CharacterDesign[]> => {
-  const { client = createReplicateClient(), logger, onProgress } = options;
-
-  const generateWithProgress = async (character: StoryCharacter, index: number): Promise<CharacterDesign> => {
-    const message = `Generating sprite sheet for ${character.name} (${index + 1}/${characters.length})...`;
-    logThinking(logger, message);
-    onProgress?.(message);
-    return characterDesignAgent(character, styleGuide, client, logger);
-  };
-
-  return Promise.all(characters.map((char, i) => generateWithProgress(char, i)));
+  const { client = createReplicateClient(), logger } = options;
+  return Promise.all(
+    characters.map((char, i) => {
+      logThinking(logger, `Generating sprite sheet for ${char.name} (${i + 1}/${characters.length})...`);
+      return characterDesignAgent(char, styleGuide, client, logger);
+    })
+  );
 };
