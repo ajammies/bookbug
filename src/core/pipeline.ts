@@ -221,13 +221,17 @@ export const renderBook = async (
   const { format = 'square-large', mock = false, onProgress, onThinking, outputManager, logger } = options;
   const totalPages = story.visuals.illustratedPages.length;
 
-  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber, previousPages) => {
+  const pages = await processPages<RenderedPage>(totalPages, async (pageNumber, renderedPages) => {
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
     onProgress?.(`render-page-${pageNumber}`, 'start');
 
+    // Hero page (page 1) anchors style, last page provides scene continuity
+    const heroPageUrl = renderedPages[0]?.url;
+    const lastPage = renderedPages[renderedPages.length - 1];
+
     const page = mock
       ? renderPageMock(pageNumber)
-      : await renderPage(story, pageNumber, { format, previousPages });
+      : await renderPage(story, pageNumber, { format, heroPageUrl, lastPage });
 
     if (outputManager) {
       await outputManager.savePageImage(page);
@@ -360,9 +364,11 @@ export const executeIncrementalPipeline = async (
       characterDesigns,
     };
 
-    // Render this page
+    // Render this page (hero page anchors style, last page provides continuity)
     emitThinking(`Rendering page ${pageNumber} of ${totalPages}...`, logger, onThinking);
-    const renderedPage = await renderPage(currentStory, pageNumber, { format, previousPages: renderedPages });
+    const heroPageUrl = renderedPages[0]?.url;
+    const lastPage = renderedPages[renderedPages.length - 1];
+    const renderedPage = await renderPage(currentStory, pageNumber, { format, heroPageUrl, lastPage });
     renderedPages.push(renderedPage);
 
     // Save incrementally

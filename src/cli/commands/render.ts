@@ -46,9 +46,13 @@ export const renderCommand = new Command('render')
       for (const storyPage of story.visuals.illustratedPages) {
         spinner.start(`Rendering page ${storyPage.pageNumber}/${totalPages}${options.mock ? ' (mock)' : ''}...`);
 
+        // Hero page (page 1) anchors style, last page provides scene continuity
+        const heroPageUrl = pages[0]?.url;
+        const lastPage = pages[pages.length - 1];
+
         const page = options.mock
           ? renderPageMock(storyPage.pageNumber)
-          : await renderPage(story, storyPage.pageNumber, { format, previousPages: pages });
+          : await renderPage(story, storyPage.pageNumber, { format, heroPageUrl, lastPage });
 
         pages.push(page);
         spinner.succeed(`Rendered page ${storyPage.pageNumber}/${totalPages}`);
