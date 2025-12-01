@@ -37,6 +37,8 @@ export const createCliUI = (): CliUI => {
       spinner = null;
     },
     prompt: async (config: { question: string; options: string[] }) => {
+      // Clear and stop spinner to fully release terminal before inquirer
+      spinner?.clear();
       spinner?.stop();
       spinner = null;
       return showSelector(config);
