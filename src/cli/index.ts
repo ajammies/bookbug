@@ -3,7 +3,6 @@ import 'dotenv/config';
 import { Command } from 'commander';
 import { createCommand } from './commands/create';
 import { resumeCommand } from './commands/resume';
-import { briefCommand } from './commands/brief';
 import { writeCommand } from './commands/write';
 import { directCommand } from './commands/direct';
 import { renderCommand } from './commands/render';
@@ -17,7 +16,6 @@ program
 
 program.addCommand(createCommand);
 program.addCommand(resumeCommand);
-program.addCommand(briefCommand);
 program.addCommand(writeCommand);
 program.addCommand(directCommand);
 program.addCommand(renderCommand);

@@ -194,7 +194,7 @@ describe('renderBook', () => {
 
 describe('runPipelineIncremental', () => {
   const mockProseSetup = { logline: mockProse.logline, theme: mockProse.theme, styleNotes: mockProse.styleNotes };
-  const mockPipelineState: PipelineState = { brief: mockStoryWithPlot, plot: mockStoryWithPlot.plot };
+  const mockPipelineState: PipelineState = { history: [], brief: mockStoryWithPlot, plot: mockStoryWithPlot.plot };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -228,18 +228,18 @@ describe('runPipelineIncremental', () => {
     expect(mockedRenderPage).toHaveBeenCalledTimes(2);
   });
 
-  it('calls onStep for each stage', async () => {
-    const onStep = vi.fn();
-    await runPipelineIncremental(mockPipelineState, { onStep });
-    expect(onStep).toHaveBeenCalledWith('style-guide');
-    expect(onStep).toHaveBeenCalledWith('prose-setup');
-    expect(onStep).toHaveBeenCalledWith('character-designs');
-    expect(onStep).toHaveBeenCalledWith('page-1-prose');
-    expect(onStep).toHaveBeenCalledWith('page-1-visuals');
-    expect(onStep).toHaveBeenCalledWith('page-1-render');
-    expect(onStep).toHaveBeenCalledWith('page-2-prose');
-    expect(onStep).toHaveBeenCalledWith('page-2-visuals');
-    expect(onStep).toHaveBeenCalledWith('page-2-render');
+  it('calls ui.progress for each stage', async () => {
+    const ui = { progress: vi.fn(), prompt: vi.fn() };
+    await runPipelineIncremental(mockPipelineState, { ui });
+    expect(ui.progress).toHaveBeenCalledWith('Creating style guide...');
+    expect(ui.progress).toHaveBeenCalledWith('Setting up prose...');
+    expect(ui.progress).toHaveBeenCalledWith('Generating character designs...');
+    expect(ui.progress).toHaveBeenCalledWith('Writing page 1...');
+    expect(ui.progress).toHaveBeenCalledWith('Directing page 1...');
+    expect(ui.progress).toHaveBeenCalledWith('Rendering page 1...');
+    expect(ui.progress).toHaveBeenCalledWith('Writing page 2...');
+    expect(ui.progress).toHaveBeenCalledWith('Directing page 2...');
+    expect(ui.progress).toHaveBeenCalledWith('Rendering page 2...');
   });
 
   it('saves artifacts when outputManager is provided', async () => {
@@ -273,7 +273,7 @@ describe('runPipelineIncremental', () => {
   });
 
   it('throws when plot is missing', async () => {
-    const stateWithoutPlot: PipelineState = { brief: mockStoryWithPlot, plot: undefined };
+    const stateWithoutPlot: PipelineState = { history: [], brief: mockStoryWithPlot, plot: undefined };
     await expect(runPipelineIncremental(stateWithoutPlot)).rejects.toThrow('requires plot');
   });
 });

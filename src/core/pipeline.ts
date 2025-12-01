@@ -15,6 +15,7 @@ import type {
   ProseSetup,
   CharacterDesign,
 } from './schemas';
+import { StoryBriefSchema } from './schemas';
 import {
   proseAgent,
   proseSetupAgent,
@@ -26,33 +27,61 @@ import {
   renderPage,
   renderPageMock,
   createBook,
+  briefExtractorAgent,
+  conversationAgent,
+  plotAgent,
+  plotConversationAgent,
+  plotInterpreterAgent,
   type StylePreset,
+  type Message,
+  type PlotMessage,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
 import type { Logger } from './utils/logger';
-import { loadStylePreset } from './services/style-loader';
+import { loadStylePreset, listStyles } from './services/style-loader';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type OnStep = (step: string) => void;
+/**
+ * PipelineUI: Interface for user interaction during pipeline execution.
+ * Passed via dependency injection - pipeline doesn't know about CLI specifics.
+ */
+export interface PipelineUI {
+  /** Show a progress indicator with message */
+  progress: (message: string) => void;
+  /** Show selector for user input (should auto-stop any spinner) */
+  prompt: (config: { question: string; options: string[] }) => Promise<string>;
+}
+
 
 export interface PipelineOptions {
-  onStep?: OnStep;
+  ui?: PipelineUI;
   outputManager?: StoryOutputManager;
   format?: BookFormatKey;
   logger?: Logger;
   stylePreset?: StylePreset;
 }
 
+export interface StageOptions {
+  ui: PipelineUI;
+  logger?: Logger;
+}
+
 /**
- * Pipeline state - pass what exists, pipeline fills in what's missing.
- * Enables both fresh runs (only brief) and resume (partial artifacts).
+ * Pipeline state - single type throughout pipeline.
+ * brief/plot are optional (absent until their stage completes).
+ * history flows between stages so context isn't lost.
  */
 export interface PipelineState {
-  // Foundation (brief required to start)
-  brief: StoryBrief;
+  // Conversation history (flows intake → plot)
+  history: Message[];
+
+  // Brief (undefined until intake completes, then complete)
+  brief?: StoryBrief;
+
+  // Plot (undefined until plot stage completes)
   plot?: PlotStructure;
 
   // Setup artifacts
@@ -68,6 +97,101 @@ export interface PipelineState {
   renderedPages?: RenderedPage[];
   heroPage?: RenderedPage;
 }
+
+// ============================================================================
+// Stage Functions (pure, easy to delete)
+// ============================================================================
+
+/**
+ * Intake stage: Gather story brief through conversation.
+ * Pure function: (state, options) → state
+ * Skips if brief already exists.
+ */
+export const runIntakeStage = async (
+  state: PipelineState,
+  options: StageOptions
+): Promise<PipelineState> => {
+  if (state.brief) return state;
+
+  const { ui, logger } = options;
+  const availableStyles = await listStyles();
+  let { history } = state;
+  let workingBrief: Partial<StoryBrief> = {};
+
+  // Initial greeting if no history
+  if (history.length === 0) {
+    history = [{ role: 'assistant', content: 'Let\'s create a children\'s book!' }];
+  }
+
+  while (!StoryBriefSchema.safeParse(workingBrief).success) {
+    ui.progress('Thinking...');
+    const response = await conversationAgent(workingBrief, history, { availableStyles });
+
+    if (response.isComplete) break;
+
+    // ui.prompt auto-stops spinner before showing selector
+    const answer = await ui.prompt({ question: response.question, options: response.options });
+
+    ui.progress('Processing...');
+    // Extract from Q&A pair (focused extraction is more reliable)
+    workingBrief = await briefExtractorAgent(response.question, answer, workingBrief, { availableStyles, logger });
+    history = [...history, { role: 'assistant', content: response.question }, { role: 'user', content: answer }];
+  }
+
+  const brief = StoryBriefSchema.parse(workingBrief);
+  return { ...state, brief, history };
+};
+
+/**
+ * Plot stage: Generate and refine plot structure.
+ * Pure function: (state, options) → state
+ * Skips if plot already exists.
+ */
+export const runPlotStage = async (
+  state: PipelineState,
+  options: StageOptions
+): Promise<PipelineState> => {
+  if (state.plot) return state;
+
+  const { ui } = options;
+  let { history } = state;
+
+  if (!state.brief) {
+    throw new Error('Cannot generate plot: brief is missing');
+  }
+  const brief = state.brief;
+
+  // Generate initial plot
+  ui.progress('Creating plot outline...');
+  let plot = await plotAgent(brief);
+
+  // Convert Message history to PlotMessage for plot conversation
+  // History from intake flows in so plot agent sees any plot details mentioned
+  const plotHistory: PlotMessage[] = history.map((m): PlotMessage => ({ role: m.role, content: m.content }));
+
+  while (true) {
+    ui.progress('Preparing...');
+    const storyWithPlot = assembleStoryWithPlot(brief, plot);
+    const response = await plotConversationAgent(storyWithPlot, plotHistory);
+
+    if (response.isComplete) break;
+
+    // ui.prompt auto-stops spinner before showing selector
+    const answer = await ui.prompt({ question: response.message, options: response.options });
+
+    ui.progress('Updating story...');
+    // Pass Q&A pair for focused interpretation
+    const messageWithContext = `Question: ${response.message}\nAnswer: ${answer}`;
+    const updates = await plotInterpreterAgent(messageWithContext, storyWithPlot);
+    if (updates.plot) plot = updates.plot;
+    plotHistory.push({ role: 'assistant', content: response.message }, { role: 'user', content: answer });
+  }
+
+  // Merge plot history back into main history
+  const newHistory: Message[] = plotHistory.map((m): Message => ({ role: m.role, content: m.content }));
+
+  return { ...state, plot, history: newHistory };
+};
 
 // ============================================================================
 // Pure assembly functions
@@ -121,7 +245,7 @@ export const generateVisuals = async (story: StoryWithProse, logger?: Logger): P
 
 export const renderBook = async (
   story: ComposedStory,
-  options: { format?: BookFormatKey; mock?: boolean; onStep?: OnStep; outputManager?: StoryOutputManager } = {}
+  options: { format?: BookFormatKey; mock?: boolean; onStep?: (step: string) => void; outputManager?: StoryOutputManager } = {}
 ): Promise<RenderedBook> => {
   const { format = 'square-large', mock = false, onStep, outputManager } = options;
   const pages: RenderedPage[] = [];
@@ -151,21 +275,22 @@ export const runPipelineIncremental = async (
   state: PipelineState,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { onStep, outputManager, format = 'square-large', stylePreset: optionsPreset } = options;
+  const { ui, outputManager, format = 'square-large', stylePreset: optionsPreset } = options;
 
+  if (!state.brief) throw new Error('PipelineState requires brief to run pipeline');
   if (!state.plot) throw new Error('PipelineState requires plot to run pipeline');
 
   const story = assembleStoryWithPlot(state.brief, state.plot);
   const stylePreset = optionsPreset ?? (story.stylePreset ? await loadStylePreset(story.stylePreset) : undefined);
 
   // Setup phase
-  onStep?.('style-guide');
+  ui?.progress('Creating style guide...');
   const styleGuide = state.styleGuide ?? await styleGuideAgent(story, stylePreset);
 
-  onStep?.('prose-setup');
+  ui?.progress('Setting up prose...');
   const proseSetup = state.proseSetup ?? await proseSetupAgent(story);
 
-  onStep?.('character-designs');
+  ui?.progress('Generating character designs...');
   const characters = story.plot.characters ?? story.characters;
   const characterDesigns = state.characterDesigns ?? await generateCharacterDesigns(characters, styleGuide, options);
   if (outputManager && !state.characterDesigns) {
@@ -179,15 +304,15 @@ export const runPipelineIncremental = async (
   let heroPage = state.heroPage ?? renderedPages[0];
 
   for (let pageNumber = renderedPages.length + 1; pageNumber <= story.pageCount; pageNumber++) {
-    onStep?.(`page-${pageNumber}-prose`);
+    ui?.progress(`Writing page ${pageNumber}...`);
     const prosePage = await prosePageAgent({ story, proseSetup, pageNumber, previousPages: prosePages });
     prosePages.push(prosePage);
 
-    onStep?.(`page-${pageNumber}-visuals`);
+    ui?.progress(`Directing page ${pageNumber}...`);
     const illustratedPage = await pageVisualsAgent({ story, styleGuide, pageNumber, prosePage });
     illustratedPages.push(illustratedPage);
 
-    onStep?.(`page-${pageNumber}-render`);
+    ui?.progress(`Rendering page ${pageNumber}...`);
     const currentStory: ComposedStory = {
       ...story,
       prose: assembleProse(proseSetup, prosePages),
@@ -211,6 +336,50 @@ export const runPipelineIncremental = async (
   await outputManager?.saveBook(book);
 
   return { story: finalStory, book };
+};
+
+// ============================================================================
+// Unified Pipeline Entry Point
+// ============================================================================
+
+/** Options for runPipeline - requires ui for interactive stages */
+export interface RunPipelineOptions extends PipelineOptions {
+  ui: PipelineUI;
+}
+
+/**
+ * Run the complete pipeline from scratch.
+ * User provides story details during intake conversation.
+ *
+ * @param options - Pipeline options including ui for user interaction
+ */
+export const runPipeline = async (
+  options: RunPipelineOptions
+): Promise<{ story: ComposedStory; book: RenderedBook }> => {
+  const { ui, outputManager, format = 'square-large', logger, stylePreset: optionsPreset } = options;
+
+  let state: PipelineState = { history: [] };
+
+  // Run intake stage (gathers brief through conversation)
+  state = await runIntakeStage(state, { ui, logger });
+
+  // Save brief if we have an output manager
+  if (state.brief) {
+    await outputManager?.saveBrief(state.brief);
+  }
+
+  // Run plot stage (generates and refines plot)
+  state = await runPlotStage(state, { ui, logger });
+
+  // Save plot
+  if (state.brief && state.plot) {
+    const storyWithPlot = assembleStoryWithPlot(state.brief, state.plot);
+    await outputManager?.savePlot(storyWithPlot);
+  }
+
+  const stylePreset = optionsPreset ?? (state.brief?.stylePreset ? await loadStylePreset(state.brief.stylePreset) : undefined);
+
+  return runPipelineIncremental(state, { ui, outputManager, format, logger, stylePreset });
 };
 
 // ============================================================================

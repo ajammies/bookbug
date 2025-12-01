@@ -225,13 +225,34 @@ erDiagram
                               Stage Outputs (NEW fields only)
                               ─────────────────────────────────
 ┌─────────────┐     ┌───────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
-│ StoryBrief  │────▶│ StoryWithPlot │────▶│ StoryWithProse  │────▶│ ComposedStory   │────▶│ RenderedBook │
+│ PartialStory│────▶│ StoryWithPlot │────▶│ StoryWithProse  │────▶│ ComposedStory   │────▶│ RenderedBook │
 └─────────────┘     └───────────────┘     └─────────────────┘     └─────────────────┘     └──────────────┘
        │                   │                       │                       │                    │
        ▼                   ▼                       ▼                       ▼                    ▼
-  Chat Intake          plotAgent             proseAgent            visualsAgent           renderPage
-  (conversation)      → PlotStructure        → Prose               → VisualDirection      → RenderedBook
+  runIntakeStage      runPlotStage         proseSetupAgent         visualsAgent           renderPage
+  + extractorAgent    + plotAgent          + prosePageAgent        + pageVisualsAgent     → RenderedBook
 ```
+
+## Unified Pipeline (runPipeline)
+
+The unified pipeline runs all stages from any starting point:
+
+```typescript
+runPipeline(
+  initialStory: PartialStory,    // Empty {} for new, or partial data to resume
+  options: {
+    promptUser: PromptUser,       // CLI provides showSelector
+    onStep?: OnStep,
+    outputManager?: StoryOutputManager,
+    format?: BookFormatKey,
+    logger?: Logger,
+  }
+): Promise<{ story: ComposedStory; book: RenderedBook }>
+```
+
+Stages automatically skip if their data is already complete:
+- **runIntakeStage**: Skips if `hasCompleteBrief(story)` returns true
+- **runPlotStage**: Skips if `hasCompletePlot(story)` returns true
 
 ## Incremental Pipeline (executePipeline)
 
@@ -293,11 +314,11 @@ Agents are named after their output for clarity.
 ### Intake Agents
 | Agent | Input | Output | Purpose |
 |-------|-------|--------|---------|
-| `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
-| `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
+| `extractorAgent` | `string` + `PartialStory` | `PartialStory` | Parse user message into story fields (unified) |
+| `conversationAgent` | `PartialStory` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
 | `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
 | `plotConversationAgent` | `StoryWithPlot` + `PlotMessage[]` | `PlotConversationResponse` | Guide plot refinement |
-| `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
+| `plotInterpreterAgent` | `string` + `StoryWithPlot` | `Partial<StoryWithPlot>` | Parse feedback into plot updates |
 
 ### Batch Agents (used by CLI commands)
 | Agent | Input | Output | Purpose |

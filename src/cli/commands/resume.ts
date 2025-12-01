@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, renderBook, type PipelineState, type OnStep } from '../../core/pipeline';
+import { runPipelineIncremental, runPlotStage, renderBook, type PipelineState } from '../../core/pipeline';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -10,11 +10,10 @@ import {
   RenderedBookSchema,
   type BookFormatKey,
 } from '../../core/schemas';
-import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
 import { loadJson } from '../../utils';
-import { runPlotIntake } from '../prompts/plot-intake';
+import { createCliUI } from '../../utils/cli';
 
 const OUTPUT_DIR = './output';
 
@@ -61,6 +60,7 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   if (files.includes('story.json')) {
     const story = StorySchema.parse(await loadJson(path.join(folder, 'story.json')));
     return {
+      history: [],
       brief: story,
       plot: story.plot,
       styleGuide: story.visuals.style,
@@ -74,6 +74,7 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   if (files.includes('prose.json')) {
     const storyWithProse = StoryWithProseSchema.parse(await loadJson(path.join(folder, 'prose.json')));
     return {
+      history: [],
       brief: storyWithProse,
       plot: storyWithProse.plot,
       proseSetup: { logline: storyWithProse.prose.logline, theme: storyWithProse.prose.theme, styleNotes: storyWithProse.prose.styleNotes },
@@ -83,26 +84,15 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
 
   if (files.includes('plot.json')) {
     const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
-    return { brief: storyWithPlot, plot: storyWithPlot.plot };
+    return { history: [], brief: storyWithPlot, plot: storyWithPlot.plot };
+  }
+
+  if (files.includes('brief.json')) {
+    const brief = StoryBriefSchema.parse(await loadJson(path.join(folder, 'brief.json')));
+    return { history: [], brief };
   }
 
   return null;
-};
-
-const stepMessage = (step: string): string => {
-  const messages: Record<string, string> = {
-    'style-guide': 'Creating style guide...',
-    'prose-setup': 'Setting up prose...',
-    'character-designs': 'Generating character designs...',
-  };
-  if (messages[step]) return messages[step];
-  const match = step.match(/^(?:page-(\d+)-(.+)|render-(\d+))$/);
-  if (match?.[3]) return `Rendering page ${match[3]}...`;
-  if (match?.[1] && match[2]) {
-    const phaseNames: Record<string, string> = { prose: 'Writing', visuals: 'Directing', render: 'Rendering' };
-    return `${phaseNames[match[2]] ?? match[2]} page ${match[1]}...`;
-  }
-  return `${step}...`;
 };
 
 export const resumeCommand = new Command('resume')
@@ -111,7 +101,7 @@ export const resumeCommand = new Command('resume')
   .option('-f, --format <format>', 'Book format for rendering', 'square-large')
   .option('-m, --mock', 'Use mock images instead of real generation')
   .action(async (folderArg: string | undefined, options: { format: BookFormatKey; mock?: boolean }) => {
-    const spinner = createSpinner();
+    const ui = createCliUI();
 
     try {
       const folder = folderArg ?? (await findLatestStoryFolder());
@@ -120,12 +110,11 @@ export const resumeCommand = new Command('resume')
         process.exit(1);
       }
 
-      spinner.start('Detecting story progress...');
+      ui.progress('Detecting story progress...');
       const info = await detectStage(folder);
-      spinner.succeed(`Found story at: ${info.folder}`);
+      ui.succeed(`Found story at: ${info.folder}`);
 
       const outputManager = await loadOutputManager(info.latestFile);
-      const onStep: OnStep = (step) => spinner.start(stepMessage(step));
 
       switch (info.stage) {
         case 'complete': {
@@ -138,8 +127,9 @@ export const resumeCommand = new Command('resume')
         case 'story': {
           console.log('\n📍 Resuming from: story.json (rendering images)');
           const story = StorySchema.parse(await loadJson(info.latestFile));
+          const onStep = (step: string) => ui.progress(`Rendering page ${step.replace('render-', '')}...`);
           const book = await renderBook(story, { mock: options.mock, format: options.format, outputManager, onStep });
-          spinner.succeed('Book rendered');
+          ui.succeed('Book rendered');
           await outputManager.saveBook(book);
           displayBook(book);
           console.log(`\nBook saved to: ${folder}/book.json`);
@@ -151,8 +141,8 @@ export const resumeCommand = new Command('resume')
           console.log(`\n📍 Resuming from: ${info.stage}.json`);
           const pipelineState = await loadPipelineState(folder);
           if (!pipelineState) throw new Error('Failed to load pipeline state');
-          const result = await runPipelineIncremental(pipelineState, { onStep, outputManager, format: options.format });
-          spinner.succeed('Book complete!');
+          const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
+          ui.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);
           break;
@@ -160,19 +150,19 @@ export const resumeCommand = new Command('resume')
 
         case 'brief': {
           console.log('\n📍 Resuming from: brief.json');
-          const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
-          const storyWithPlot = await runPlotIntake(brief);
-          await outputManager.savePlot(storyWithPlot);
-          const pipelineState: PipelineState = { brief: storyWithPlot, plot: storyWithPlot.plot };
-          const result = await runPipelineIncremental(pipelineState, { onStep, outputManager, format: options.format });
-          spinner.succeed('Book complete!');
+          let pipelineState = await loadPipelineState(folder);
+          if (!pipelineState) throw new Error('Failed to load pipeline state');
+          // Brief exists but no plot - run plot stage first
+          pipelineState = await runPlotStage(pipelineState, { ui });
+          const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
+          ui.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);
           break;
         }
       }
     } catch (error) {
-      spinner.fail('Resume failed');
+      ui.fail('Resume failed');
       console.error(error);
       process.exit(1);
     }
