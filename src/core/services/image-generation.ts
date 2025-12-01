@@ -110,23 +110,54 @@ const getRetryAfterMs = (error: unknown): number | null => {
 };
 
 /**
- * Run Replicate model with rate limit handling
+ * Check if error is a transient prediction failure (worth retrying)
+ */
+const isTransientPredictionError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    // "Prediction failed: null" or similar transient failures
+    return error.message.includes('Prediction failed');
+  }
+  return false;
+};
+
+/**
+ * Run Replicate model with rate limit and transient error handling
  */
 export const runWithRateLimit = async (
   client: Replicate,
   input: Record<string, unknown>,
-  logger?: Logger
+  logger?: Logger,
+  maxRetries = 3
 ): Promise<unknown> => {
-  try {
-    return await client.run(IMAGE_MODEL, { input });
-  } catch (error) {
-    const retryAfter = getRetryAfterMs(error);
-    if (!retryAfter) throw error;
+  let lastError: unknown;
 
-    logRateLimit(logger, 'replicate', Math.ceil(retryAfter / 1000));
-    await sleep(retryAfter);
-    return await client.run(IMAGE_MODEL, { input });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await client.run(IMAGE_MODEL, { input });
+    } catch (error) {
+      lastError = error;
+
+      // Handle rate limiting
+      const retryAfter = getRetryAfterMs(error);
+      if (retryAfter) {
+        logRateLimit(logger, 'replicate', Math.ceil(retryAfter / 1000));
+        await sleep(retryAfter);
+        continue;
+      }
+
+      // Handle transient prediction failures with exponential backoff
+      if (isTransientPredictionError(error) && attempt < maxRetries) {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+        logger?.warn({ attempt, backoffMs, error: (error as Error).message }, 'Prediction failed, retrying...');
+        await sleep(backoffMs);
+        continue;
+      }
+
+      throw error;
+    }
   }
+
+  throw lastError;
 };
 
 /** Build the full prompt with rendering instructions - style at top for emphasis */

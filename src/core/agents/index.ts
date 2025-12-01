@@ -40,4 +40,4 @@ export { plotConversationAgent, type PlotMessage } from './plot-conversation';
 export { plotInterpreterAgent } from './plot-interpreter';
 
 // Brief extractor (outputs Partial<StoryBrief>)
-export { briefExtractorAgent, type BriefExtractorOptions } from './extractor';
+export { briefExtractorAgent, type BriefExtractorOptions } from './brief-extractor';

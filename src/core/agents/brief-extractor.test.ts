@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { briefExtractorAgent } from './extractor';
+import { briefExtractorAgent } from './brief-extractor';
 import type { StoryBrief } from '../schemas';
 
 vi.mock('../services/ai', async (importOriginal) => {

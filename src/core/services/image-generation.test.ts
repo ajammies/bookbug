@@ -194,7 +194,8 @@ describe('generatePageImage', () => {
       generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient })
     ).rejects.toEqual(apiError);
 
-    expect(mockRun).toHaveBeenCalledTimes(2);
+    // maxRetries=3 means 3 total attempts
+    expect(mockRun).toHaveBeenCalledTimes(3);
   });
 
   it('throws immediately on non-429 API errors', async () => {
