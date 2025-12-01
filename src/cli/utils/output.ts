@@ -40,7 +40,7 @@ export interface StoryOutputManager {
   /** Save a character design sprite sheet to assets/characters folder */
   saveCharacterDesign(design: CharacterDesign): Promise<string>;
   /** Save quality analysis result for a page to assets/quality folder */
-  saveQualityResult(pageNumber: number, result: ImageQualityResult): Promise<string>;
+  saveQualityResult(pageNumber: number, result: ImageQualityResult, attempt?: number): Promise<string>;
   /** Save a failed image to assets/failed folder for debugging */
   saveFailedImage(pageNumber: number, attempt: number, url: string): Promise<string>;
 }
@@ -118,8 +118,8 @@ const createManager = (folder: string): StoryOutputManager => ({
     await fs.writeFile(imagePath, imageBuffer);
     return `assets/characters/${filename}`;
   },
-  saveQualityResult: async (pageNumber: number, result: ImageQualityResult): Promise<string> => {
-    const filename = `page-${pageNumber}.json`;
+  saveQualityResult: async (pageNumber: number, result: ImageQualityResult, attempt?: number): Promise<string> => {
+    const filename = attempt ? `page-${pageNumber}-attempt-${attempt}.json` : `page-${pageNumber}.json`;
     const resultPath = path.join(folder, 'assets', 'quality', filename);
     await fs.writeFile(resultPath, JSON.stringify(result, null, 2));
     return `assets/quality/${filename}`;

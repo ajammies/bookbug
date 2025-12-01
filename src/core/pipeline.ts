@@ -56,12 +56,23 @@ export interface PipelineUI {
 }
 
 
+export interface QualityCheckOptions {
+  /** Enable quality checking (default: false) */
+  enabled?: boolean;
+  /** Quality threshold 0-100 (default: 70) */
+  threshold?: number;
+  /** Max retries on failure (default: 2) */
+  maxRetries?: number;
+}
+
 export interface PipelineOptions {
   ui?: PipelineUI;
   outputManager?: StoryOutputManager;
   format?: BookFormatKey;
   logger?: Logger;
   stylePreset?: StylePreset;
+  /** Quality checking options for rendered images */
+  qualityCheck?: QualityCheckOptions;
 }
 
 export interface StageOptions {
@@ -275,7 +286,7 @@ export const runPipelineIncremental = async (
   state: PipelineState,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { ui, outputManager, format = 'square-large', stylePreset: optionsPreset } = options;
+  const { ui, outputManager, format = 'square-large', stylePreset: optionsPreset, qualityCheck, logger } = options;
 
   if (!state.brief) throw new Error('PipelineState requires brief to run pipeline');
   if (!state.plot) throw new Error('PipelineState requires plot to run pipeline');
@@ -319,9 +330,33 @@ export const runPipelineIncremental = async (
       visuals: assembleVisuals(styleGuide, illustratedPages),
       characterDesigns,
     };
-    const renderedPage = await renderPage(currentStory, pageNumber, { format, heroPageUrl: heroPage?.url });
+
+    // Build render options with quality check if enabled
+    const renderOptions = {
+      format,
+      heroPageUrl: heroPage?.url,
+      logger,
+      qualityCheck: qualityCheck?.enabled ? { threshold: qualityCheck.threshold, maxRetries: qualityCheck.maxRetries } : undefined,
+    };
+
+    const renderedPage = await renderPage(currentStory, pageNumber, renderOptions);
     renderedPages.push(renderedPage);
     if (!heroPage) heroPage = renderedPage;
+
+    // Save quality result if available
+    if (outputManager && renderedPage.quality) {
+      await outputManager.saveQualityResult(pageNumber, renderedPage.quality);
+    }
+
+    // Save failed attempts for debugging
+    if (outputManager && renderedPage.failedAttempts) {
+      for (let i = 0; i < renderedPage.failedAttempts.length; i++) {
+        const failed = renderedPage.failedAttempts[i]!;
+        await outputManager.saveFailedImage(pageNumber, i + 1, failed.url);
+        await outputManager.saveQualityResult(pageNumber, failed.quality, i + 1);
+      }
+    }
+
     if (outputManager) await outputManager.savePageImage(renderedPage);
   }
 
