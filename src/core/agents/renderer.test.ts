@@ -12,7 +12,13 @@ vi.mock('../services/image-generation', () => ({
   generatePageImage: vi.fn().mockResolvedValue({ url: 'https://generated.com/image.png' }),
 }));
 
+// Mock image-quality module
+vi.mock('./image-quality', () => ({
+  imageQualityAgent: vi.fn(),
+}));
+
 import { generatePageImage } from '../services/image-generation';
+import { imageQualityAgent } from './image-quality';
 
 const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory => ({
   // StoryBrief fields
@@ -194,6 +200,8 @@ describe('filterStoryForPage', () => {
   });
 });
 
+const mockedImageQualityAgent = vi.mocked(imageQualityAgent);
+
 describe('renderPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -246,6 +254,143 @@ describe('renderPage', () => {
       expect.objectContaining({ name: 'Landscape' }),
       expect.any(Object)
     );
+  });
+
+  describe('with quality check enabled', () => {
+    const mockPassingQuality = {
+      score: 85,
+      characterConsistency: 90,
+      environmentConsistency: 80,
+      aiArtifacts: 85,
+      issues: [],
+      passesQualityBar: true,
+    };
+
+    const mockFailingQuality = {
+      score: 50,
+      characterConsistency: 40,
+      environmentConsistency: 60,
+      aiArtifacts: 50,
+      issues: ['Character proportions wrong', 'Distorted hands'],
+      passesQualityBar: false,
+    };
+
+    it('calls imageQualityAgent when qualityCheck is true', async () => {
+      mockedImageQualityAgent.mockResolvedValue(mockPassingQuality);
+      const story = createMinimalStory();
+
+      await renderPage(story, 1, { qualityCheck: true });
+
+      expect(mockedImageQualityAgent).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns quality result when check passes', async () => {
+      mockedImageQualityAgent.mockResolvedValue(mockPassingQuality);
+      const story = createMinimalStory();
+
+      const result = await renderPage(story, 1, { qualityCheck: true });
+
+      expect(result.quality).toEqual(mockPassingQuality);
+      expect(result.failedAttempts).toBeUndefined();
+    });
+
+    it('retries on quality failure up to maxRetries', async () => {
+      const mockedGeneratePageImage = vi.mocked(generatePageImage);
+      mockedGeneratePageImage
+        .mockResolvedValueOnce({ url: 'https://example.com/attempt1.png' })
+        .mockResolvedValueOnce({ url: 'https://example.com/attempt2.png' })
+        .mockResolvedValueOnce({ url: 'https://example.com/attempt3.png' });
+      mockedImageQualityAgent
+        .mockResolvedValueOnce(mockFailingQuality)
+        .mockResolvedValueOnce(mockFailingQuality)
+        .mockResolvedValueOnce(mockPassingQuality);
+
+      const story = createMinimalStory();
+
+      const result = await renderPage(story, 1, { qualityCheck: { maxRetries: 2 } });
+
+      expect(mockedGeneratePageImage).toHaveBeenCalledTimes(3);
+      expect(mockedImageQualityAgent).toHaveBeenCalledTimes(3);
+      expect(result.url).toBe('https://example.com/attempt3.png');
+      expect(result.quality).toEqual(mockPassingQuality);
+    });
+
+    it('returns failed attempts when retries occur', async () => {
+      const mockedGeneratePageImage = vi.mocked(generatePageImage);
+      mockedGeneratePageImage
+        .mockResolvedValueOnce({ url: 'https://example.com/attempt1.png' })
+        .mockResolvedValueOnce({ url: 'https://example.com/attempt2.png' });
+      mockedImageQualityAgent
+        .mockResolvedValueOnce(mockFailingQuality)
+        .mockResolvedValueOnce(mockPassingQuality);
+
+      const story = createMinimalStory();
+
+      const result = await renderPage(story, 1, { qualityCheck: { maxRetries: 2 } });
+
+      expect(result.failedAttempts).toHaveLength(1);
+      expect(result.failedAttempts![0]!.url).toBe('https://example.com/attempt1.png');
+      expect(result.failedAttempts![0]!.quality).toEqual(mockFailingQuality);
+    });
+
+    it('returns last attempt when all retries fail', async () => {
+      const mockedGeneratePageImage = vi.mocked(generatePageImage);
+      mockedGeneratePageImage
+        .mockResolvedValueOnce({ url: 'https://example.com/attempt1.png' })
+        .mockResolvedValueOnce({ url: 'https://example.com/attempt2.png' })
+        .mockResolvedValueOnce({ url: 'https://example.com/attempt3.png' });
+      mockedImageQualityAgent.mockResolvedValue(mockFailingQuality);
+
+      const story = createMinimalStory();
+
+      const result = await renderPage(story, 1, { qualityCheck: { maxRetries: 2 } });
+
+      expect(result.url).toBe('https://example.com/attempt3.png');
+      expect(result.quality).toEqual(mockFailingQuality);
+      expect(result.failedAttempts).toHaveLength(2);
+    });
+
+    it('uses custom threshold when specified', async () => {
+      mockedImageQualityAgent.mockResolvedValue(mockPassingQuality);
+      const story = createMinimalStory();
+
+      await renderPage(story, 1, { qualityCheck: { threshold: 80 } });
+
+      expect(mockedImageQualityAgent).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Object),
+        expect.objectContaining({ qualityThreshold: 80 })
+      );
+    });
+
+    it('uses default threshold of 70 when not specified', async () => {
+      mockedImageQualityAgent.mockResolvedValue(mockPassingQuality);
+      const story = createMinimalStory();
+
+      await renderPage(story, 1, { qualityCheck: true });
+
+      expect(mockedImageQualityAgent).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Object),
+        expect.objectContaining({ qualityThreshold: 70 })
+      );
+    });
+
+    it('does not call imageQualityAgent when qualityCheck is false', async () => {
+      const story = createMinimalStory();
+
+      await renderPage(story, 1, { qualityCheck: false });
+
+      expect(mockedImageQualityAgent).not.toHaveBeenCalled();
+    });
+
+    it('does not call imageQualityAgent when qualityCheck is undefined', async () => {
+      const story = createMinimalStory();
+
+      await renderPage(story, 1);
+
+      expect(mockedImageQualityAgent).not.toHaveBeenCalled();
+    });
   });
 });
 
