@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, renderBook, type PipelineState, type OnStep } from '../../core/pipeline';
+import { runPipelineIncremental, runPipeline, renderBook, type PipelineState, type OnStep, type PromptConfig } from '../../core/pipeline';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -9,12 +9,16 @@ import {
   StorySchema,
   RenderedBookSchema,
   type BookFormatKey,
+  type PartialStory,
 } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
+import { showSelector } from '../../utils/cli';
 import { loadJson } from '../../utils';
-import { runPlotIntake } from '../prompts/plot-intake';
+
+const promptUser = (config: PromptConfig): Promise<string> =>
+  showSelector({ question: config.question, options: config.options });
 
 const OUTPUT_DIR = './output';
 
@@ -91,6 +95,11 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
 
 const stepMessage = (step: string): string => {
   const messages: Record<string, string> = {
+    'intake': 'Gathering story details...',
+    'intake-skip': 'Story details complete...',
+    'plot-generate': 'Creating plot outline...',
+    'plot-refine': 'Refining plot...',
+    'plot-skip': 'Plot complete...',
     'style-guide': 'Creating style guide...',
     'prose-setup': 'Setting up prose...',
     'character-designs': 'Generating character designs...',
@@ -125,7 +134,13 @@ export const resumeCommand = new Command('resume')
       spinner.succeed(`Found story at: ${info.folder}`);
 
       const outputManager = await loadOutputManager(info.latestFile);
-      const onStep: OnStep = (step) => spinner.start(stepMessage(step));
+      const onStep: OnStep = (step) => {
+        if (step.includes('-skip')) {
+          console.log(`✓ ${stepMessage(step)}`);
+        } else {
+          spinner.start(stepMessage(step));
+        }
+      };
 
       switch (info.stage) {
         case 'complete': {
@@ -159,12 +174,11 @@ export const resumeCommand = new Command('resume')
         }
 
         case 'brief': {
-          console.log('\n📍 Resuming from: brief.json');
+          console.log('\n📍 Resuming from: brief.json (needs plot)');
           const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
-          const storyWithPlot = await runPlotIntake(brief);
-          await outputManager.savePlot(storyWithPlot);
-          const pipelineState: PipelineState = { brief: storyWithPlot, plot: storyWithPlot.plot };
-          const result = await runPipelineIncremental(pipelineState, { onStep, outputManager, format: options.format });
+          // Use unified pipeline which will skip intake (brief is complete) and run plot stage
+          const partialStory: PartialStory = { ...brief };
+          const result = await runPipeline(partialStory, { onStep, outputManager, format: options.format, promptUser });
           spinner.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);
