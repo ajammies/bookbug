@@ -27,16 +27,23 @@ export interface ImageQualityOptions {
   logger?: Logger;
 }
 
+/** Image input: URL string or Buffer (for local files) */
+export type ImageInput = string | Buffer;
+
 /**
  * ImageQualityAgent: Analyzes a rendered image for quality issues.
  * Uses vision to compare the image against the render context.
+ * Accepts either a URL string or a Buffer (for local files).
  */
 export const imageQualityAgent = async (
-  imageUrl: string,
+  image: ImageInput,
   context: PageRenderContext,
   options: ImageQualityOptions = {}
 ): Promise<ImageQualityResult> => {
   const { qualityThreshold = 70, logger } = options;
+
+  // Support both URL strings and Buffers (local files)
+  const imageContent = typeof image === 'string' ? new URL(image) : image;
 
   const result = await generateObject(
     {
@@ -58,7 +65,7 @@ ${JSON.stringify(context, null, 2)}`,
             },
             {
               type: 'image',
-              image: new URL(imageUrl),
+              image: imageContent,
             },
           ],
         },
