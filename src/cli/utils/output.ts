@@ -8,6 +8,7 @@ import type {
   RenderedBook,
   RenderedPage,
   CharacterDesign,
+  ImageQualityResult,
 } from '../../core/schemas';
 import { createStoryFolderName } from './naming';
 import { downloadFile } from '../../utils';
@@ -38,6 +39,10 @@ export interface StoryOutputManager {
   savePageImage(page: RenderedPage): Promise<string>;
   /** Save a character design sprite sheet to assets/characters folder */
   saveCharacterDesign(design: CharacterDesign): Promise<string>;
+  /** Save quality analysis result for a page to assets/quality folder */
+  saveQualityResult(pageNumber: number, result: ImageQualityResult): Promise<string>;
+  /** Save a failed image to assets/failed folder for debugging */
+  saveFailedImage(pageNumber: number, attempt: number, url: string): Promise<string>;
 }
 
 /**
@@ -53,6 +58,8 @@ export const createOutputManager = async (
   await fs.mkdir(folder, { recursive: true });
   await fs.mkdir(path.join(folder, 'assets'), { recursive: true });
   await fs.mkdir(path.join(folder, 'assets', 'characters'), { recursive: true });
+  await fs.mkdir(path.join(folder, 'assets', 'quality'), { recursive: true });
+  await fs.mkdir(path.join(folder, 'assets', 'failed'), { recursive: true });
   return createManager(folder);
 };
 
@@ -110,6 +117,19 @@ const createManager = (folder: string): StoryOutputManager => ({
     const imagePath = path.join(folder, 'assets', 'characters', filename);
     await fs.writeFile(imagePath, imageBuffer);
     return `assets/characters/${filename}`;
+  },
+  saveQualityResult: async (pageNumber: number, result: ImageQualityResult): Promise<string> => {
+    const filename = `page-${pageNumber}.json`;
+    const resultPath = path.join(folder, 'assets', 'quality', filename);
+    await fs.writeFile(resultPath, JSON.stringify(result, null, 2));
+    return `assets/quality/${filename}`;
+  },
+  saveFailedImage: async (pageNumber: number, attempt: number, url: string): Promise<string> => {
+    const imageBuffer = await downloadFile(url);
+    const filename = `page-${pageNumber}-attempt-${attempt}.png`;
+    const imagePath = path.join(folder, 'assets', 'failed', filename);
+    await fs.writeFile(imagePath, imageBuffer);
+    return `assets/failed/${filename}`;
   },
 });
 
