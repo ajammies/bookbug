@@ -18,6 +18,9 @@ import { generateObject } from '../services/ai';
 
 const mockGenerateObject = vi.mocked(generateObject);
 
+// Helper to create mock GenerateObjectResult
+const mockResult = <T>(object: T) => ({ object }) as unknown as Awaited<ReturnType<typeof generateObject>>;
+
 describe('extractorAgent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -25,7 +28,7 @@ describe('extractorAgent', () => {
 
   it('extracts story fields from user message', async () => {
     const extracted: PartialStory = { title: 'Luna the Brave', storyArc: 'A rabbit finds courage' };
-    mockGenerateObject.mockResolvedValue({ object: extracted });
+    mockGenerateObject.mockResolvedValue(mockResult(extracted));
 
     const result = await extractorAgent('A story about Luna, a brave rabbit');
 
@@ -41,7 +44,7 @@ describe('extractorAgent', () => {
   it('merges extracted fields with current story', async () => {
     const current: PartialStory = { title: 'Luna the Brave' };
     const extracted: PartialStory = { storyArc: 'A rabbit finds courage' };
-    mockGenerateObject.mockResolvedValue({ object: extracted });
+    mockGenerateObject.mockResolvedValue(mockResult(extracted));
 
     const result = await extractorAgent('She discovers her inner strength', current);
 
@@ -50,7 +53,7 @@ describe('extractorAgent', () => {
 
   it('includes current story context in prompt', async () => {
     const current: PartialStory = { title: 'Luna the Brave' };
-    mockGenerateObject.mockResolvedValue({ object: {} });
+    mockGenerateObject.mockResolvedValue(mockResult({}));
 
     await extractorAgent('Make it 12 pages', current);
 
@@ -70,7 +73,7 @@ describe('extractorAgent', () => {
 
   it('handles empty current story', async () => {
     const extracted: PartialStory = { title: 'New Story' };
-    mockGenerateObject.mockResolvedValue({ object: extracted });
+    mockGenerateObject.mockResolvedValue(mockResult(extracted));
 
     const result = await extractorAgent('A new story', {});
 
@@ -84,7 +87,7 @@ describe('extractorAgent', () => {
   });
 
   it('includes available styles in system prompt', async () => {
-    mockGenerateObject.mockResolvedValue({ object: {} });
+    mockGenerateObject.mockResolvedValue(mockResult({}));
 
     await extractorAgent('Use watercolor style', {}, { availableStyles: ['watercolor', 'digital'] });
 
@@ -97,8 +100,8 @@ describe('extractorAgent', () => {
   });
 
   it('passes logger to generateObject', async () => {
-    const logger = { debug: vi.fn() } as unknown as Parameters<typeof extractorAgent>[2]['logger'];
-    mockGenerateObject.mockResolvedValue({ object: {} });
+    const logger = { debug: vi.fn() } as unknown as NonNullable<Parameters<typeof extractorAgent>[2]>['logger'];
+    mockGenerateObject.mockResolvedValue(mockResult({}));
 
     await extractorAgent('test', {}, { logger });
 
@@ -120,9 +123,10 @@ describe('extractorAgent', () => {
           { purpose: 'climax', description: 'She faces her fear' },
           { purpose: 'payoff', description: 'She discovers courage' },
         ],
+        allowCreativeLiberty: true,
       },
     };
-    mockGenerateObject.mockResolvedValue({ object: extracted });
+    mockGenerateObject.mockResolvedValue(mockResult(extracted));
 
     const result = await extractorAgent('Make the climax more dramatic', current);
 
@@ -133,7 +137,7 @@ describe('extractorAgent', () => {
   it('overwrites fields with new extractions', async () => {
     const current: PartialStory = { title: 'Old Title', pageCount: 12 };
     const extracted: PartialStory = { title: 'New Title' };
-    mockGenerateObject.mockResolvedValue({ object: extracted });
+    mockGenerateObject.mockResolvedValue(mockResult(extracted));
 
     const result = await extractorAgent('Change title to New Title', current);
 
