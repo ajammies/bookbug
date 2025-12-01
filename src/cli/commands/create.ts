@@ -1,9 +1,6 @@
 import { Command } from 'commander';
 import path from 'path';
 import { runPipeline } from '../../core/pipeline';
-import { briefExtractorAgent } from '../../core/agents';
-import { listStyles } from '../../core/services/style-loader';
-import type { PartialStory } from '../../core/schemas';
 import { displayBook } from '../output/display';
 import { createOutputManager } from '../utils/output';
 import { createLogger } from '../../core/utils/logger';
@@ -11,10 +8,9 @@ import { createCliUI } from '../../utils/cli';
 
 export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
-  .argument('[prompt]', 'Optional initial story idea (can also provide interactively)')
   .option('-o, --output <path>', 'Output directory for generated files')
   .option('--no-save', 'Disable automatic artifact saving')
-  .action(async (prompt: string | undefined, options: { output?: string; save?: boolean }) => {
+  .action(async (options: { output?: string; save?: boolean }) => {
     const ui = createCliUI();
 
     try {
@@ -28,16 +24,7 @@ export const createCommand = new Command('create')
       console.log(`Story folder: ${outputManager.folder}`);
       if (logPath) console.log(`Logging to: ${logPath}`);
 
-      // If user provided initial prompt, extract story details from it
-      let initialStory: PartialStory = {};
-      if (prompt?.trim()) {
-        ui.progress('Understanding your story...');
-        const availableStyles = await listStyles();
-        // Treat prompt as answer to implicit "What story would you like?"
-        initialStory = await briefExtractorAgent('What story would you like to create?', prompt, {}, { availableStyles, logger });
-      }
-
-      const { book } = await runPipeline(initialStory, {
+      const { book } = await runPipeline({
         ui,
         logger,
         outputManager: options.save !== false ? outputManager : undefined,

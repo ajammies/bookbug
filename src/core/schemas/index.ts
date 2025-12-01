@@ -98,15 +98,8 @@ export {
   type Story,
 } from './composed';
 
-// Partial story (for progressive filling)
-export {
-  PartialStorySchema,
-  hasCompleteBrief,
-  hasCompletePlot,
-  hasCompleteProse,
-  hasCompleteVisuals,
-  type PartialStory,
-} from './partial';
+// Stage validators (check if stage can be skipped)
+export { hasCompleteBrief, hasCompletePlot } from './partial';
 
 // Stage 5: Render
 export {

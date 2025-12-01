@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, runPipeline, renderBook, type PipelineState } from '../../core/pipeline';
+import { runPipelineIncremental, runPlotStage, renderBook, type PipelineState } from '../../core/pipeline';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -60,6 +60,7 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   if (files.includes('story.json')) {
     const story = StorySchema.parse(await loadJson(path.join(folder, 'story.json')));
     return {
+      history: [],
       brief: story,
       plot: story.plot,
       styleGuide: story.visuals.style,
@@ -73,6 +74,7 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   if (files.includes('prose.json')) {
     const storyWithProse = StoryWithProseSchema.parse(await loadJson(path.join(folder, 'prose.json')));
     return {
+      history: [],
       brief: storyWithProse,
       plot: storyWithProse.plot,
       proseSetup: { logline: storyWithProse.prose.logline, theme: storyWithProse.prose.theme, styleNotes: storyWithProse.prose.styleNotes },
@@ -82,7 +84,12 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
 
   if (files.includes('plot.json')) {
     const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
-    return { brief: storyWithPlot, plot: storyWithPlot.plot };
+    return { history: [], brief: storyWithPlot, plot: storyWithPlot.plot };
+  }
+
+  if (files.includes('brief.json')) {
+    const brief = StoryBriefSchema.parse(await loadJson(path.join(folder, 'brief.json')));
+    return { history: [], brief };
   }
 
   return null;
@@ -143,12 +150,11 @@ export const resumeCommand = new Command('resume')
 
         case 'brief': {
           console.log('\n📍 Resuming from: brief.json');
-          const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
-          const result = await runPipeline(brief, {
-            ui,
-            outputManager,
-            format: options.format,
-          });
+          let pipelineState = await loadPipelineState(folder);
+          if (!pipelineState) throw new Error('Failed to load pipeline state');
+          // Brief exists but no plot - run plot stage first
+          pipelineState = await runPlotStage(pipelineState, { ui });
+          const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
           ui.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);

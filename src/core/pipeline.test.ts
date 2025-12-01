@@ -194,7 +194,7 @@ describe('renderBook', () => {
 
 describe('runPipelineIncremental', () => {
   const mockProseSetup = { logline: mockProse.logline, theme: mockProse.theme, styleNotes: mockProse.styleNotes };
-  const mockPipelineState: PipelineState = { brief: mockStoryWithPlot, plot: mockStoryWithPlot.plot };
+  const mockPipelineState: PipelineState = { history: [], brief: mockStoryWithPlot, plot: mockStoryWithPlot.plot };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -273,7 +273,7 @@ describe('runPipelineIncremental', () => {
   });
 
   it('throws when plot is missing', async () => {
-    const stateWithoutPlot: PipelineState = { brief: mockStoryWithPlot, plot: undefined };
+    const stateWithoutPlot: PipelineState = { history: [], brief: mockStoryWithPlot, plot: undefined };
     await expect(runPipelineIncremental(stateWithoutPlot)).rejects.toThrow('requires plot');
   });
 });
