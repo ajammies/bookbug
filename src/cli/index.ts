@@ -6,6 +6,7 @@ import { resumeCommand } from './commands/resume';
 import { writeCommand } from './commands/write';
 import { directCommand } from './commands/direct';
 import { renderCommand } from './commands/render';
+import { qualityCommand } from './commands/quality';
 
 const program = new Command();
 
@@ -19,5 +20,6 @@ program.addCommand(resumeCommand);
 program.addCommand(writeCommand);
 program.addCommand(directCommand);
 program.addCommand(renderCommand);
+program.addCommand(qualityCommand);
 
 program.parse();
