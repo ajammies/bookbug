@@ -38,3 +38,6 @@ export { conversationAgent, type Message, type MessageRole, type ConversationAge
 export { plotAgent } from './plot';
 export { plotConversationAgent, type PlotMessage } from './plot-conversation';
 export { plotInterpreterAgent } from './plot-interpreter';
+
+// Unified extractor (outputs PartialStory)
+export { extractorAgent, type ExtractorAgentOptions } from './extractor';
