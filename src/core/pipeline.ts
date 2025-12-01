@@ -354,29 +354,16 @@ export const runPipelineIncremental = async (
  * Run the complete pipeline from any starting point.
  * Automatically skips completed stages based on input state.
  *
- * @param initialInput - String (initial message) or PartialStory (resume state)
+ * @param initialStory - PartialStory to start from (empty for new story)
  * @param options - Pipeline options including promptUser callback
  */
 export const runPipeline = async (
-  initialInput: string | PartialStory,
+  initialStory: PartialStory,
   options: UnifiedPipelineOptions
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
   const { promptUser, onStep, outputManager, format = 'square-large', logger, stylePreset: optionsPreset } = options;
 
-  // Initialize state from input
-  const initialStory: PartialStory = typeof initialInput === 'string'
-    ? {}
-    : initialInput;
-  const initialHistory: Message[] = typeof initialInput === 'string' && initialInput.trim()
-    ? [{ role: 'assistant', content: 'Let\'s create a children\'s book!' }, { role: 'user', content: initialInput }]
-    : [];
-
-  // If we have an initial message, run extraction first
-  let state: StageState = { story: initialStory, history: initialHistory };
-  if (typeof initialInput === 'string' && initialInput.trim()) {
-    const availableStyles = await listStyles();
-    state.story = await extractorAgent(initialInput, state.story, { availableStyles, logger });
-  }
+  let state: StageState = { story: initialStory, history: [] };
 
   // Run intake stage (skips if brief is complete)
   state = await runIntakeStage(state, { promptUser, onStep, logger });

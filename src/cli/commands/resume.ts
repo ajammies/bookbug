@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, renderBook, type PipelineState, type OnStep } from '../../core/pipeline';
+import { runPipelineIncremental, runPipeline, renderBook, type PipelineState, type OnStep } from '../../core/pipeline';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -14,7 +14,7 @@ import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
 import { loadJson } from '../../utils';
-import { runPlotIntake } from '../prompts/plot-intake';
+import { showSelector } from '../../utils/cli';
 
 const OUTPUT_DIR = './output';
 
@@ -161,10 +161,13 @@ export const resumeCommand = new Command('resume')
         case 'brief': {
           console.log('\n📍 Resuming from: brief.json');
           const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
-          const storyWithPlot = await runPlotIntake(brief);
-          await outputManager.savePlot(storyWithPlot);
-          const pipelineState: PipelineState = { brief: storyWithPlot, plot: storyWithPlot.plot };
-          const result = await runPipelineIncremental(pipelineState, { onStep, outputManager, format: options.format });
+          // Use runPipeline which handles plot generation and conversation
+          const result = await runPipeline(brief, {
+            promptUser: showSelector,
+            onStep,
+            outputManager,
+            format: options.format,
+          });
           spinner.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);

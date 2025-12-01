@@ -1,14 +1,19 @@
 import { Command } from 'commander';
 import path from 'path';
-import { runPipelineIncremental, type PipelineState, type OnStep } from '../../core/pipeline';
-import { runStoryIntake } from '../prompts/story-intake';
-import { runPlotIntake } from '../prompts/plot-intake';
+import ora from 'ora';
+import { runPipeline, type OnStep } from '../../core/pipeline';
+import { extractorAgent } from '../../core/agents';
+import { listStyles } from '../../core/services/style-loader';
+import type { PartialStory } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
-import { createOutputManager, type StoryOutputManager } from '../utils/output';
+import { createOutputManager } from '../utils/output';
 import { createLogger } from '../../core/utils/logger';
+import { showSelector } from '../../utils/cli';
 
 const STEP_MESSAGES: Record<string, string> = {
+  'intake': 'Gathering story details...',
+  'plot': 'Creating plot outline...',
   'style-guide': 'Creating style guide...',
   'prose-setup': 'Setting up prose...',
   'character-designs': 'Generating character designs...',
@@ -31,31 +36,32 @@ export const createCommand = new Command('create')
   .option('--no-save', 'Disable automatic artifact saving')
   .action(async (prompt: string | undefined, options: { output?: string; save?: boolean }) => {
     const spinner = createSpinner();
-    let outputManager: StoryOutputManager;
 
     try {
-      const brief = await runStoryIntake(prompt);
+      console.log('\n📚 Let\'s create a children\'s book!\n');
 
-      outputManager = await createOutputManager(brief.title);
-      const logger = createLogger({ title: brief.title });
+      // Create output manager with temporary name, will be updated when we have title
+      const outputManager = await createOutputManager('untitled');
+      const logger = createLogger({ title: 'create' });
       const logName = logger.bindings()?.name as string | undefined;
       const logPath = logName ? path.join(process.cwd(), 'logs', `${logName}.log`) : null;
 
-      await outputManager.saveBrief(brief);
-      console.log(`\nStory folder created: ${outputManager.folder}`);
+      console.log(`Story folder: ${outputManager.folder}`);
       if (logPath) console.log(`Logging to: ${logPath}`);
 
-      const storyWithPlot = await runPlotIntake(brief);
-      await outputManager.savePlot(storyWithPlot);
+      // If user provided initial prompt, extract story details from it
+      let initialStory: PartialStory = {};
+      if (prompt?.trim()) {
+        const extractSpinner = ora('Understanding your story...').start();
+        const availableStyles = await listStyles();
+        initialStory = await extractorAgent(prompt, {}, { availableStyles, logger });
+        extractSpinner.stop();
+      }
 
       const onStep: OnStep = (step) => spinner.start(stepMessage(step));
 
-      const pipelineState: PipelineState = {
-        brief: storyWithPlot,
-        plot: storyWithPlot.plot,
-      };
-
-      const { book } = await runPipelineIncremental(pipelineState, {
+      const { book } = await runPipeline(initialStory, {
+        promptUser: showSelector,
         logger,
         onStep,
         outputManager: options.save !== false ? outputManager : undefined,
