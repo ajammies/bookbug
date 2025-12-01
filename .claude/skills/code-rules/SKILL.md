@@ -24,6 +24,7 @@ description: Code editing rules. Reference before complex edits.
 - Always flow data through parameters, not global state
 - Use 2-3 params as direct arguments; 4+ use options object
 - Always use logger (pino) not console.log
+- Prefer descriptive function names: `showSelector` over `promptUser`, `extractorAgent` over `interpreterAgent`
 
 ## Agent Design (LLM-driven features)
 

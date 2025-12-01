@@ -22,13 +22,15 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - `src/core/schemas/` - Zod schemas and TypeScript types
 - `src/core/agents/` - LLM agents (generateObject calls)
 - `src/core/pipeline.ts` - Pipeline orchestration
-- `src/cli/commands/` - CLI commands (create, write, direct, render)
-- `src/cli/prompts/` - Interactive prompts (story-intake, plot-intake)
+- `src/cli/commands/` - CLI commands (create, brief, resume, render)
+- `src/utils/` - Shared utilities (no project imports allowed)
+- `src/utils/cli/` - CLI-specific utilities (showSelector, progress-rotator)
 - `docs/ARCHITECTURE.md` - Type system and pipeline diagrams (keep updated)
 - `docs/plans/` - Feature planning docs
 
 # Workflow
 - Changes should be small, contained, and atomic
+- Break large refactors into atomic PRs - one concern per PR
 - New features: 
   - Enter Planning mode to create plan, write to `docs/plans/plan-<feature-name>.md` and wait for user approval
     - plan includes goals, approach, files to change, test strategy   
@@ -79,6 +81,7 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - Provide domain knowledge, not step-by-step instructions - the model knows how to converse
 
 # Skills
+- Use pr-workflow skill for all feature work
 - Use code-rules skill when entering planning mode or before complex edits
 - Use create-skill skill when creating or updating skills
 - Use reflect skill at session end or after significant work
@@ -123,3 +126,4 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - Check data shapes when connecting different parts of system (id vs name mismatches)
 - One spike to validate assumptions, then commit - avoid fix-forward chains
 - User will course-correct quickly; don't debate, just iterate
+- Agree on naming upfront before implementing - avoid rename PRs later
