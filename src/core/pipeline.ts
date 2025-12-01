@@ -140,7 +140,9 @@ export const runIntakeStage = async (
     const answer = await ui.prompt({ question: response.question, options: response.options });
 
     ui.progress('Processing...');
-    story = await extractorAgent(answer, story, { availableStyles, logger });
+    // Pass question context so extractor understands what "Yes" confirms
+    const messageWithContext = `Question: ${response.question}\nAnswer: ${answer}`;
+    story = await extractorAgent(messageWithContext, story, { availableStyles, logger });
     history = [...history, { role: 'assistant', content: response.question }, { role: 'user', content: answer }];
   }
 
@@ -187,7 +189,9 @@ export const runPlotStage = async (
     const answer = await ui.prompt({ question: response.message, options: response.options });
 
     ui.progress('Updating story...');
-    const updates = await plotInterpreterAgent(answer, storyWithPlot);
+    // Pass question context so interpreter understands what "Yes" confirms
+    const messageWithContext = `Question: ${response.message}\nAnswer: ${answer}`;
+    const updates = await plotInterpreterAgent(messageWithContext, storyWithPlot);
     story = { ...story, ...updates };
     plotHistory.push({ role: 'assistant', content: response.message }, { role: 'user', content: answer });
   }
