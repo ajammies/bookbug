@@ -178,6 +178,8 @@ describe('renderBook', () => {
       saveBook: vi.fn(),
       savePageImage: vi.fn().mockResolvedValue('/test/folder/assets/page-1.png'),
       saveCharacterDesign: vi.fn().mockResolvedValue('assets/characters/test.png'),
+      saveQualityResult: vi.fn().mockResolvedValue('assets/quality/page-1.json'),
+      saveFailedImage: vi.fn().mockResolvedValue('assets/failed/page-1-attempt-1.png'),
     };
 
     await renderBook(mockComposedStory, { outputManager });
@@ -252,6 +254,8 @@ describe('runPipelineIncremental', () => {
       saveBook: vi.fn(),
       savePageImage: vi.fn().mockResolvedValue('/test/folder/assets/page-1.png'),
       saveCharacterDesign: vi.fn().mockResolvedValue('assets/characters/test.png'),
+      saveQualityResult: vi.fn().mockResolvedValue('assets/quality/page-1.json'),
+      saveFailedImage: vi.fn().mockResolvedValue('assets/failed/page-1-attempt-1.png'),
     };
 
     await runPipelineIncremental(mockPipelineState, { outputManager });

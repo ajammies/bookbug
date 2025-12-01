@@ -1,10 +1,21 @@
-import type { ComposedStory, RenderedBook, RenderedPage, BookFormatKey, PageRenderContext } from '../schemas';
+import type { ComposedStory, RenderedBook, RenderedPage, BookFormatKey, PageRenderContext, ImageQualityResult } from '../schemas';
 import { BOOK_FORMATS } from '../schemas';
 import { generatePageImage } from '../services/image-generation';
+import { imageQualityAgent } from './image-quality';
+import type { Logger } from '../utils/logger';
+
+export interface QualityCheckResult {
+  url: string;
+  quality?: ImageQualityResult;
+  failedAttempts?: Array<{ url: string; quality: ImageQualityResult }>;
+}
 
 export interface RenderPageOptions {
   format?: BookFormatKey;
   heroPageUrl?: string;
+  /** Enable quality checking with optional threshold (default 70) */
+  qualityCheck?: boolean | { threshold?: number; maxRetries?: number };
+  logger?: Logger;
 }
 
 /** Render a single page image. Pass heroPageUrl (page 1) for style consistency. */
@@ -12,12 +23,36 @@ export const renderPage = async (
   story: ComposedStory,
   pageNumber: number,
   options: RenderPageOptions = {}
-): Promise<RenderedPage> => {
-  const { format = 'square-large', heroPageUrl } = options;
+): Promise<RenderedPage & { quality?: ImageQualityResult; failedAttempts?: Array<{ url: string; quality: ImageQualityResult }> }> => {
+  const { format = 'square-large', heroPageUrl, qualityCheck, logger } = options;
   const storySlice = filterStoryForPage(story, pageNumber);
   const formatSpec = BOOK_FORMATS[format];
-  const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl });
-  return { pageNumber, url: result.url };
+
+  // No quality check - simple render
+  if (!qualityCheck) {
+    const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl, logger });
+    return { pageNumber, url: result.url };
+  }
+
+  // Quality check enabled
+  const threshold = typeof qualityCheck === 'object' ? qualityCheck.threshold ?? 70 : 70;
+  const maxRetries = typeof qualityCheck === 'object' ? qualityCheck.maxRetries ?? 2 : 2;
+  const failedAttempts: Array<{ url: string; quality: ImageQualityResult }> = [];
+
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl, logger });
+    const quality = await imageQualityAgent(result.url, storySlice, { qualityThreshold: threshold, logger });
+
+    if (quality.passesQualityBar || attempt > maxRetries) {
+      return { pageNumber, url: result.url, quality, failedAttempts: failedAttempts.length > 0 ? failedAttempts : undefined };
+    }
+
+    logger?.warn({ pageNumber, attempt, score: quality.score, issues: quality.issues }, 'Image failed quality check, retrying');
+    failedAttempts.push({ url: result.url, quality });
+  }
+
+  // Should never reach here, but TypeScript needs it
+  throw new Error('Unexpected: exceeded max retries without returning');
 };
 
 /**

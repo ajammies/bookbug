@@ -17,13 +17,16 @@ description: |
    ```
    Prefixes: `feat/` `fix/` `refactor/` `docs/`
 
-2. **Plan** - Invoke `code-rules` skill, enter planning mode, propose the plan
+2. **Plan** - Invoke `code-rules` skill, propose the plan with atomic commits
+   - Break feature into small, independent commits (each ~1-3 files)
+   - Each commit should be: deletable, testable, single-purpose
+   - Format commits as numbered list with clear scope
    ⏸️ Wait for user approval of plan
 
-3. **Write plan** - Exit plan mode, write plan to `docs/plans/plan-<feature>.md`
+3. **Write plan** - Write plan to `docs/plans/plan-<feature>.md`
 
 4. **Implement** - Make small changes, use `commit` skill after each logical unit
-   ⟳ Repeat: implement → commit → wait for feedback
+   ⟳ Repeat: implement → commit → ⏸️ wait for feedback
 
 5. **Test** - Run `npm run test:run && npm run typecheck`
 
