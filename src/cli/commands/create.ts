@@ -1,21 +1,14 @@
 import { Command } from 'commander';
 import path from 'path';
-import { runPipeline, type OnStep, type PromptConfig } from '../../core/pipeline';
+import { runPipelineIncremental, type PipelineState, type OnStep } from '../../core/pipeline';
+import { runStoryIntake } from '../prompts/story-intake';
+import { runPlotIntake } from '../prompts/plot-intake';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, type StoryOutputManager } from '../utils/output';
-import { showSelector } from '../../utils/cli';
 import { createLogger } from '../../core/utils/logger';
 
-const promptUser = (config: PromptConfig): Promise<string> =>
-  showSelector({ question: config.question, options: config.options });
-
 const STEP_MESSAGES: Record<string, string> = {
-  'intake': 'Gathering story details...',
-  'intake-skip': 'Story details complete, skipping intake...',
-  'plot-generate': 'Creating plot outline...',
-  'plot-refine': 'Refining plot...',
-  'plot-skip': 'Plot complete, skipping...',
   'style-guide': 'Creating style guide...',
   'prose-setup': 'Setting up prose...',
   'character-designs': 'Generating character designs...',
@@ -38,51 +31,35 @@ export const createCommand = new Command('create')
   .option('--no-save', 'Disable automatic artifact saving')
   .action(async (prompt: string | undefined, options: { output?: string; save?: boolean }) => {
     const spinner = createSpinner();
-    let outputManager: StoryOutputManager | undefined;
+    let outputManager: StoryOutputManager;
 
     try {
-      console.log('\n📚 Let\'s create a children\'s book!\n');
+      const brief = await runStoryIntake(prompt);
 
-      const logger = createLogger({ title: 'bookbug' });
+      outputManager = await createOutputManager(brief.title);
+      const logger = createLogger({ title: brief.title });
       const logName = logger.bindings()?.name as string | undefined;
       const logPath = logName ? path.join(process.cwd(), 'logs', `${logName}.log`) : null;
-      if (logPath) console.log(`Logging to: ${logPath}\n`);
 
-      const onStep: OnStep = (step) => {
-        // Don't show spinner for skip messages, just log
-        if (step.includes('-skip')) {
-          console.log(`✓ ${stepMessage(step)}`);
-        } else {
-          spinner.start(stepMessage(step));
-        }
+      await outputManager.saveBrief(brief);
+      console.log(`\nStory folder created: ${outputManager.folder}`);
+      if (logPath) console.log(`Logging to: ${logPath}`);
+
+      const storyWithPlot = await runPlotIntake(brief);
+      await outputManager.savePlot(storyWithPlot);
+
+      const onStep: OnStep = (step) => spinner.start(stepMessage(step));
+
+      const pipelineState: PipelineState = {
+        brief: storyWithPlot,
+        plot: storyWithPlot.plot,
       };
 
-      const { story, book } = await runPipeline(prompt ?? '', {
+      const { book } = await runPipelineIncremental(pipelineState, {
         logger,
         onStep,
-        promptUser,
-        outputManager: undefined, // Will be set after we have a title
+        outputManager: options.save !== false ? outputManager : undefined,
       });
-
-      // Create output manager with final title and save everything
-      outputManager = await createOutputManager(story.title);
-      console.log(`\nStory folder created: ${outputManager.folder}`);
-
-      if (options.save !== false) {
-        await outputManager.saveBrief(story);
-        await outputManager.savePlot(story);
-        await outputManager.saveProse(story);
-        await outputManager.saveStory(story);
-        await outputManager.saveBook(book);
-        for (const page of book.pages) {
-          await outputManager.savePageImage(page);
-        }
-        if (story.characterDesigns) {
-          for (const design of story.characterDesigns) {
-            await outputManager.saveCharacterDesign(design);
-          }
-        }
-      }
 
       spinner.succeed('Book complete!');
       displayBook(book);

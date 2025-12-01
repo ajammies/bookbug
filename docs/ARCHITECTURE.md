@@ -290,24 +290,13 @@ type Story = ComposedStory
 
 Agents are named after their output for clarity.
 
-### Unified Extractor
-| Agent | Input | Output | Purpose |
-|-------|-------|--------|---------|
-| `extractorAgent` | `string` + `PartialStory` | `PartialStory` | Parse any input (natural language, JSON) into story fields |
-
-The extractor handles all story field extraction, replacing the need for separate intake/plot interpreters.
-
-### Conversation Agents
-| Agent | Input | Output | Purpose |
-|-------|-------|--------|---------|
-| `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
-| `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
-| `plotConversationAgent` | `StoryWithPlot` + `PlotMessage[]` | `PlotConversationResponse` | Guide plot refinement |
-
-### Legacy Intake Agents (deprecated, use extractorAgent)
+### Intake Agents
 | Agent | Input | Output | Purpose |
 |-------|-------|--------|---------|
 | `interpreterAgent` | `string` + `Partial<StoryBrief>` | `Partial<StoryBrief>` | Parse user message into brief fields |
+| `conversationAgent` | `Partial<StoryBrief>` + `Message[]` | `ConversationResponse` | Guide story intake conversation |
+| `plotAgent` | `StoryBrief` | `PlotStructure` | Generate plot beats from brief |
+| `plotConversationAgent` | `StoryWithPlot` + `PlotMessage[]` | `PlotConversationResponse` | Guide plot refinement |
 | `plotInterpreterAgent` | `string` + `StoryWithPlot` | `PlotStructure` | Parse feedback into plot updates |
 
 ### Batch Agents (used by CLI commands)

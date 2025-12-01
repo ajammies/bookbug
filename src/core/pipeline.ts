@@ -14,11 +14,6 @@ import type {
   VisualStyleGuide,
   ProseSetup,
   CharacterDesign,
-  PartialStory,
-} from './schemas';
-import {
-  hasCompleteBrief,
-  hasCompletePlot,
 } from './schemas';
 import {
   proseAgent,
@@ -31,17 +26,11 @@ import {
   renderPage,
   renderPageMock,
   createBook,
-  extractorAgent,
-  conversationAgent,
-  plotAgent,
-  plotConversationAgent,
   type StylePreset,
-  type Message,
-  type PlotMessage,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
 import type { Logger } from './utils/logger';
-import { loadStylePreset, listStyles } from './services/style-loader';
+import { loadStylePreset } from './services/style-loader';
 
 // ============================================================================
 // Types
@@ -49,33 +38,12 @@ import { loadStylePreset, listStyles } from './services/style-loader';
 
 export type OnStep = (step: string) => void;
 
-/**
- * Prompt configuration for user interaction
- */
-export interface PromptConfig {
-  question: string;
-  options: string[];
-}
-
-/**
- * Callback for prompting user during intake/plot stages
- * Returns the user's response string
- */
-export type PromptUser = (config: PromptConfig) => Promise<string>;
-
 export interface PipelineOptions {
   onStep?: OnStep;
   outputManager?: StoryOutputManager;
   format?: BookFormatKey;
   logger?: Logger;
   stylePreset?: StylePreset;
-}
-
-/**
- * Extended options for unified pipeline that includes intake/plot stages
- */
-export interface UnifiedPipelineOptions extends PipelineOptions {
-  promptUser: PromptUser;
 }
 
 /**
@@ -243,176 +211,6 @@ export const runPipelineIncremental = async (
   await outputManager?.saveBook(book);
 
   return { story: finalStory, book };
-};
-
-// ============================================================================
-// Unified Pipeline Stages
-// ============================================================================
-
-/**
- * Stage state - story + conversation history that flows between stages
- */
-interface StageState {
-  story: PartialStory;
-  history: Message[];
-}
-
-/**
- * Intake stage: Gather story brief through conversation
- * Skips if brief is already complete
- */
-const runIntakeStage = async (
-  state: StageState,
-  options: { promptUser: PromptUser; onStep?: OnStep; logger?: Logger }
-): Promise<StageState> => {
-  if (hasCompleteBrief(state.story)) {
-    options.onStep?.('intake-skip');
-    return state;
-  }
-
-  options.onStep?.('intake');
-  const availableStyles = await listStyles();
-  let { story, history } = state;
-
-  while (!hasCompleteBrief(story)) {
-    const response = await conversationAgent(story, history, { availableStyles });
-
-    if (response.isComplete) break;
-
-    const userInput = await options.promptUser({
-      question: response.question,
-      options: response.options,
-    });
-
-    story = await extractorAgent(userInput, story, { availableStyles, logger: options.logger });
-
-    history = [
-      ...history,
-      { role: 'assistant', content: response.question },
-      { role: 'user', content: userInput },
-    ];
-  }
-
-  return { story, history };
-};
-
-/**
- * Plot stage: Generate and refine plot structure
- * Skips if plot is already complete
- * Receives history from intake stage for context
- */
-const runPlotStage = async (
-  state: StageState,
-  options: { promptUser: PromptUser; onStep?: OnStep; logger?: Logger }
-): Promise<StageState> => {
-  if (hasCompletePlot(state.story)) {
-    options.onStep?.('plot-skip');
-    return state;
-  }
-
-  options.onStep?.('plot-generate');
-
-  // Need complete brief to generate plot
-  if (!hasCompleteBrief(state.story)) {
-    throw new Error('Cannot run plot stage without complete brief');
-  }
-
-  let { story, history } = state;
-
-  // Generate initial plot if missing
-  if (!story.plot) {
-    const plot = await plotAgent(story as StoryBrief);
-    story = { ...story, plot };
-  }
-
-  // Plot conversation loop - uses history from intake for context
-  const plotHistory: PlotMessage[] = history.map(m => ({
-    role: m.role,
-    content: m.content,
-  }));
-
-  while (true) {
-    options.onStep?.('plot-refine');
-    const response = await plotConversationAgent(story as StoryWithPlot, plotHistory);
-
-    if (response.isComplete) break;
-
-    const userInput = await options.promptUser({
-      question: response.message,
-      options: response.options,
-    });
-
-    // Use extractor to apply changes (it handles plot fields)
-    story = await extractorAgent(userInput, story, { logger: options.logger });
-
-    plotHistory.push(
-      { role: 'assistant', content: response.message },
-      { role: 'user', content: userInput }
-    );
-  }
-
-  // Update combined history
-  const newHistory: Message[] = plotHistory.map(m => ({
-    role: m.role as 'user' | 'assistant',
-    content: m.content,
-  }));
-
-  return { story, history: newHistory };
-};
-
-/**
- * Unified pipeline: Runs all stages from any starting point
- *
- * Pass any partial story - pipeline runs only missing stages:
- * - Empty/partial brief → runs intake conversation
- * - Complete brief, no plot → generates and refines plot
- * - Complete brief + plot → skips to prose/visuals/render
- *
- * Conversation history flows between intake and plot stages,
- * giving plot context about what user told us during intake.
- */
-export const runPipeline = async (
-  initialInput: string | PartialStory,
-  options: UnifiedPipelineOptions
-): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { promptUser, onStep, outputManager, format = 'square-large', logger, stylePreset: optionsPreset } = options;
-
-  // Start with initial story state
-  const availableStyles = await listStyles();
-  let state: StageState = {
-    story: typeof initialInput === 'string'
-      ? await extractorAgent(initialInput, {}, { availableStyles, logger })
-      : initialInput,
-    history: [],
-  };
-
-  // Run intake stage (conversation if brief incomplete)
-  state = await runIntakeStage(state, { promptUser, onStep, logger });
-
-  // Run plot stage (generate + refine if plot incomplete)
-  state = await runPlotStage(state, { promptUser, onStep, logger });
-
-  // At this point we have a complete StoryWithPlot
-  if (!hasCompletePlot(state.story)) {
-    throw new Error('Pipeline error: story should have complete plot at this point');
-  }
-
-  // Convert to PipelineState for incremental processing
-  const pipelineState: PipelineState = {
-    brief: state.story as StoryBrief,
-    plot: state.story.plot,
-    // Include any other artifacts that might have been extracted
-    proseSetup: state.story.prose ? {
-      logline: state.story.prose.logline,
-      theme: state.story.prose.theme,
-      styleNotes: state.story.prose.styleNotes,
-    } : undefined,
-    prosePages: state.story.prose?.pages,
-    characterDesigns: state.story.characterDesigns,
-  };
-
-  // Run remaining stages (prose, visuals, render)
-  return runPipelineIncremental(pipelineState, { onStep, outputManager, format, logger, stylePreset: optionsPreset });
 };
 
 // ============================================================================
