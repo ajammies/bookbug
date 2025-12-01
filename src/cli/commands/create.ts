@@ -59,8 +59,14 @@ export const createCommand = new Command('create')
 
       const onStep: OnStep = (step) => spinner.start(stepMessage(step));
 
+      // Wrap showSelector to stop spinner before user interaction (defensive)
+      const promptUser = async (config: { question: string; options: string[] }) => {
+        spinner.stop();
+        return showSelector(config);
+      };
+
       const { book } = await runPipeline(initialStory, {
-        promptUser: showSelector,
+        promptUser,
         logger,
         onStep,
         outputManager: options.save !== false ? outputManager : undefined,

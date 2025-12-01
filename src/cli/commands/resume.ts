@@ -161,9 +161,14 @@ export const resumeCommand = new Command('resume')
         case 'brief': {
           console.log('\n📍 Resuming from: brief.json');
           const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
+          // Wrap showSelector to stop spinner before user interaction (defensive)
+          const promptUser = async (config: { question: string; options: string[] }) => {
+            spinner.stop();
+            return showSelector(config);
+          };
           // Use runPipeline which handles plot generation and conversation
           const result = await runPipeline(brief, {
-            promptUser: showSelector,
+            promptUser,
             onStep,
             outputManager,
             format: options.format,
