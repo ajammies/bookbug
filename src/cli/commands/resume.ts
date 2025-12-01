@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, runPipeline, renderBook, type PipelineState, type OnStep } from '../../core/pipeline';
+import { runPipelineIncremental, runPipeline, renderBook, type PipelineState } from '../../core/pipeline';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -10,11 +10,10 @@ import {
   RenderedBookSchema,
   type BookFormatKey,
 } from '../../core/schemas';
-import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
 import { loadJson } from '../../utils';
-import { showSelector } from '../../utils/cli';
+import { createCliUI } from '../../utils/cli';
 
 const OUTPUT_DIR = './output';
 
@@ -89,29 +88,13 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   return null;
 };
 
-const stepMessage = (step: string): string => {
-  const messages: Record<string, string> = {
-    'style-guide': 'Creating style guide...',
-    'prose-setup': 'Setting up prose...',
-    'character-designs': 'Generating character designs...',
-  };
-  if (messages[step]) return messages[step];
-  const match = step.match(/^(?:page-(\d+)-(.+)|render-(\d+))$/);
-  if (match?.[3]) return `Rendering page ${match[3]}...`;
-  if (match?.[1] && match[2]) {
-    const phaseNames: Record<string, string> = { prose: 'Writing', visuals: 'Directing', render: 'Rendering' };
-    return `${phaseNames[match[2]] ?? match[2]} page ${match[1]}...`;
-  }
-  return `${step}...`;
-};
-
 export const resumeCommand = new Command('resume')
   .description('Resume creating a story from where it left off')
   .argument('[folder]', 'Story folder path (defaults to latest)')
   .option('-f, --format <format>', 'Book format for rendering', 'square-large')
   .option('-m, --mock', 'Use mock images instead of real generation')
   .action(async (folderArg: string | undefined, options: { format: BookFormatKey; mock?: boolean }) => {
-    const spinner = createSpinner();
+    const ui = createCliUI();
 
     try {
       const folder = folderArg ?? (await findLatestStoryFolder());
@@ -120,12 +103,11 @@ export const resumeCommand = new Command('resume')
         process.exit(1);
       }
 
-      spinner.start('Detecting story progress...');
+      ui.progress('Detecting story progress...');
       const info = await detectStage(folder);
-      spinner.succeed(`Found story at: ${info.folder}`);
+      ui.succeed(`Found story at: ${info.folder}`);
 
       const outputManager = await loadOutputManager(info.latestFile);
-      const onStep: OnStep = (step) => spinner.start(stepMessage(step));
 
       switch (info.stage) {
         case 'complete': {
@@ -138,8 +120,9 @@ export const resumeCommand = new Command('resume')
         case 'story': {
           console.log('\n📍 Resuming from: story.json (rendering images)');
           const story = StorySchema.parse(await loadJson(info.latestFile));
+          const onStep = (step: string) => ui.progress(`Rendering page ${step.replace('render-', '')}...`);
           const book = await renderBook(story, { mock: options.mock, format: options.format, outputManager, onStep });
-          spinner.succeed('Book rendered');
+          ui.succeed('Book rendered');
           await outputManager.saveBook(book);
           displayBook(book);
           console.log(`\nBook saved to: ${folder}/book.json`);
@@ -151,8 +134,8 @@ export const resumeCommand = new Command('resume')
           console.log(`\n📍 Resuming from: ${info.stage}.json`);
           const pipelineState = await loadPipelineState(folder);
           if (!pipelineState) throw new Error('Failed to load pipeline state');
-          const result = await runPipelineIncremental(pipelineState, { onStep, outputManager, format: options.format });
-          spinner.succeed('Book complete!');
+          const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
+          ui.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);
           break;
@@ -161,26 +144,19 @@ export const resumeCommand = new Command('resume')
         case 'brief': {
           console.log('\n📍 Resuming from: brief.json');
           const brief = StoryBriefSchema.parse(await loadJson(info.latestFile));
-          // Wrap showSelector to stop spinner before user interaction (defensive)
-          const promptUser = async (config: { question: string; options: string[] }) => {
-            spinner.stop();
-            return showSelector(config);
-          };
-          // Use runPipeline which handles plot generation and conversation
           const result = await runPipeline(brief, {
-            promptUser,
-            onStep,
+            ui,
             outputManager,
             format: options.format,
           });
-          spinner.succeed('Book complete!');
+          ui.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);
           break;
         }
       }
     } catch (error) {
-      spinner.fail('Resume failed');
+      ui.fail('Resume failed');
       console.error(error);
       process.exit(1);
     }
