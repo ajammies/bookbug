@@ -123,11 +123,11 @@ export const runIntakeStage = async (
 ): Promise<StageState> => {
   if (hasCompleteBrief(state.story)) return state;
 
-  const { promptUser, onStep, logger } = options;
+  const { promptUser, logger } = options;
   const availableStyles = await listStyles();
   let { story, history } = state;
 
-  onStep?.('intake');
+  // Note: No onStep here - interactive stages don't use spinners (conflicts with selector)
 
   // Initial greeting if no history
   if (history.length === 0) {
@@ -159,10 +159,10 @@ export const runPlotStage = async (
 ): Promise<StageState> => {
   if (hasCompletePlot(state.story)) return state;
 
-  const { promptUser, onStep, logger } = options;
+  const { promptUser, logger } = options;
   let { story, history } = state;
 
-  onStep?.('plot');
+  // Note: No onStep here - interactive stages don't use spinners (conflicts with selector)
 
   // Validate brief before plot generation
   const briefResult = StoryBriefSchema.safeParse(story);

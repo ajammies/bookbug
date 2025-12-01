@@ -12,8 +12,7 @@ import { createLogger } from '../../core/utils/logger';
 import { showSelector } from '../../utils/cli';
 
 const STEP_MESSAGES: Record<string, string> = {
-  'intake': 'Gathering story details...',
-  'plot': 'Creating plot outline...',
+  // Note: intake/plot don't use spinners (interactive stages)
   'style-guide': 'Creating style guide...',
   'prose-setup': 'Setting up prose...',
   'character-designs': 'Generating character designs...',
