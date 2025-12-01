@@ -107,10 +107,12 @@ export {
   RenderedBookSchema,
   PageRenderContextSchema,
   ImageGenerationResultSchema,
+  ImageQualityResultSchema,
   type RenderedPage,
   type RenderedBook,
   type PageRenderContext,
   type ImageGenerationResult,
+  type ImageQualityResult,
 } from './render';
 
 // Formats

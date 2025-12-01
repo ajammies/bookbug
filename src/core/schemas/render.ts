@@ -50,3 +50,17 @@ export const ImageGenerationResultSchema = z.union([
 ]);
 
 export type ImageGenerationResult = z.infer<typeof ImageGenerationResultSchema>;
+
+/**
+ * ImageQualityResult: Analysis of a rendered image for quality issues
+ */
+export const ImageQualityResultSchema = z.object({
+  score: z.number().min(0).max(100).describe('Overall quality score 0-100'),
+  characterConsistency: z.number().min(0).max(100).describe('How well characters match their designs'),
+  environmentConsistency: z.number().min(0).max(100).describe('How well environment matches style guide'),
+  aiArtifacts: z.number().min(0).max(100).describe('100 = no artifacts, 0 = severe artifacts'),
+  issues: z.array(z.string()).describe('Specific problems found in the image'),
+  passesQualityBar: z.boolean().describe('Whether image meets minimum quality threshold'),
+});
+
+export type ImageQualityResult = z.infer<typeof ImageQualityResultSchema>;
