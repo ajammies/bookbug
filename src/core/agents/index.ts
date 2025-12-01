@@ -39,5 +39,5 @@ export { plotAgent } from './plot';
 export { plotConversationAgent, type PlotMessage } from './plot-conversation';
 export { plotInterpreterAgent } from './plot-interpreter';
 
-// Unified extractor (outputs PartialStory)
-export { extractorAgent, type ExtractorAgentOptions } from './extractor';
+// Brief extractor (outputs Partial<StoryBrief>)
+export { briefExtractorAgent, type BriefExtractorOptions } from './extractor';

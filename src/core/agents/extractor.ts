@@ -1,51 +1,56 @@
 import { generateObject } from '../services/ai';
-import { PartialStorySchema, type PartialStory } from '../schemas';
+import { StoryBriefSchema, type StoryBrief } from '../schemas';
 import { getModel } from '../config';
 import type { Logger } from '../utils/logger';
+
+// Focused schema for brief extraction only
+const BriefExtractionSchema = StoryBriefSchema.partial();
 
 const buildSystemPrompt = (availableStyles: string[]): string => {
   const stylesNote = availableStyles.length > 0
     ? `\n\nStyle presets available: ${availableStyles.join(', ')}. If user mentions one of these (or "generate new style"), set stylePreset accordingly.`
     : '';
 
-  return `Extract story details from user input into a partial story object.
+  return `Extract story brief fields from the conversation exchange.
 
-Only include fields the user explicitly mentioned or clearly implied. Omit fields entirely if not mentioned - don't invent details or use empty strings.
+Only include fields explicitly mentioned in the question or answer. OMIT fields entirely if unknown - never use placeholders, empty strings, or invented values.
 
-For detailed descriptions, context, pasted JSON, or special requests that don't fit other fields, use customInstructions.${stylesNote}`;
+If the user confirms something (e.g., "yes", "that's good"), extract the relevant details from the question they're confirming.${stylesNote}`;
 };
 
-export interface ExtractorAgentOptions {
+export interface BriefExtractorOptions {
   availableStyles?: string[];
   logger?: Logger;
 }
 
 /**
- * ExtractorAgent: Pure function that extracts story fields from user input.
- * Named after output type (PartialStory). Replaces interpreterAgent and plotInterpreterAgent.
+ * BriefExtractorAgent: Extracts StoryBrief fields from a Q&A exchange.
+ * Focused on brief fields only - uses StoryBriefSchema.partial().
  *
- * @param userMessage - The user's input text
- * @param currentStory - Current accumulated story state
+ * @param question - The assistant's question
+ * @param answer - The user's answer
+ * @param currentBrief - Current accumulated brief state
  * @param options - Available styles and logger
- * @returns Merged PartialStory with new extractions
+ * @returns Merged partial brief with new extractions
  */
-export const extractorAgent = async (
-  userMessage: string,
-  currentStory: PartialStory = {},
-  options: ExtractorAgentOptions = {}
-): Promise<PartialStory> => {
+export const briefExtractorAgent = async (
+  question: string,
+  answer: string,
+  currentBrief: Partial<StoryBrief> = {},
+  options: BriefExtractorOptions = {}
+): Promise<Partial<StoryBrief>> => {
   const { availableStyles = [], logger } = options;
 
-  const contextualPrompt = Object.keys(currentStory).length > 0
-    ? `Current story:\n${JSON.stringify(currentStory, null, 2)}\n\nUser message:\n${userMessage}`
-    : userMessage;
+  const contextualPrompt = Object.keys(currentBrief).length > 0
+    ? `Current brief:\n${JSON.stringify(currentBrief, null, 2)}\n\nQuestion: ${question}\nAnswer: ${answer}`
+    : `Question: ${question}\nAnswer: ${answer}`;
 
   const { object } = await generateObject({
     model: getModel(),
-    schema: PartialStorySchema,
+    schema: BriefExtractionSchema,
     system: buildSystemPrompt(availableStyles),
     prompt: contextualPrompt,
   }, logger);
 
-  return { ...currentStory, ...object };
+  return { ...currentBrief, ...object };
 };

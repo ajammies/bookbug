@@ -33,7 +33,7 @@ import {
   renderPage,
   renderPageMock,
   createBook,
-  extractorAgent,
+  briefExtractorAgent,
   conversationAgent,
   plotAgent,
   plotConversationAgent,
@@ -140,10 +140,9 @@ export const runIntakeStage = async (
     const answer = await ui.prompt({ question: response.question, options: response.options });
 
     ui.progress('Processing...');
-    // Update history first, then pass full conversation to extractor
+    // Extract from Q&A pair (focused extraction is more reliable)
+    story = await briefExtractorAgent(response.question, answer, story, { availableStyles, logger });
     history = [...history, { role: 'assistant', content: response.question }, { role: 'user', content: answer }];
-    const conversation = history.map(m => `${m.role}: ${m.content}`).join('\n');
-    story = await extractorAgent(conversation, story, { availableStyles, logger });
   }
 
   return { story, history };
@@ -189,11 +188,11 @@ export const runPlotStage = async (
     const answer = await ui.prompt({ question: response.message, options: response.options });
 
     ui.progress('Updating story...');
-    // Update history first, then pass full conversation to interpreter
-    plotHistory.push({ role: 'assistant', content: response.message }, { role: 'user', content: answer });
-    const conversation = plotHistory.map(m => `${m.role}: ${m.content}`).join('\n');
-    const updates = await plotInterpreterAgent(conversation, storyWithPlot);
+    // Pass Q&A pair for focused interpretation
+    const messageWithContext = `Question: ${response.message}\nAnswer: ${answer}`;
+    const updates = await plotInterpreterAgent(messageWithContext, storyWithPlot);
     story = { ...story, ...updates };
+    plotHistory.push({ role: 'assistant', content: response.message }, { role: 'user', content: answer });
   }
 
   // Merge plot history back into main history

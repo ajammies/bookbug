@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import path from 'path';
 import { runPipeline } from '../../core/pipeline';
-import { extractorAgent } from '../../core/agents';
+import { briefExtractorAgent } from '../../core/agents';
 import { listStyles } from '../../core/services/style-loader';
 import type { PartialStory } from '../../core/schemas';
 import { displayBook } from '../output/display';
@@ -33,7 +33,8 @@ export const createCommand = new Command('create')
       if (prompt?.trim()) {
         ui.progress('Understanding your story...');
         const availableStyles = await listStyles();
-        initialStory = await extractorAgent(prompt, {}, { availableStyles, logger });
+        // Treat prompt as answer to implicit "What story would you like?"
+        initialStory = await briefExtractorAgent('What story would you like to create?', prompt, {}, { availableStyles, logger });
       }
 
       const { book } = await runPipeline(initialStory, {
