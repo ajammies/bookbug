@@ -8,7 +8,10 @@ const SYSTEM_PROMPT = `You are a quality control expert for children's book illu
 Analyze the rendered image against the provided context (style guide, character designs, prose).
 
 Evaluate:
-1. Character Consistency: Do characters match their sprite sheet designs? Check proportions, colors, features.
+1. Character Consistency: Do characters match their sprite sheet designs and visualTraits?
+   - Check each character's visualTraits (eyes, fur, clothing, etc.) against the render
+   - Verify species-appropriate anatomy
+   - Match proportions, colors, and distinctive features
 2. Environment Consistency: Does the setting match the style guide? Check art style, lighting, colors.
 3. AI Artifacts: Look for generation errors - weird hands, distorted faces, floating objects, text errors, inconsistent shadows, unnatural anatomy.
 
