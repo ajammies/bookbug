@@ -2,9 +2,10 @@ import { generateObject } from '../services/ai';
 import { StoryBriefSchema, type StoryBrief } from '../schemas';
 import { getModel } from '../config';
 import type { Logger } from '../utils/logger';
+import { toExtractablePartial, stripNulls } from '../utils/extractable-schema';
 
-// Focused schema for brief extraction only
-const BriefExtractionSchema = StoryBriefSchema.partial();
+// Extractable schema: all fields nullable + optional for safe LLM extraction
+const BriefExtractionSchema = toExtractablePartial(StoryBriefSchema);
 
 const buildSystemPrompt = (availableStyles: string[]): string => {
   const stylesNote = availableStyles.length > 0
@@ -13,9 +14,10 @@ const buildSystemPrompt = (availableStyles: string[]): string => {
 
   return `Extract story brief fields from the conversation exchange.
 
-Only include fields explicitly mentioned in the question or answer. OMIT fields entirely if unknown - never use placeholders, empty strings, or invented values.
-
-If the user confirms something (e.g., "yes", "that's good"), extract the relevant details from the question they're confirming.${stylesNote}`;
+RULES:
+- Set fields to null if unknown or not mentioned
+- Only extract fields explicitly stated in the question or answer
+- If the user confirms something (e.g., "yes"), extract from the question they're confirming${stylesNote}`;
 };
 
 export interface BriefExtractorOptions {
@@ -52,5 +54,7 @@ export const briefExtractorAgent = async (
     prompt: contextualPrompt,
   }, logger);
 
-  return { ...currentBrief, ...object };
+  // Strip nulls and merge with current brief
+  const extracted = stripNulls(object as Record<string, unknown>) as Partial<StoryBrief>;
+  return { ...currentBrief, ...extracted };
 };
