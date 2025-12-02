@@ -16,13 +16,26 @@ export const AgeRangeSchema = z
 
 export type AgeRange = z.infer<typeof AgeRangeSchema>;
 
+/**
+ * Key-value trait for flexible character attributes
+ */
+export const CharacterTraitSchema = z.object({
+  key: z.string().min(1).describe('Trait category: eyes, fur, clothing, core, flaw, etc.'),
+  value: z.string().min(1).describe('Trait description'),
+});
+
+export type CharacterTrait = z.infer<typeof CharacterTraitSchema>;
+
 export const StoryCharacterSchema = z.object({
   name: z.string().min(1).describe('Character name'),
-  description: z.string().min(1).describe('Brief physical and personality description'),
-  role: z.string().optional().describe('Role in the story (e.g., "protagonist", "sidekick", "mentor")'),
-  traits: z.array(z.string().min(1)).default([]).describe('Personality traits (e.g., "curious", "brave")'),
-  notes: z.array(z.string().min(1)).default([]).describe('Additional notes for illustration consistency'),
-  visualDescription: z.string().optional().describe('Detailed visual appearance for sprite generation: body type, colors, clothing, props, distinguishing features'),
+  description: z.string().min(1).describe('Brief character summary'),
+  role: z.string().optional().describe('Role in story: protagonist, sidekick, mentor'),
+  species: z.string().optional().describe('Character type: human, dog, alien blob, talking teapot'),
+  personalityTraits: z.array(CharacterTraitSchema).default([])
+    .describe('Personality/behavioral traits: core personality, flaws, quirks'),
+  visualTraits: z.array(CharacterTraitSchema).default([])
+    .describe('Visual appearance: eyes, fur, clothing, accessories, distinguishing features'),
+  notes: z.array(z.string().min(1)).default([]).describe('Additional notes'),
 });
 
 export type StoryCharacter = z.infer<typeof StoryCharacterSchema>;

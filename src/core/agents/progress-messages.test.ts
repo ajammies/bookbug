@@ -21,8 +21,8 @@ const mockStory: StoryWithPlot = {
   ageRange: { min: 4, max: 6 },
   pageCount: 24,
   characters: [
-    { name: 'Felix', description: 'A small orange fox', role: 'protagonist', traits: ['brave', 'curious'], notes: [] },
-    { name: 'Olive', description: 'A grey owl', role: 'sidekick', traits: ['wise', 'calm'], notes: [] },
+    { name: 'Felix', description: 'A small orange fox', role: 'protagonist', personalityTraits: [{ key: 'core', value: 'brave' }, { key: 'core', value: 'curious' }], visualTraits: [], notes: [] },
+    { name: 'Olive', description: 'A grey owl', role: 'sidekick', personalityTraits: [{ key: 'core', value: 'wise' }, { key: 'core', value: 'calm' }], visualTraits: [], notes: [] },
   ],
   tone: 'whimsical',
   interests: ['animals', 'adventure'],

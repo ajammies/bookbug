@@ -10,7 +10,7 @@ const minimalBrief: StoryBrief = {
   ageRange: { min: 4, max: 8 },
   pageCount: 10,
   characters: [
-    { name: 'Hero', description: 'brave child', role: 'protagonist', traits: ['brave'], notes: [] },
+    { name: 'Hero', description: 'brave child', role: 'protagonist', personalityTraits: [{ key: 'core', value: 'brave' }], visualTraits: [], notes: [] },
   ],
   interests: [],
 };

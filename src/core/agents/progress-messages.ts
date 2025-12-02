@@ -39,7 +39,10 @@ export const progressMessagesAgent = async (
 ): Promise<string[]> => {
   const context = {
     title: story.title,
-    characters: story.characters.map((c) => ({ name: c.name, traits: c.traits })),
+    characters: story.characters.map((c) => ({
+      name: c.name,
+      traits: c.personalityTraits.map((t) => t.value),
+    })),
     setting: story.setting,
     tone: story.tone,
   };

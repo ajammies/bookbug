@@ -13,11 +13,19 @@ import { type Logger, logThinking } from '../utils/logger';
 
 const IMAGE_MODEL = 'google/nano-banana-pro';
 
+/** Format visual traits array as descriptive text */
+const formatVisualTraits = (character: StoryCharacter): string => {
+  if (character.visualTraits.length === 0) return character.description;
+  return character.visualTraits.map(t => `${t.key}: ${t.value}`).join('\n');
+};
+
 const buildSpritePrompt = (character: StoryCharacter, styleGuide: VisualStyleGuide): string => {
   const { art_style } = styleGuide;
   const genre = art_style.genre?.join(', ') || 'childrens-illustration';
   const medium = art_style.medium?.join(', ') || 'digital illustration';
   const technique = art_style.technique?.join(', ') || 'soft edges';
+
+  const visualDescription = formatVisualTraits(character);
 
   return `ART STYLE (CRITICAL - must match exactly):
 Genre: ${genre}
@@ -27,9 +35,11 @@ Technique: ${technique}
 Generate a character sprite sheet in the EXACT style above.
 
 Character: ${character.name}
-Description: ${character.visualDescription || character.description}
+Species: ${character.species || 'human'}
 Role: ${character.role || 'character'}
-Traits: ${character.traits?.join(', ') || 'none specified'}
+
+Visual Appearance:
+${visualDescription}
 
 Requirements:
 - Show character from 4 angles: front, 3/4 view, side profile, back

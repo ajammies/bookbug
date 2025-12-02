@@ -7,9 +7,11 @@
 // Common types
 export {
   AgeRangeSchema,
+  CharacterTraitSchema,
   StoryCharacterSchema,
   BeatPurposeSchema,
   type AgeRange,
+  type CharacterTrait,
   type StoryCharacter,
   type BeatPurpose,
 } from './common';
