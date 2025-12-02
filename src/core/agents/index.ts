@@ -43,4 +43,4 @@ export { plotInterpreterAgent } from './plot-interpreter';
 export { briefExtractorAgent, type BriefExtractorOptions } from './brief-extractor';
 
 // Image quality analysis (outputs ImageQualityResult)
-export { imageQualityAgent, type ImageQualityOptions } from './image-quality';
+export { imageQualityAgent, type ImageQualityOptions, type ImageInput } from './image-quality';

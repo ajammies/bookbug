@@ -103,9 +103,9 @@ describe('imageQualityAgent', () => {
       qualityThreshold: 80,
     });
 
-    const call = mockedGenerateObject.mock.calls[0]![0];
-    const textContent = call.messages[0].content.find((c: { type: string }) => c.type === 'text');
-    expect(textContent.text).toContain('Quality threshold: 80');
+    const call = mockedGenerateObject.mock.calls[0]![0] as { messages: Array<{ content: Array<{ type: string; text?: string }> }> };
+    const textContent = call.messages[0]!.content.find((c) => c.type === 'text');
+    expect(textContent?.text).toContain('Quality threshold: 80');
   });
 
   it('uses default threshold of 70 when not specified', async () => {
@@ -114,9 +114,9 @@ describe('imageQualityAgent', () => {
 
     await imageQualityAgent('https://example.com/page1.png', createMockContext());
 
-    const call = mockedGenerateObject.mock.calls[0]![0];
-    const textContent = call.messages[0].content.find((c: { type: string }) => c.type === 'text');
-    expect(textContent.text).toContain('Quality threshold: 70');
+    const call = mockedGenerateObject.mock.calls[0]![0] as { messages: Array<{ content: Array<{ type: string; text?: string }> }> };
+    const textContent = call.messages[0]!.content.find((c) => c.type === 'text');
+    expect(textContent?.text).toContain('Quality threshold: 70');
   });
 
   it('passes logger to generateObject', async () => {
@@ -138,10 +138,10 @@ describe('imageQualityAgent', () => {
 
     await imageQualityAgent('https://example.com/page1.png', context);
 
-    const call = mockedGenerateObject.mock.calls[0]![0];
-    const textContent = call.messages[0].content.find((c: { type: string }) => c.type === 'text');
-    expect(textContent.text).toContain('Test Story');
-    expect(textContent.text).toContain('Luna');
+    const call = mockedGenerateObject.mock.calls[0]![0] as { messages: Array<{ content: Array<{ type: string; text?: string }> }> };
+    const textContent = call.messages[0]!.content.find((c) => c.type === 'text');
+    expect(textContent?.text).toContain('Test Story');
+    expect(textContent?.text).toContain('Luna');
   });
 
   it('creates URL object for image', async () => {
@@ -150,9 +150,9 @@ describe('imageQualityAgent', () => {
 
     await imageQualityAgent('https://example.com/page1.png', createMockContext());
 
-    const call = mockedGenerateObject.mock.calls[0]![0];
-    const imageContent = call.messages[0].content.find((c: { type: string }) => c.type === 'image');
-    expect(imageContent.image).toBeInstanceOf(URL);
-    expect(imageContent.image.href).toBe('https://example.com/page1.png');
+    const call = mockedGenerateObject.mock.calls[0]![0] as { messages: Array<{ content: Array<{ type: string; image?: URL }> }> };
+    const imageContent = call.messages[0]!.content.find((c) => c.type === 'image');
+    expect(imageContent?.image).toBeInstanceOf(URL);
+    expect((imageContent?.image as URL).href).toBe('https://example.com/page1.png');
   });
 });
