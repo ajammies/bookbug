@@ -34,7 +34,7 @@ Set isComplete=true only when all required information has been gathered.`;
 export const withOptionsResponse = <T extends ZodRawShape>(inner: ZodObject<T>) =>
   inner.extend({
     options: z.array(z.string().min(1)).min(2).max(8)
-      .describe('2-8 short clickable suggestions for user response'),
+      .describe('2-8 clickable options. When isComplete=true, include both a "continue" and "keep editing" option'),
     isComplete: z.boolean()
       .describe('True when conversation can end'),
   });
