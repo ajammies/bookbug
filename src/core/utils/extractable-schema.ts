@@ -96,6 +96,14 @@ export function toExtractablePartial<T extends ZodRawShape>(
  * const clean = stripNulls(extracted);
  * // { title: "My Story", setting: "forest" }
  */
+/**
+ * Check if an object has at least one non-null value.
+ * Used to filter out empty/incomplete extracted objects.
+ */
+function hasContent(obj: Record<string, unknown>): boolean {
+  return Object.values(obj).some((v) => v !== null && v !== undefined);
+}
+
 export function stripNulls<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const result: Record<string, unknown> = {};
 
@@ -106,9 +114,14 @@ export function stripNulls<T extends Record<string, unknown>>(obj: T): Partial<T
 
     if (Array.isArray(value)) {
       // Recursively strip nulls from array items if they're objects
-      result[key] = value.map((item) =>
-        typeof item === 'object' && item !== null ? stripNulls(item as Record<string, unknown>) : item
-      );
+      // Filter out items that become empty after stripping
+      result[key] = value
+        .map((item) =>
+          typeof item === 'object' && item !== null ? stripNulls(item as Record<string, unknown>) : item
+        )
+        .filter((item) =>
+          typeof item === 'object' && item !== null ? hasContent(item as Record<string, unknown>) : true
+        );
     } else if (typeof value === 'object') {
       result[key] = stripNulls(value as Record<string, unknown>);
     } else {
