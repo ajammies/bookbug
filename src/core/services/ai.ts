@@ -10,6 +10,7 @@ import {
   streamObject as aiStreamObject,
   NoObjectGeneratedError,
   type GenerateObjectResult,
+  APICallError,
 } from 'ai';
 import type { JSONParseError, TypeValidationError } from '@ai-sdk/provider';
 import { z, type ZodRawShape, type ZodObject } from 'zod';
@@ -43,13 +44,13 @@ type GenerateObjectParams = Parameters<typeof aiGenerateObject>[0];
 
 /** Extract retry-after seconds from error, returns null if not present */
 const getRetryAfterSeconds = (error: unknown): number | null => {
-  const e = error as { statusCode?: number; responseHeaders?: Record<string, string> };
-  if (e?.statusCode !== 429) return null;
+  if (!APICallError.isInstance(error)) return null;
+  if (error.statusCode !== 429) return null;
 
-  const header = e.responseHeaders?.['retry-after'];
-  if (!header) return null;
+  const retryAfter = error.responseHeaders?.['retry-after'];
+  if (!retryAfter) return null;
 
-  const seconds = parseInt(header, 10);
+  const seconds = parseInt(retryAfter, 10);
   return isNaN(seconds) ? null : seconds;
 };
 
