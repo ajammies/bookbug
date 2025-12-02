@@ -4,6 +4,26 @@ import { BOOK_FORMATS } from '../schemas';
 import type { PageRenderContext } from '../schemas';
 import type Replicate from 'replicate';
 
+// Mock retry to avoid real delays in tests - implements retry logic without sleep
+vi.mock('../utils/retry', () => ({
+  sleep: vi.fn().mockResolvedValue(undefined),
+  retryWithBackoff: async <T>(fn: () => Promise<T>, options?: { maxRetries?: number; shouldRetry?: (e: unknown) => boolean }) => {
+    const { maxRetries = 5, shouldRetry = () => true } = options || {};
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        if (attempt >= maxRetries || !shouldRetry(error)) {
+          throw error;
+        }
+      }
+    }
+    throw lastError;
+  },
+}));
+
 describe('createReplicateClient', () => {
   const originalEnv = process.env;
 
@@ -163,10 +183,8 @@ describe('generatePageImage', () => {
   });
 
   it('retries on 429 rate limit and succeeds', async () => {
-    const apiError = {
-      message: 'Rate limit exceeded',
-      response: { status: 429, headers: { get: () => '1' } }, // 1 second
-    };
+    // Error message must include '429' to be detected as retryable
+    const apiError = new Error('Request failed with status 429 Too Many Requests: {"retry_after":1}');
     const mockRun = vi.fn()
       .mockRejectedValueOnce(apiError)
       .mockResolvedValueOnce(['https://example.com/retry-success.png']);
@@ -183,10 +201,8 @@ describe('generatePageImage', () => {
   });
 
   it('throws after retry fails on 429', async () => {
-    const apiError = {
-      message: 'Rate limit exceeded',
-      response: { status: 429, headers: { get: () => '1' } },
-    };
+    // Error message must include '429' to be detected as retryable
+    const apiError = new Error('Request failed with status 429 Too Many Requests');
     const mockRun = vi.fn().mockRejectedValue(apiError);
     const mockClient = createMockClient(mockRun);
 
@@ -194,8 +210,8 @@ describe('generatePageImage', () => {
       generatePageImage(minimalContext, BOOK_FORMATS['square-large'], { client: mockClient })
     ).rejects.toEqual(apiError);
 
-    // maxRetries=3 means 3 total attempts
-    expect(mockRun).toHaveBeenCalledTimes(3);
+    // maxRetries=5 means 5 total attempts
+    expect(mockRun).toHaveBeenCalledTimes(5);
   });
 
   it('throws immediately on non-429 API errors', async () => {

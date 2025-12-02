@@ -7,6 +7,7 @@ import { writeCommand } from './commands/write';
 import { directCommand } from './commands/direct';
 import { renderCommand } from './commands/render';
 import { qualityCommand } from './commands/quality';
+import { logsCommand } from './commands/logs';
 
 const program = new Command();
 
@@ -21,5 +22,6 @@ program.addCommand(writeCommand);
 program.addCommand(directCommand);
 program.addCommand(renderCommand);
 program.addCommand(qualityCommand);
+program.addCommand(logsCommand);
 
 program.parse();

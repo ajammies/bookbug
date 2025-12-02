@@ -77,7 +77,7 @@ export const characterDesignAgent = async (
 };
 
 /**
- * Generate sprite sheets for all characters in a story
+ * Generate sprite sheets for all characters in a story (sequential to avoid rate limits)
  */
 export const generateCharacterDesigns = async (
   characters: StoryCharacter[],
@@ -85,10 +85,13 @@ export const generateCharacterDesigns = async (
   options: { client?: Replicate; logger?: Logger } = {}
 ): Promise<CharacterDesign[]> => {
   const { client = createReplicateClient(), logger } = options;
-  return Promise.all(
-    characters.map((char, i) => {
-      logThinking(logger, `Generating sprite sheet for ${char.name} (${i + 1}/${characters.length})...`);
-      return characterDesignAgent(char, styleGuide, client, logger);
-    })
-  );
+  const designs: CharacterDesign[] = [];
+
+  for (const [i, char] of characters.entries()) {
+    logThinking(logger, `Generating sprite sheet for ${char.name} (${i + 1}/${characters.length})...`);
+    const design = await characterDesignAgent(char, styleGuide, client, logger);
+    designs.push(design);
+  }
+
+  return designs;
 };

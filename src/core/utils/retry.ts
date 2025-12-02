@@ -13,12 +13,15 @@ export interface RetryOptions {
   initialDelayMs?: number;
   maxDelayMs?: number;
   shouldRetry?: (error: unknown) => boolean;
+  /** Extract retry-after seconds from error, overrides exponential backoff */
+  getRetryAfter?: (error: unknown) => number | null;
   logger?: Logger;
 }
 
 /**
  * Retry a function with exponential backoff.
  * Pure utility - no business logic, just retry mechanics.
+ * If getRetryAfter returns a value, uses that instead of exponential backoff.
  */
 export const retryWithBackoff = async <T>(
   fn: () => Promise<T>,
@@ -29,6 +32,7 @@ export const retryWithBackoff = async <T>(
     initialDelayMs = 1000,
     maxDelayMs = 10000,
     shouldRetry = () => true,
+    getRetryAfter,
     logger,
   } = options;
 
@@ -44,7 +48,9 @@ export const retryWithBackoff = async <T>(
         throw error;
       }
 
-      const delayMs = Math.min(initialDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
+      // Use retry-after from error if available, otherwise exponential backoff
+      const retryAfterMs = getRetryAfter?.(error);
+      const delayMs = retryAfterMs ?? Math.min(initialDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
       logger?.warn({ attempt, delayMs, error: (error as Error).message }, 'Retrying after error');
       await sleep(delayMs);
     }
