@@ -13,9 +13,18 @@ const buildSystemPrompt = (availableStyles: string[]): string => {
 
   return `Extract story brief fields from the conversation exchange.
 
-Only include fields explicitly mentioned in the question or answer. OMIT fields entirely if unknown - never use placeholders, empty strings, or invented values.
+CRITICAL RULES:
+1. OMIT fields entirely if unknown - never use placeholders like "<UNKNOWN>" or empty strings
+2. Only include fields explicitly mentioned in the question or answer
+3. If the user confirms something (e.g., "yes", "that's good"), extract the relevant details from the question they're confirming
 
-If the user confirms something (e.g., "yes", "that's good"), extract the relevant details from the question they're confirming.${stylesNote}`;
+For characters array, each character needs:
+- name (required)
+- description (required)
+- personalityTraits: array of {key, value} pairs (can be empty [])
+- visualTraits: array of {key, value} pairs (can be empty [])
+
+If no characters are mentioned, OMIT the characters field entirely.${stylesNote}`;
 };
 
 export interface BriefExtractorOptions {
