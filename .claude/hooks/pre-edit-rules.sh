@@ -1,7 +1,7 @@
 #!/bin/bash
-# Remind Claude to invoke code-rules skill before complex edits
+# Remind Claude to invoke code-rules skill before edits
 cat << 'EOF'
 {
-  "additionalContext": "REMINDER: For complex edits (new agents, multi-file changes, refactoring), invoke the code-rules skill first to review guidelines."
+  "systemMessage": "⚠️ BEFORE EDITING: Have you invoked the code-rules skill this session? If not, STOP and invoke it now. For new files, also invoke find-pattern skill first."
 }
 EOF

@@ -2,6 +2,15 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "Bash(git checkout -b:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-branch-workflow.sh"
+          }
+        ]
+      },
+      {
         "matcher": "Bash(git commit:*)",
         "hooks": [
           {
