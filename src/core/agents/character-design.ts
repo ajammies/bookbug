@@ -18,18 +18,19 @@ const formatAppearance = (character: StoryCharacter): string => {
   const { appearance } = character;
   if (!appearance) return character.description;
 
-  const lines: string[] = [
-    `Eyes: ${appearance.eyeStyle}`,
-    `Body: ${appearance.bodyType}`,
-    `Clothing: ${appearance.clothing}`,
-  ];
+  const lines: string[] = [];
 
+  // Only include fields that are defined
+  if (appearance.eyeStyle) lines.push(`Eyes: ${appearance.eyeStyle}`);
+  if (appearance.bodyType) lines.push(`Body: ${appearance.bodyType}`);
+  if (appearance.clothing) lines.push(`Clothing: ${appearance.clothing}`);
   if (appearance.hairStyle) lines.push(`Hair: ${appearance.hairStyle}`);
   if (appearance.skinTone) lines.push(`Skin/Fur: ${appearance.skinTone}`);
   if (appearance.accessories.length > 0) lines.push(`Accessories: ${appearance.accessories.join(', ')}`);
   if (appearance.distinctiveFeatures.length > 0) lines.push(`Distinctive features: ${appearance.distinctiveFeatures.join(', ')}`);
 
-  return lines.join('\n');
+  // Fall back to description if no appearance fields are set
+  return lines.length > 0 ? lines.join('\n') : character.description;
 };
 
 const buildSpritePrompt = (character: StoryCharacter, styleGuide: VisualStyleGuide): string => {

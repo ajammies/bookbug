@@ -8,7 +8,7 @@ description: Code editing rules. Reference before complex edits.
 ## Philosophy
 
 - 🔴 Always make it as simple as possible, but not simpler
-- Always write code that is easy to follow and read
+- 🔴 Always write code that is easy to follow and read
 - 🔴 Always write code that is easy to delete - loose coupling, no tentacles across files
 - Always keep functions small enough to fit in your head
 - Do not abstract until you see the pattern three times
@@ -18,7 +18,7 @@ description: Code editing rules. Reference before complex edits.
 
 - 🔴 Always read file before editing - never propose changes to code you haven't read
 - 🔴 Always use pure functions, immutability, no side effects
-- Use context7 when working with libraries or doing something new
+- 🔴 Always Use context7 when working with libraries or doing something new
 - Always use explicit types for data flowing between functions
 - Always use standalone exported functions, not classes
 - Always flow data through parameters, not global state

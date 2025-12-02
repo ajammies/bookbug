@@ -14,6 +14,7 @@ import type {
   VisualStyleGuide,
   ProseSetup,
   CharacterDesign,
+  StoryCharacter,
 } from './schemas';
 import { StoryBriefSchema } from './schemas';
 import {
@@ -24,6 +25,7 @@ import {
   styleGuideAgent,
   pageVisualsAgent,
   generateCharacterDesigns,
+  generateCharacterAppearances,
   renderPage,
   renderPageMock,
   createBook,
@@ -98,6 +100,7 @@ export interface PipelineState {
   // Setup artifacts
   styleGuide?: VisualStyleGuide;
   proseSetup?: ProseSetup;
+  enrichedCharacters?: StoryCharacter[];
   characterDesigns?: CharacterDesign[];
 
   // Content (per-page)
@@ -301,9 +304,13 @@ export const runPipelineIncremental = async (
   ui?.progress('Setting up prose...');
   const proseSetup = state.proseSetup ?? await proseSetupAgent(story);
 
-  ui?.progress('Generating character designs...');
+  // Enrich characters with complete appearance details
+  ui?.progress('Designing character appearances...');
   const characters = story.plot.characters ?? story.characters;
-  const characterDesigns = state.characterDesigns ?? await generateCharacterDesigns(characters, styleGuide, options);
+  const enrichedCharacters = state.enrichedCharacters ?? await generateCharacterAppearances(characters, styleGuide, logger);
+
+  ui?.progress('Generating character designs...');
+  const characterDesigns = state.characterDesigns ?? await generateCharacterDesigns(enrichedCharacters, styleGuide, options);
   if (outputManager && !state.characterDesigns) {
     for (const design of characterDesigns) await outputManager.saveCharacterDesign(design);
   }

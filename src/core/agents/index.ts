@@ -25,6 +25,7 @@ export type OnStepProgress = (step: string, status: 'start' | 'complete' | 'erro
 export { proseAgent, proseSetupAgent, prosePageAgent, type ProsePageInput } from './prose';
 export { visualsAgent, styleGuideAgent, pageVisualsAgent, type PageVisualsInput, type StylePreset } from './visuals';
 export { characterDesignAgent, generateCharacterDesigns } from './character-design';
+export { characterAppearanceAgent, generateCharacterAppearances } from './character-appearance';
 export { renderPage, renderPageMock, createBook, filterStoryForPage } from './renderer';
 
 // Progress messages for CLI display

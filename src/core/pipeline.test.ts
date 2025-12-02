@@ -27,6 +27,7 @@ vi.mock('./agents', async (importOriginal) => {
     pageVisualsAgent: vi.fn(),
     visualsAgent: vi.fn(),
     styleGuideAgent: vi.fn(),
+    generateCharacterAppearances: vi.fn(),
     generateCharacterDesigns: vi.fn(),
     renderPage: vi.fn(),
   };
@@ -39,6 +40,7 @@ import {
   pageVisualsAgent,
   visualsAgent,
   styleGuideAgent,
+  generateCharacterAppearances,
   generateCharacterDesigns,
   renderPage,
 } from './agents';
@@ -49,6 +51,7 @@ const mockedProsePageAgent = vi.mocked(prosePageAgent);
 const mockedPageVisualsAgent = vi.mocked(pageVisualsAgent);
 const mockedVisualsAgent = vi.mocked(visualsAgent);
 const mockedStyleGuideAgent = vi.mocked(styleGuideAgent);
+const mockedGenerateCharacterAppearances = vi.mocked(generateCharacterAppearances);
 const mockedGenerateCharacterDesigns = vi.mocked(generateCharacterDesigns);
 const mockedRenderPage = vi.mocked(renderPage);
 
@@ -202,6 +205,7 @@ describe('runPipelineIncremental', () => {
     vi.clearAllMocks();
     mockedStyleGuideAgent.mockResolvedValue(mockStyleGuide);
     mockedProseSetupAgent.mockResolvedValue(mockProseSetup);
+    mockedGenerateCharacterAppearances.mockResolvedValue(mockStoryWithPlot.characters);
     mockedGenerateCharacterDesigns.mockResolvedValue([
       { character: mockStoryWithPlot.characters[0]!, spriteSheetUrl: 'https://example.com/sprite.png' },
     ]);
@@ -235,6 +239,7 @@ describe('runPipelineIncremental', () => {
     await runPipelineIncremental(mockPipelineState, { ui });
     expect(ui.progress).toHaveBeenCalledWith('Creating style guide...');
     expect(ui.progress).toHaveBeenCalledWith('Setting up prose...');
+    expect(ui.progress).toHaveBeenCalledWith('Designing character appearances...');
     expect(ui.progress).toHaveBeenCalledWith('Generating character designs...');
     expect(ui.progress).toHaveBeenCalledWith('Writing page 1...');
     expect(ui.progress).toHaveBeenCalledWith('Directing page 1...');

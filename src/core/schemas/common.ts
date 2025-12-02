@@ -29,17 +29,18 @@ export type CharacterTrait = z.infer<typeof CharacterTraitSchema>;
 /**
  * Structured visual appearance for consistent character rendering.
  * Each field describes a specific visible attribute.
+ * All fields optional during intake - can be filled by character design stage.
  */
 export const CharacterAppearanceSchema = z.object({
-  eyeStyle: z.string().min(1)
+  eyeStyle: z.string().min(1).optional()
     .describe('Eye appearance: shape, size, color, style (e.g., "large round blue eyes", "button eyes", "no visible pupils")'),
-  hairStyle: z.string().optional()
+  hairStyle: z.string().min(1).optional()
     .describe('Hair description: color, length, texture, style (e.g., "short curly red hair", "long braids")'),
-  skinTone: z.string().optional()
+  skinTone: z.string().min(1).optional()
     .describe('Skin or fur color/texture (e.g., "warm brown skin", "fluffy white fur", "green scales")'),
-  bodyType: z.string().min(1)
+  bodyType: z.string().min(1).optional()
     .describe('Body shape and proportions (e.g., "small and round", "tall and lanky", "chubby toddler proportions")'),
-  clothing: z.string().min(1)
+  clothing: z.string().min(1).optional()
     .describe('Full outfit description (e.g., "red overalls over yellow striped shirt, blue sneakers")'),
   accessories: z.array(z.string().min(1)).default([])
     .describe('Items worn or carried (e.g., "round glasses", "pink bow", "wooden sword")'),
