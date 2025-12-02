@@ -202,4 +202,40 @@ describe('stripNulls', () => {
 
     expect(result).toEqual({ enabled: false, count: 0 });
   });
+
+  it('filters out empty objects from arrays', () => {
+    const input = {
+      items: [
+        { id: 'a', value: 1 },
+        { id: null, value: null }, // becomes empty after strip
+        { id: 'c', value: 3 },
+      ],
+    };
+    const result = stripNulls(input);
+
+    expect(result).toEqual({
+      items: [
+        { id: 'a', value: 1 },
+        { id: 'c', value: 3 },
+      ],
+    });
+  });
+
+  it('keeps array items with at least one valid field', () => {
+    const input = {
+      characters: [
+        { name: 'Hero', description: 'The protagonist' },
+        { name: null, description: 'Some description' }, // has description, kept
+        { name: null, description: null }, // empty, filtered
+      ],
+    };
+    const result = stripNulls(input);
+
+    expect(result).toEqual({
+      characters: [
+        { name: 'Hero', description: 'The protagonist' },
+        { description: 'Some description' },
+      ],
+    });
+  });
 });

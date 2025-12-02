@@ -1,11 +1,15 @@
 import { generateObject } from '../services/ai';
-import { StoryBriefSchema, type StoryBrief } from '../schemas';
+import { StoryBriefSchema, type StoryBrief, type StoryCharacter } from '../schemas';
 import { getModel } from '../config';
 import type { Logger } from '../utils/logger';
 import { toExtractablePartial, stripNulls } from '../utils/extractable-schema';
 
 // Extractable schema: all fields nullable + optional for safe LLM extraction
 const BriefExtractionSchema = toExtractablePartial(StoryBriefSchema);
+
+/** Filter out incomplete characters (must have name) */
+const filterValidCharacters = (characters: Partial<StoryCharacter>[]): StoryCharacter[] =>
+  characters.filter((c): c is StoryCharacter => typeof c.name === 'string' && c.name.length > 0);
 
 const buildSystemPrompt = (availableStyles: string[]): string => {
   const stylesNote = availableStyles.length > 0
@@ -56,5 +60,11 @@ export const briefExtractorAgent = async (
 
   // Strip nulls and merge with current brief
   const extracted = stripNulls(object as Record<string, unknown>) as Partial<StoryBrief>;
+
+  // Filter out incomplete characters (LLM sometimes returns partial objects)
+  if (extracted.characters) {
+    extracted.characters = filterValidCharacters(extracted.characters);
+  }
+
   return { ...currentBrief, ...extracted };
 };
