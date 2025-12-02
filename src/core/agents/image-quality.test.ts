@@ -26,7 +26,7 @@ const createMockContext = (): PageRenderContext => ({
   },
   characterDesigns: [
     {
-      character: { name: 'Luna', description: 'A rabbit', personalityTraits: [], visualTraits: [], notes: [] },
+      character: { name: 'Luna', description: 'A rabbit', personalityTraits: [], notes: [] },
       spriteSheetUrl: 'https://example.com/luna.png',
     },
   ],

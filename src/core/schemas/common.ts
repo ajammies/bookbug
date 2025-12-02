@@ -17,14 +17,37 @@ export const AgeRangeSchema = z
 export type AgeRange = z.infer<typeof AgeRangeSchema>;
 
 /**
- * Key-value trait for flexible character attributes
+ * Key-value trait for flexible character attributes (personality)
  */
 export const CharacterTraitSchema = z.object({
-  key: z.string().min(1).describe('Trait category: eyes, fur, clothing, core, flaw, etc.'),
+  key: z.string().min(1).describe('Trait category: core, flaw, quirk, fear, desire'),
   value: z.string().min(1).describe('Trait description'),
 });
 
 export type CharacterTrait = z.infer<typeof CharacterTraitSchema>;
+
+/**
+ * Structured visual appearance for consistent character rendering.
+ * Each field describes a specific visible attribute.
+ */
+export const CharacterAppearanceSchema = z.object({
+  eyeStyle: z.string().min(1)
+    .describe('Eye appearance: shape, size, color, style (e.g., "large round blue eyes", "button eyes", "no visible pupils")'),
+  hairStyle: z.string().optional()
+    .describe('Hair description: color, length, texture, style (e.g., "short curly red hair", "long braids")'),
+  skinTone: z.string().optional()
+    .describe('Skin or fur color/texture (e.g., "warm brown skin", "fluffy white fur", "green scales")'),
+  bodyType: z.string().min(1)
+    .describe('Body shape and proportions (e.g., "small and round", "tall and lanky", "chubby toddler proportions")'),
+  clothing: z.string().min(1)
+    .describe('Full outfit description (e.g., "red overalls over yellow striped shirt, blue sneakers")'),
+  accessories: z.array(z.string().min(1)).default([])
+    .describe('Items worn or carried (e.g., "round glasses", "pink bow", "wooden sword")'),
+  distinctiveFeatures: z.array(z.string().min(1)).default([])
+    .describe('Unique identifying marks (e.g., "freckles", "gap tooth", "scar on left cheek", "missing ear")'),
+});
+
+export type CharacterAppearance = z.infer<typeof CharacterAppearanceSchema>;
 
 export const StoryCharacterSchema = z.object({
   name: z.string().min(1).describe('Character name'),
@@ -33,8 +56,8 @@ export const StoryCharacterSchema = z.object({
   species: z.string().optional().describe('Character type: human, dog, alien blob, talking teapot'),
   personalityTraits: z.array(CharacterTraitSchema).default([])
     .describe('Personality/behavioral traits: core personality, flaws, quirks'),
-  visualTraits: z.array(CharacterTraitSchema).default([])
-    .describe('Visual appearance: eyes, fur, clothing, accessories, distinguishing features'),
+  appearance: CharacterAppearanceSchema.optional()
+    .describe('Structured visual appearance for consistent rendering'),
   notes: z.array(z.string().min(1)).default([]).describe('Additional notes'),
 });
 

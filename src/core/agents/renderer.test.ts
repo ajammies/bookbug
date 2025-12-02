@@ -28,14 +28,14 @@ const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory =
   ageRange: { min: 4, max: 8 },
   pageCount: 2,
   characters: [
-    { name: 'Luna', description: 'A curious rabbit', personalityTraits: [], visualTraits: [{ key: 'appearance', value: 'Small white rabbit with big curious eyes' }], notes: [] },
-    { name: 'Pip', description: 'A friendly bird', personalityTraits: [], visualTraits: [{ key: 'appearance', value: 'Small blue bird with orange beak' }], notes: [] },
+    { name: 'Luna', description: 'A curious rabbit', personalityTraits: [], appearance: { eyeStyle: 'big curious eyes', bodyType: 'small and fluffy', clothing: 'none', accessories: [], distinctiveFeatures: ['white fur'] }, notes: [] },
+    { name: 'Pip', description: 'A friendly bird', personalityTraits: [], appearance: { eyeStyle: 'small beady eyes', bodyType: 'small and round', clothing: 'none', accessories: [], distinctiveFeatures: ['orange beak'] }, notes: [] },
   ],
   interests: [],
   // Character designs with sprite sheets
   characterDesigns: [
-    { character: { name: 'Luna', description: 'A curious rabbit', personalityTraits: [], visualTraits: [{ key: 'appearance', value: 'Small white rabbit with big curious eyes' }], notes: [] }, spriteSheetUrl: 'https://example.com/luna-sprite.png' },
-    { character: { name: 'Pip', description: 'A friendly bird', personalityTraits: [], visualTraits: [{ key: 'appearance', value: 'Small blue bird with orange beak' }], notes: [] }, spriteSheetUrl: 'https://example.com/pip-sprite.png' },
+    { character: { name: 'Luna', description: 'A curious rabbit', personalityTraits: [], appearance: { eyeStyle: 'big curious eyes', bodyType: 'small and fluffy', clothing: 'none', accessories: [], distinctiveFeatures: ['white fur'] }, notes: [] }, spriteSheetUrl: 'https://example.com/luna-sprite.png' },
+    { character: { name: 'Pip', description: 'A friendly bird', personalityTraits: [], appearance: { eyeStyle: 'small beady eyes', bodyType: 'small and round', clothing: 'none', accessories: [], distinctiveFeatures: ['orange beak'] }, notes: [] }, spriteSheetUrl: 'https://example.com/pip-sprite.png' },
   ],
   
   // PlotStructure

@@ -8,10 +8,12 @@
 export {
   AgeRangeSchema,
   CharacterTraitSchema,
+  CharacterAppearanceSchema,
   StoryCharacterSchema,
   BeatPurposeSchema,
   type AgeRange,
   type CharacterTrait,
+  type CharacterAppearance,
   type StoryCharacter,
   type BeatPurpose,
 } from './common';

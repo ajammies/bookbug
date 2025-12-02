@@ -142,7 +142,7 @@ export interface PageVisualsInput {
 const PAGE_VISUALS_PROMPT = `Create illustration beats for a single page of a children's picture book.
 
 You receive:
-- Story context (plot, characters with visualTraits, setting)
+- Story context (plot, characters with appearance specs, setting)
 - Visual style guide (established art direction, colors, mood)
 - Page number
 - Prose page (text and imageConcept to illustrate)
@@ -150,14 +150,15 @@ You receive:
 For this page, create one or more IllustrationBeats:
 - order: Sequence number (1, 2, 3...)
 - purpose: setup, build, twist, climax, payoff, or button
-- summary: What is happening visually (reference character visualTraits for accuracy)
+- summary: What is happening visually (reference character appearance for accuracy)
 - emotion: Emotional tone to convey
 - characters: Who appears, their expression, pose, focus level
 - shot: Composition (size, angle, POV, layout, staging)
 
 Character rendering:
-- Reference each character's visualTraits for consistent appearance
+- Reference each character's appearance fields (eyeStyle, bodyType, clothing, etc.)
 - Include species-appropriate details from character definitions
+- Ensure distinctive features are visible when character is shown
 
 Shot composition principles:
 - Vary shot sizes (wide for establishing, close for emotion)

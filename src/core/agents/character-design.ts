@@ -13,10 +13,23 @@ import { type Logger, logThinking } from '../utils/logger';
 
 const IMAGE_MODEL = 'google/nano-banana-pro';
 
-/** Format visual traits array as descriptive text */
-const formatVisualTraits = (character: StoryCharacter): string => {
-  if (character.visualTraits.length === 0) return character.description;
-  return character.visualTraits.map(t => `${t.key}: ${t.value}`).join('\n');
+/** Format character appearance as descriptive text for image generation */
+const formatAppearance = (character: StoryCharacter): string => {
+  const { appearance } = character;
+  if (!appearance) return character.description;
+
+  const lines: string[] = [
+    `Eyes: ${appearance.eyeStyle}`,
+    `Body: ${appearance.bodyType}`,
+    `Clothing: ${appearance.clothing}`,
+  ];
+
+  if (appearance.hairStyle) lines.push(`Hair: ${appearance.hairStyle}`);
+  if (appearance.skinTone) lines.push(`Skin/Fur: ${appearance.skinTone}`);
+  if (appearance.accessories.length > 0) lines.push(`Accessories: ${appearance.accessories.join(', ')}`);
+  if (appearance.distinctiveFeatures.length > 0) lines.push(`Distinctive features: ${appearance.distinctiveFeatures.join(', ')}`);
+
+  return lines.join('\n');
 };
 
 const buildSpritePrompt = (character: StoryCharacter, styleGuide: VisualStyleGuide): string => {
@@ -25,7 +38,7 @@ const buildSpritePrompt = (character: StoryCharacter, styleGuide: VisualStyleGui
   const medium = art_style.medium?.join(', ') || 'digital illustration';
   const technique = art_style.technique?.join(', ') || 'soft edges';
 
-  const visualDescription = formatVisualTraits(character);
+  const visualDescription = formatAppearance(character);
 
   return `ART STYLE (CRITICAL - must match exactly):
 Genre: ${genre}

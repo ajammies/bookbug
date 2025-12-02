@@ -21,7 +21,7 @@ describe('displayBrief', () => {
     ageRange: { min: 4, max: 8 },
     pageCount: 24,
     characters: [
-      { name: 'Luna', description: 'A curious rabbit', personalityTraits: [], visualTraits: [], notes: [] },
+      { name: 'Luna', description: 'A curious rabbit', personalityTraits: [], notes: [] },
     ],
     interests: [],
     
@@ -76,7 +76,7 @@ describe('displayBrief', () => {
     const briefWithRole: StoryBrief = {
       ...minimalBrief,
       characters: [
-        { name: 'Luna', description: 'A curious rabbit', role: 'protagonist', personalityTraits: [], visualTraits: [], notes: [] },
+        { name: 'Luna', description: 'A curious rabbit', role: 'protagonist', personalityTraits: [], notes: [] },
       ],
     };
     displayBrief(briefWithRole);
@@ -95,7 +95,7 @@ describe('displayStory', () => {
     ageRange: { min: 4, max: 8 },
     pageCount: 1,
     characters: [
-      { name: 'Luna', description: 'A curious rabbit', personalityTraits: [], visualTraits: [], notes: [] },
+      { name: 'Luna', description: 'A curious rabbit', personalityTraits: [], notes: [] },
     ],
     interests: [],
     

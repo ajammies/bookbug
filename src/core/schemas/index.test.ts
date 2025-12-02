@@ -65,7 +65,7 @@ describe('StoryCharacterSchema', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.personalityTraits).toEqual([]);
-      expect(result.data.visualTraits).toEqual([]);
+      expect(result.data.appearance).toBeUndefined();
       expect(result.data.notes).toEqual([]);
     }
   });

@@ -58,7 +58,7 @@ const mockStoryWithPlot: StoryWithPlot = {
   setting: 'Test land',
   ageRange: { min: 4, max: 8 },
   pageCount: 2,
-  characters: [{ name: 'Hero', description: 'The main character', personalityTraits: [], visualTraits: [], notes: [] }],
+  characters: [{ name: 'Hero', description: 'The main character', personalityTraits: [], notes: [] }],
   interests: [],
   plot: {
     storyArcSummary: 'A hero goes on a journey',
