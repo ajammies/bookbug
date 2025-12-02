@@ -3,6 +3,10 @@ import { ImageQualityResultSchema, type PageRenderContext, type ImageQualityResu
 import { getModel } from '../config';
 import type { Logger } from '../utils/logger';
 
+// TODO: Replace with ensemble pipeline - see https://github.com/ajammies/bookbug/issues/79
+// Current approach: Claude Vision (~$0.02/image, ~3s)
+// Target approach: Fast screen (TOPIQ) → Artifact check (HADM) → Character match (CLIP) → Claude only for borderline
+
 const SYSTEM_PROMPT = `You are a quality control expert for children's book illustrations.
 
 Analyze the rendered image against the provided context (style guide, character designs, prose).
