@@ -1,0 +1,9 @@
+{
+  "name": "Chibi",
+  "art_style": {
+    "genre": ["chibi", "kawaii", "anime-inspired"],
+    "medium": ["digital", "cel-shaded"],
+    "technique": ["big-heads", "small-bodies", "exaggerated-expressions", "simple-features", "bold-outlines"],
+    "style_strength": 0.95
+  }
+}
