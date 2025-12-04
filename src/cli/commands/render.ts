@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { renderPage, renderPageMock, createBook } from '../../core/pipeline';
 import { StorySchema, type BookFormatKey, type RenderedBook, type RenderedPage } from '../../core/schemas';
+import type { ImageModel } from '../../core/services/image-generation';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
 import { createOutputManager, getOrCreateOutputManager } from '../utils/output';
@@ -12,6 +13,7 @@ interface RenderOptions {
   output?: string;
   mock?: boolean;
   format?: BookFormatKey;
+  model?: ImageModel;
 }
 
 export const renderCommand = new Command('render')
@@ -20,6 +22,7 @@ export const renderCommand = new Command('render')
   .option('-o, --output <path>', 'Output directory for book files')
   .option('-m, --mock', 'Use mock images instead of real generation')
   .option('-f, --format <format>', 'Book format: square-small, square-large, landscape, portrait-small, portrait-large', 'square-large')
+  .option('--model <model>', 'Image generation model: nano-banana (default), flux2-dev', 'nano-banana')
   .action(async (storyFile: string, options: RenderOptions) => {
     const spinner = createSpinner();
 
@@ -41,15 +44,16 @@ export const renderCommand = new Command('render')
       // Render pages one at a time (images have temporary URLs from Replicate)
       const totalPages = story.visuals.illustratedPages.length;
       const format = options.format ?? 'square-large';
+      const model = options.model ?? 'nano-banana';
       const pages: RenderedPage[] = [];
       let heroPage: RenderedPage | undefined;
 
       for (const storyPage of story.visuals.illustratedPages) {
-        spinner.start(`Rendering page ${storyPage.pageNumber}/${totalPages}${options.mock ? ' (mock)' : ''}...`);
+        spinner.start(`Rendering page ${storyPage.pageNumber}/${totalPages}${options.mock ? ' (mock)' : ` [${model}]`}...`);
 
         const page = options.mock
           ? renderPageMock(storyPage.pageNumber)
-          : await renderPage(story, storyPage.pageNumber, { format, heroPageUrl: heroPage?.url });
+          : await renderPage(story, storyPage.pageNumber, { format, heroPageUrl: heroPage?.url, model });
 
         pages.push(page);
         if (!heroPage) heroPage = page;

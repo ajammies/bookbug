@@ -4,14 +4,16 @@ import {
   createReplicateClient,
   extractImageUrl,
   runWithRateLimit,
+  type ImageModel,
 } from '../services/image-generation';
 import { type Logger, logThinking } from '../utils/logger';
+
+// Character sprite sheets always use nano-banana (no experiment flag here yet)
+const CHARACTER_MODEL: ImageModel = 'nano-banana';
 
 /**
  * Character sprite sheet generation using Replicate
  */
-
-const IMAGE_MODEL = 'google/nano-banana-pro';
 
 const buildSpritePrompt = (character: StoryCharacter, styleGuide: VisualStyleGuide): string => {
   const { art_style } = styleGuide;
@@ -51,6 +53,7 @@ export const characterDesignAgent = async (
 ): Promise<CharacterDesign> => {
   const output = await runWithRateLimit(
     client,
+    CHARACTER_MODEL,
     {
       prompt: buildSpritePrompt(character, styleGuide),
       aspect_ratio: '16:9',

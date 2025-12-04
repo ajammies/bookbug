@@ -5,14 +5,22 @@ import { retryWithBackoff } from '../utils/retry';
 import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
 
 /**
- * Image generation service using Replicate API with Google Nano Banana Pro
+ * Image generation service using Replicate API.
  *
- * Generates images by passing filtered Story JSON directly as the prompt.
- * The model receives the full context about the story, style, characters, and specific page.
+ * Supports multiple models:
+ * - nano-banana: Google Nano Banana Pro (default)
+ * - flux2-dev: Black Forest Labs Flux 2 Dev (better consistency, cheaper)
  */
 
-const IMAGE_MODEL = 'google/nano-banana-pro';
-const DEFAULT_RESOLUTION = '2K'; // Options: '1K', '2K', '4K'
+export type ImageModel = 'nano-banana' | 'flux2-dev';
+
+const MODEL_IDS: Record<ImageModel, string> = {
+  'nano-banana': 'google/nano-banana-pro',
+  'flux2-dev': 'black-forest-labs/flux-2-dev',
+};
+
+const DEFAULT_MODEL: ImageModel = 'nano-banana';
+const DEFAULT_RESOLUTION = '2K'; // Options: '1K', '2K', '4K' (nano-banana only)
 
 export interface GeneratedPage {
   /** Temporary URL from Replicate (expires after ~24h) */
@@ -127,11 +135,13 @@ const getReplicateRetryAfter = (error: unknown): number | null => {
  */
 export const runWithRateLimit = async (
   client: Replicate,
+  model: ImageModel,
   input: Record<string, unknown>,
   logger?: Logger
 ): Promise<unknown> => {
+  const modelId = MODEL_IDS[model];
   return retryWithBackoff(
-    () => client.run(IMAGE_MODEL, { input }),
+    () => client.run(modelId as `${string}/${string}`, { input }),
     {
       maxRetries: 5,
       shouldRetry: isRetryableError,
@@ -178,20 +188,64 @@ export interface GeneratePageImageOptions {
   heroPageUrl?: string;
   client?: Replicate;
   logger?: Logger;
+  model?: ImageModel;
 }
 
 /**
- * Generate a page image using Google Nano Banana Pro via Replicate
+ * Build model-specific input parameters
+ */
+const buildModelInput = (
+  model: ImageModel,
+  prompt: string,
+  format: BookFormat,
+  referenceImages: string[]
+): Record<string, unknown> => {
+  const aspectRatio = getAspectRatio(format);
+
+  if (model === 'flux2-dev') {
+    // Flux 2 Dev uses input_images (up to 4), different param names
+    const input: Record<string, unknown> = {
+      prompt,
+      aspect_ratio: aspectRatio,
+      output_format: 'png',
+      go_fast: true, // Slightly lower quality but faster/cheaper
+    };
+    // Flux 2 supports up to 4 reference images
+    if (referenceImages.length > 0) {
+      input.input_images = referenceImages.slice(0, 4);
+    }
+    return input;
+  }
+
+  // Nano Banana Pro (default)
+  const input: Record<string, unknown> = {
+    prompt,
+    aspect_ratio: aspectRatio,
+    resolution: DEFAULT_RESOLUTION,
+    output_format: 'png',
+  };
+  if (referenceImages.length > 0) {
+    input.image_input = referenceImages;
+  }
+  return input;
+};
+
+/**
+ * Generate a page image using Replicate
+ *
+ * Supports multiple models:
+ * - nano-banana (default): Google Nano Banana Pro
+ * - flux2-dev: Black Forest Labs Flux 2 Dev (better consistency, cheaper)
  *
  * Passes rendering instructions plus filtered Story JSON as the prompt.
- * Hero page and character sprite sheets are passed as image_input for visual consistency.
+ * Hero page and character sprite sheets are passed as reference images for visual consistency.
  */
 export const generatePageImage = async (
   context: PageRenderContext,
   format: BookFormat,
   options: GeneratePageImageOptions = {}
 ): Promise<GeneratedPage> => {
-  const { heroPageUrl, client = createReplicateClient(), logger } = options;
+  const { heroPageUrl, client = createReplicateClient(), logger, model = DEFAULT_MODEL } = options;
 
   try {
     const referenceImages = extractReferenceImages(context, heroPageUrl);
@@ -199,23 +253,12 @@ export const generatePageImage = async (
 
     // Debug logging for prompt and reference images
     logger?.debug(
-      { pageNumber: context.page.pageNumber, prompt, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
+      { pageNumber: context.page.pageNumber, model, prompt, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
       'Preparing image generation'
     );
 
-    const input: Record<string, unknown> = {
-      prompt,
-      aspect_ratio: getAspectRatio(format),
-      resolution: DEFAULT_RESOLUTION,
-      output_format: 'png',
-    };
-
-    // Pass sprite sheets and previous pages as reference images for consistency
-    if (referenceImages.length > 0) {
-      input.image_input = referenceImages;
-    }
-
-    const output = await runWithRateLimit(client, input, logger);
+    const input = buildModelInput(model, prompt, format, referenceImages);
+    const output = await runWithRateLimit(client, model, input, logger);
 
     logApiSuccess(logger, 'imageGen');
     return { url: extractImageUrl(output) };
