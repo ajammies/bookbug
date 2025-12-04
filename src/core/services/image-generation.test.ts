@@ -146,10 +146,10 @@ describe('generatePageImage', () => {
     const callArgs = mockRun.mock.calls[0]?.[1] as { input: { prompt: string } };
     const prompt = callArgs.input.prompt;
 
-    // Prompt includes render instructions followed by JSON context
+    // Prompt includes render instructions followed by minified JSON context
     expect(prompt).toContain('Render the page text directly on the image');
-    expect(prompt).toContain('"storyTitle": "The Magic Garden"');
-    expect(prompt).toContain('"text": "Luna found an old garden gate."');
+    expect(prompt).toContain('"storyTitle":"The Magic Garden"');
+    expect(prompt).toContain('"text":"Luna found an old garden gate."');
   });
 
   it('uses correct aspect ratio for square format', async () => {

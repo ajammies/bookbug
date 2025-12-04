@@ -170,7 +170,7 @@ Render the page text directly on the image. Choose a font that befits the scene.
 MUST render in ${medium} style with ${technique}.
 
 Page context:
-${JSON.stringify(context, null, 2)}`;
+${JSON.stringify(context)}`;
 };
 
 /** Extract reference image URLs for image_input (hero page + sprite sheets) */
