@@ -298,6 +298,11 @@ export const runPipelineIncremental = async (
   ui?.progress('Creating style guide...');
   const styleGuide = state.styleGuide ?? await styleGuideAgent(story, stylePreset);
 
+  // Save initial visuals (style guide only, no pages yet)
+  if (outputManager && !state.styleGuide) {
+    await outputManager.saveVisuals({ style: styleGuide, illustratedPages: [] });
+  }
+
   ui?.progress('Setting up prose...');
   const proseSetup = state.proseSetup ?? await proseSetupAgent(story);
 
@@ -322,6 +327,11 @@ export const runPipelineIncremental = async (
     ui?.progress(`Directing page ${pageNumber}...`);
     const illustratedPage = await pageVisualsAgent({ story, styleGuide, pageNumber, prosePage });
     illustratedPages.push(illustratedPage);
+
+    // Save visuals incrementally after each page
+    if (outputManager) {
+      await outputManager.saveVisuals({ style: styleGuide, illustratedPages });
+    }
 
     ui?.progress(`Rendering page ${pageNumber}...`);
     const currentStory: ComposedStory = {

@@ -173,6 +173,7 @@ describe('renderBook', () => {
       folder: '/test/folder',
       saveBrief: vi.fn(),
       savePlot: vi.fn(),
+      saveVisuals: vi.fn(),
       saveProse: vi.fn(),
       saveStory: vi.fn(),
       saveBook: vi.fn(),
@@ -249,6 +250,7 @@ describe('runPipelineIncremental', () => {
       folder: '/test/folder',
       saveBrief: vi.fn(),
       savePlot: vi.fn(),
+      saveVisuals: vi.fn(),
       saveProse: vi.fn(),
       saveStory: vi.fn(),
       saveBook: vi.fn(),
@@ -259,6 +261,7 @@ describe('runPipelineIncremental', () => {
     };
 
     await runPipelineIncremental(mockPipelineState, { outputManager });
+    expect(outputManager.saveVisuals).toHaveBeenCalled();
     expect(outputManager.saveProse).toHaveBeenCalled();
     expect(outputManager.saveStory).toHaveBeenCalled();
     expect(outputManager.saveBook).toHaveBeenCalled();

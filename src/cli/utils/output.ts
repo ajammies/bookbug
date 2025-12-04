@@ -9,12 +9,13 @@ import type {
   RenderedPage,
   CharacterDesign,
   ImageQualityResult,
+  VisualDirection,
 } from '../../core/schemas';
 import { createStoryFolderName } from './naming';
 import { downloadFile } from '../../utils';
 
 const OUTPUT_DIR = './output';
-const ARTIFACT_FILES = ['brief.json', 'plot.json', 'prose.json', 'story.json', 'book.json'];
+const ARTIFACT_FILES = ['brief.json', 'plot.json', 'visuals.json', 'prose.json', 'story.json', 'book.json'];
 
 const saveJson = (folder: string, filename: string, data: unknown): Promise<void> =>
   fs.writeFile(path.join(folder, filename), JSON.stringify(data, null, 2));
@@ -29,6 +30,8 @@ export interface StoryOutputManager {
   saveBrief(brief: StoryBrief): Promise<void>;
   /** Save StoryWithPlot to plot.json (composed brief + plot) */
   savePlot(story: StoryWithPlot): Promise<void>;
+  /** Save VisualDirection to visuals.json (style guide + illustrated pages) */
+  saveVisuals(visuals: VisualDirection): Promise<void>;
   /** Save StoryWithProse to prose.json (composed brief + plot + prose) */
   saveProse(story: StoryWithProse): Promise<void>;
   /** Save Story to story.json */
@@ -101,6 +104,7 @@ const createManager = (folder: string): StoryOutputManager => ({
   folder,
   saveBrief: (brief) => saveJson(folder, 'brief.json', brief),
   savePlot: (plot) => saveJson(folder, 'plot.json', plot),
+  saveVisuals: (visuals) => saveJson(folder, 'visuals.json', visuals),
   saveProse: (story) => saveJson(folder, 'prose.json', story),
   saveStory: (story) => saveJson(folder, 'story.json', story),
   saveBook: (book) => saveJson(folder, 'book.json', book),
