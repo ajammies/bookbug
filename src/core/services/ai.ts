@@ -7,6 +7,7 @@
  */
 import {
   generateObject as aiGenerateObject,
+  generateText as aiGenerateText,
   streamObject as aiStreamObject,
   NoObjectGeneratedError,
   type GenerateObjectResult,
@@ -78,6 +79,39 @@ export async function generateObject<T>(
     const result = await aiGenerateObject({ ...options, maxRetries: 0 }) as GenerateObjectResult<T>;
     logApiSuccess(logger, agent);
     return result;
+  }
+}
+
+// ============================================================================
+// Text Generation
+// ============================================================================
+
+type GenerateTextParams = Parameters<typeof aiGenerateText>[0];
+
+export async function generateText(
+  options: GenerateTextParams,
+  logger?: Logger
+): Promise<string> {
+  const agent = 'generateText';
+
+  try {
+    const result = await aiGenerateText(options);
+    logApiSuccess(logger, agent);
+    return result.text;
+  } catch (error) {
+    const retryAfter = getRetryAfterSeconds(error);
+
+    if (retryAfter === null) {
+      logApiError(logger, agent, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+
+    // Provider sent retry-after header - wait exact duration and retry once
+    logRateLimit(logger, agent, retryAfter);
+    await sleep(retryAfter * 1000);
+    const result = await aiGenerateText({ ...options, maxRetries: 0 });
+    logApiSuccess(logger, agent);
+    return result.text;
   }
 }
 

@@ -2,7 +2,8 @@ import Replicate, { type FileOutput } from 'replicate';
 import type { PageRenderContext, BookFormat } from '../schemas';
 import { getAspectRatio } from '../schemas';
 import { retryWithBackoff } from '../utils/retry';
-import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/logger';
+import { type Logger, logApiSuccess, logApiError } from '../utils/logger';
+import { promptCondenserAgent } from '../agents/prompt-condenser';
 
 /**
  * Image generation service using Replicate API.
@@ -211,8 +212,11 @@ const buildModelInput = (
       go_fast: true, // Slightly lower quality but faster/cheaper
     };
     // Flux 2 supports up to 4 reference images
-    if (referenceImages.length > 0) {
-      input.input_images = referenceImages.slice(0, 4);
+    // Skip expired Replicate delivery URLs (they 404 after ~24h)
+    // TODO: Regenerate expired character images instead of skipping (#90)
+    const validImages = referenceImages.filter(url => !url.includes('replicate.delivery'));
+    if (validImages.length > 0) {
+      input.input_images = validImages.slice(0, 4);
     }
     return input;
   }
@@ -234,10 +238,9 @@ const buildModelInput = (
  * Generate a page image using Replicate
  *
  * Supports multiple models:
- * - nano-banana (default): Google Nano Banana Pro
- * - flux2-dev: Black Forest Labs Flux 2 Dev (better consistency, cheaper)
+ * - nano-banana (default): Google Nano Banana Pro - uses full JSON context
+ * - flux2-dev: Black Forest Labs Flux 2 Dev - uses LLM-condensed plain English prompt
  *
- * Passes rendering instructions plus filtered Story JSON as the prompt.
  * Hero page and character sprite sheets are passed as reference images for visual consistency.
  */
 export const generatePageImage = async (
@@ -249,11 +252,16 @@ export const generatePageImage = async (
 
   try {
     const referenceImages = extractReferenceImages(context, heroPageUrl);
-    const prompt = buildPrompt(context);
+
+    // Flux 2 needs a condensed plain English prompt (shorter limit, better adherence)
+    // Nano Banana can handle the full JSON context
+    const prompt = model === 'flux2-dev'
+      ? await promptCondenserAgent(context, logger)
+      : buildPrompt(context);
 
     // Debug logging for prompt and reference images
     logger?.debug(
-      { pageNumber: context.page.pageNumber, model, prompt, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
+      { pageNumber: context.page.pageNumber, model, promptLength: prompt.length, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
       'Preparing image generation'
     );
 

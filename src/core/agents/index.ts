@@ -47,3 +47,6 @@ export { extract, type ExtractionResult, type ExtractOptions } from './extractor
 
 // Image quality analysis (outputs ImageQualityResult)
 export { imageQualityAgent, type ImageQualityOptions, type ImageInput } from './image-quality';
+
+// Prompt condenser for image generation (outputs plain text prompt)
+export { promptCondenserAgent } from './prompt-condenser';
