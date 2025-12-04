@@ -1,28 +1,28 @@
-import { generateObject } from '../services/ai';
 import { StoryBriefSchema, type StoryBrief, type StoryCharacter } from '../schemas';
-import { getModel } from '../config';
 import type { Logger } from '../utils/logger';
-import { toExtractablePartial, stripNulls } from '../utils/extractable-schema';
-
-// Extractable schema: all fields nullable + optional for safe LLM extraction
-const BriefExtractionSchema = toExtractablePartial(StoryBriefSchema);
+import { extract } from './extractor';
 
 /** Filter out incomplete characters (must have name) */
 const filterValidCharacters = (characters: Partial<StoryCharacter>[]): StoryCharacter[] =>
   characters.filter((c): c is StoryCharacter => typeof c.name === 'string' && c.name.length > 0);
 
 const buildSystemPrompt = (availableStyles: string[]): string => {
-  const stylesNote = availableStyles.length > 0
-    ? `\n\nStyle presets available: ${availableStyles.join(', ')}. If user mentions one of these (or "generate new style"), set stylePreset accordingly.`
-    : '';
+  const stylesNote =
+    availableStyles.length > 0
+      ? `\n\nStyle presets available: ${availableStyles.join(', ')}. If user mentions one of these (or "generate new style"), set stylePreset accordingly.`
+      : '';
 
   return `Extract story brief fields from the conversation exchange.
 
 RULES:
-- Set fields to null if unknown or not mentioned
 - Only extract fields explicitly stated in the question or answer
 - If the user confirms something (e.g., "yes"), extract from the question they're confirming${stylesNote}`;
 };
+
+const buildContextualPrompt = (question: string, answer: string, currentBrief: Partial<StoryBrief>): string =>
+  Object.keys(currentBrief).length > 0
+    ? `Current brief:\n${JSON.stringify(currentBrief, null, 2)}\n\nQuestion: ${question}\nAnswer: ${answer}`
+    : `Question: ${question}\nAnswer: ${answer}`;
 
 export interface BriefExtractorOptions {
   availableStyles?: string[];
@@ -47,21 +47,13 @@ export const briefExtractorAgent = async (
 ): Promise<Partial<StoryBrief>> => {
   const { availableStyles = [], logger } = options;
 
-  const contextualPrompt = Object.keys(currentBrief).length > 0
-    ? `Current brief:\n${JSON.stringify(currentBrief, null, 2)}\n\nQuestion: ${question}\nAnswer: ${answer}`
-    : `Question: ${question}\nAnswer: ${answer}`;
+  const prompt = buildContextualPrompt(question, answer, currentBrief);
+  const context = buildSystemPrompt(availableStyles);
 
-  const { object } = await generateObject({
-    model: getModel(),
-    schema: BriefExtractionSchema,
-    system: buildSystemPrompt(availableStyles),
-    prompt: contextualPrompt,
-  }, logger);
+  const result = await extract(prompt, StoryBriefSchema, { context, logger });
 
-  // Strip nulls and merge with current brief
-  const extracted = stripNulls(object as Record<string, unknown>) as Partial<StoryBrief>;
-
-  // Filter out incomplete characters (LLM sometimes returns partial objects)
+  // Domain-specific: filter incomplete characters
+  const extracted = { ...result.data };
   if (extracted.characters) {
     extracted.characters = filterValidCharacters(extracted.characters);
   }
