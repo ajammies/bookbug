@@ -95,16 +95,31 @@ export const extractImageUrl = (output: unknown): string => {
  * Check if error is retryable (rate limit or transient prediction failure)
  */
 const isRetryableError = (error: unknown): boolean => {
-  // Rate limit errors
-  if (error && typeof error === 'object' && 'response' in error) {
-    const apiError = error as { response: { status: number } };
-    if (apiError.response.status === 429) return true;
+  // Rate limit errors (check message since Replicate includes status in error message)
+  if (error instanceof Error && error.message.includes('429')) {
+    return true;
   }
   // Transient prediction failures
   if (error instanceof Error && error.message.includes('Prediction failed')) {
     return true;
   }
   return false;
+};
+
+/**
+ * Extract retry-after seconds from Replicate error message.
+ * Replicate returns JSON with retry_after in the error body.
+ */
+const getReplicateRetryAfter = (error: unknown): number | null => {
+  if (!(error instanceof Error)) return null;
+
+  // Parse retry_after from error message JSON
+  // Format: "...status 429 Too Many Requests: {\"detail\":\"...\",\"retry_after\":10}"
+  const match = error.message.match(/"retry_after"\s*:\s*(\d+)/);
+  if (match?.[1]) {
+    return parseInt(match[1], 10) * 1000; // Convert to ms
+  }
+  return null;
 };
 
 /**
@@ -117,7 +132,12 @@ export const runWithRateLimit = async (
 ): Promise<unknown> => {
   return retryWithBackoff(
     () => client.run(IMAGE_MODEL, { input }),
-    { maxRetries: 3, shouldRetry: isRetryableError, logger }
+    {
+      maxRetries: 5,
+      shouldRetry: isRetryableError,
+      getRetryAfter: getReplicateRetryAfter,
+      logger,
+    }
   );
 };
 

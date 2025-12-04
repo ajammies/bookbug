@@ -9,6 +9,10 @@ vi.mock('ai', () => ({
     isInstance: (error: unknown) =>
       error instanceof Error && (error as { name?: string }).name === 'NoObjectGeneratedError',
   },
+  APICallError: {
+    isInstance: (error: unknown) =>
+      error instanceof Error && (error as { name?: string }).name === 'APICallError',
+  },
 }));
 
 // Mock retry
@@ -23,12 +27,99 @@ vi.mock('../utils/logger', () => ({
   logRateLimit: vi.fn(),
 }));
 
-import { streamObject } from 'ai';
-import { streamObjectWithProgress, type RepairFunction } from './ai';
+import { streamObject, generateObject as aiGenerateObject } from 'ai';
+import { streamObjectWithProgress, generateObject, type RepairFunction } from './ai';
+import { sleep } from '../utils/retry';
+import { logRateLimit, logApiSuccess } from '../utils/logger';
 
 const TestSchema = z.object({
   name: z.string(),
   value: z.number(),
+});
+
+describe('generateObject', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns result on success', async () => {
+    const mockResult = { object: { name: 'test', value: 42 } };
+    const mockGenerateObject = aiGenerateObject as ReturnType<typeof vi.fn>;
+    mockGenerateObject.mockResolvedValue(mockResult);
+
+    const result = await generateObject({
+      model: 'mock-model' as unknown as Parameters<typeof aiGenerateObject>[0]['model'],
+      schema: TestSchema,
+      prompt: 'test prompt',
+    });
+
+    expect(result.object).toEqual(mockResult.object);
+    expect(logApiSuccess).toHaveBeenCalled();
+  });
+
+  it('retries on 429 APICallError with retry-after header', async () => {
+    const mockGenerateObject = aiGenerateObject as ReturnType<typeof vi.fn>;
+    const apiError = new Error('Rate limited');
+    (apiError as { name?: string }).name = 'APICallError';
+    (apiError as { statusCode?: number }).statusCode = 429;
+    (apiError as { responseHeaders?: Record<string, string> }).responseHeaders = {
+      'retry-after': '5',
+    };
+
+    const mockResult = { object: { name: 'test', value: 42 } };
+    mockGenerateObject
+      .mockRejectedValueOnce(apiError)
+      .mockResolvedValueOnce(mockResult);
+
+    const result = await generateObject({
+      model: 'mock-model' as unknown as Parameters<typeof aiGenerateObject>[0]['model'],
+      schema: TestSchema,
+      prompt: 'test prompt',
+    });
+
+    expect(sleep).toHaveBeenCalledWith(5000);
+    expect(logRateLimit).toHaveBeenCalled();
+    expect(result.object).toEqual(mockResult.object);
+  });
+
+  it('throws 429 error without retry-after header', async () => {
+    const mockGenerateObject = aiGenerateObject as ReturnType<typeof vi.fn>;
+    const apiError = new Error('Rate limited');
+    (apiError as { name?: string }).name = 'APICallError';
+    (apiError as { statusCode?: number }).statusCode = 429;
+    (apiError as { responseHeaders?: Record<string, string> }).responseHeaders = {};
+
+    mockGenerateObject.mockRejectedValue(apiError);
+
+    await expect(
+      generateObject({
+        model: 'mock-model' as unknown as Parameters<typeof aiGenerateObject>[0]['model'],
+        schema: TestSchema,
+        prompt: 'test prompt',
+      })
+    ).rejects.toThrow('Rate limited');
+
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it('throws non-429 errors without retry', async () => {
+    const mockGenerateObject = aiGenerateObject as ReturnType<typeof vi.fn>;
+    const error = new Error('Server error');
+    (error as { name?: string }).name = 'APICallError';
+    (error as { statusCode?: number }).statusCode = 500;
+
+    mockGenerateObject.mockRejectedValue(error);
+
+    await expect(
+      generateObject({
+        model: 'mock-model' as unknown as Parameters<typeof aiGenerateObject>[0]['model'],
+        schema: TestSchema,
+        prompt: 'test prompt',
+      })
+    ).rejects.toThrow('Server error');
+
+    expect(sleep).not.toHaveBeenCalled();
+  });
 });
 
 describe('streamObjectWithProgress', () => {
