@@ -8,8 +8,7 @@ import {
 } from '../services/image-generation';
 import { type Logger, logThinking } from '../utils/logger';
 
-// Character sprite sheets always use nano-banana (no experiment flag here yet)
-const CHARACTER_MODEL: ImageModel = 'nano-banana';
+const CHARACTER_MODEL: ImageModel = 'flux2-dev';
 
 /**
  * Character sprite sheet generation using Replicate
@@ -57,8 +56,8 @@ export const characterDesignAgent = async (
     {
       prompt: buildSpritePrompt(character, styleGuide),
       aspect_ratio: '16:9',
-      resolution: '2K',
       output_format: 'png',
+      go_fast: true,
     },
     logger
   );
