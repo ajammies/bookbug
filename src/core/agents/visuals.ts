@@ -26,14 +26,31 @@ For each page in illustratedPages:
 - beats: Array with at least one IllustrationBeat
 
 For each beat:
-- order, purpose, summary, emotion (keep brief)
+- order, purpose, summary, emotion (keep brief), action sequence
 - characters: Who appears
 - shot: size and angle (required), other fields optional
 
 Visual principles:
-- Vary shot sizes (wide for establishing, close for emotion)
-- Match composition to emotional beats
+- First think of core emotion and plot beat in the scene
+- In your composition of the visual, exaggerate this emotion as far as you possibly can
+- Be extremely creative in your composition
+- Add a lot of action and dynamism into your shots
+- Vary the shots
 - Keep beat descriptions to 1-2 sentences
+
+ANIMATION PRINCIPLES FOR STATIC ILLUSTRATION:
+1. Squash & Stretch: Show weight through distorted forms—elongate jumping figures, compress on impact
+2. Anticipation: Include the wind-up before action—leaning back before running, eyes widening before surprise
+3. Staging: Direct the eye to key action first—use contrast, negative space, leading lines
+4. Peak Moment: Choose the most dynamic frozen instant—apex of jump, not preparation
+5. Follow Through: Show trailing elements catching up—hair flowing, cape mid-billow, clothes settling
+6. Motion Blur: Imply speed through blur or afterimages clustered at movement start/end
+7. Arcs: Position limbs along curved paths—no stiff, straight-line movements
+8. Secondary Action: Add supporting gestures reinforcing emotion—nervous fidgeting, excited bouncing
+9. Timing: Choose held stillness vs dynamic mid-action based on emotional beat
+10. Exaggeration: Push poses beyond realism—bigger expressions, dramatic silhouettes
+11. Solid Drawing: Render with volume and weight—consistent perspective, grounded shadows
+12. Appeal: Clear readable shapes, interesting proportions, expressive features
 
 CRITICAL: Generate illustratedPages for EVERY page in the story. Do not stop after style.`;
 
@@ -154,6 +171,20 @@ For this page, create one or more IllustrationBeats:
 - emotion: Emotional tone to convey
 - characters: Who appears, their expression, pose, focus level
 - shot: Composition (size, angle, POV, layout, staging)
+
+ANIMATION PRINCIPLES FOR STATIC ILLUSTRATION:
+1. Squash & Stretch: Show weight through distorted forms—elongate jumping figures, compress on impact
+2. Anticipation: Include the wind-up before action—leaning back before running, eyes widening before surprise
+3. Staging: Direct the eye to key action first—use contrast, negative space, leading lines
+4. Peak Moment: Choose the most dynamic frozen instant—apex of jump, not preparation
+5. Follow Through: Show trailing elements catching up—hair flowing, cape mid-billow, clothes settling
+6. Motion Blur: Imply speed through blur or afterimages clustered at movement start/end
+7. Arcs: Position limbs along curved paths—no stiff, straight-line movements
+8. Secondary Action: Add supporting gestures reinforcing emotion—nervous fidgeting, excited bouncing
+9. Timing: Choose held stillness vs dynamic mid-action based on emotional beat
+10. Exaggeration: Push poses beyond realism—bigger expressions, dramatic silhouettes
+11. Solid Drawing: Render with volume and weight—consistent perspective, grounded shadows
+12. Appeal: Clear readable shapes, interesting proportions, expressive features
 
 Shot composition principles:
 - Vary shot sizes (wide for establishing, close for emotion)

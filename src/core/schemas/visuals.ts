@@ -173,6 +173,8 @@ export const VisualStyleGuideSchema = z.object({
     technique: z.array(z.string().min(1)).default([]).describe('Rendering techniques (e.g., "soft edges", "bold outlines")'),
     style_strength: z.number().min(0).max(1).optional().describe('How strongly to apply style (0=subtle, 1=dominant)'),
   }).describe('Overall artistic style'),
+  actionSequence: z.string().optional().describe('The visual action arc of the story (e.g., "discovery → challenge → triumph")'),
+  coreEmotion: z.string().optional().describe('The primary emotional throughline (e.g., "wonder", "courage", "belonging")'),
   setting: SettingSchema.describe('Default setting for the story'),
   lighting: LightingSchema.optional().describe('Default lighting setup'),
   color_script: ColorScriptSchema.optional().describe('Color palette and mood'),
