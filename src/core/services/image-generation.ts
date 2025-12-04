@@ -204,19 +204,15 @@ const buildModelInput = (
 
   if (model === 'flux2-dev') {
     // Flux 2 Dev uses input_images (up to 4), different param names
-    // Flux 2 has a much shorter prompt limit than Nano Banana - truncate to ~2000 chars
-    const truncatedPrompt = prompt.length > 2000 ? prompt.slice(0, 2000) + '...' : prompt;
     const input: Record<string, unknown> = {
-      prompt: truncatedPrompt,
+      prompt,
       aspect_ratio: aspectRatio,
       output_format: 'png',
       go_fast: true, // Slightly lower quality but faster/cheaper
     };
     // Flux 2 supports up to 4 reference images
-    // Filter out expired Replicate URLs (they return 404 after ~24h)
-    const validImages = referenceImages.filter(url => !url.includes('replicate.delivery'));
-    if (validImages.length > 0) {
-      input.input_images = validImages.slice(0, 4);
+    if (referenceImages.length > 0) {
+      input.input_images = referenceImages.slice(0, 4);
     }
     return input;
   }
