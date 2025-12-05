@@ -2,37 +2,34 @@
  * Structured logging utilities using Pino
  *
  * Pure functional logger factory and helper functions.
- * Logs are written to centralized logs/ folder in NDJSON format.
+ * Logs are written directly to story output folders in NDJSON format.
  */
 import pino from 'pino';
 import path from 'path';
-import { createStoryFolderName } from '../../cli/utils/naming';
 
 export type Logger = pino.Logger;
 
 export interface LoggerConfig {
   silent?: boolean;
-  title?: string;
 }
 
-/** Derive log file path from name */
-const getLogPath = (name: string): string =>
-  path.join(process.cwd(), 'logs', `${name}.log`);
+/** Create a silent logger (for testing or when logging disabled) */
+export const createSilentLogger = (): Logger => pino({ level: 'silent' });
 
-/** Create a configured logger instance */
-export const createLogger = (config: LoggerConfig = {}): Logger => {
+/** Create a logger that writes to a specific folder */
+export const createLoggerToFolder = (folder: string, config: LoggerConfig = {}): Logger => {
   if (config.silent) {
-    return pino({ level: 'silent' });
+    return createSilentLogger();
   }
 
-  const name = createStoryFolderName(config.title ?? 'run');
+  const logPath = path.join(folder, 'run.log');
 
   return pino(
-    { level: 'debug', base: { name } },
+    { level: 'debug' },
     pino.transport({
       target: 'pino/file',
       options: {
-        destination: getLogPath(name),
+        destination: logPath,
         mkdir: true,
       },
     })

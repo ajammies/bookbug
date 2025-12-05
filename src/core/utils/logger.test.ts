@@ -1,22 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createLogger, logApiSuccess, logApiError, logRateLimit, logThinking } from './logger';
+import { createSilentLogger, createLoggerToFolder, logApiSuccess, logApiError, logRateLimit, logThinking } from './logger';
 import type { Logger } from './logger';
 
-describe('createLogger', () => {
+describe('createSilentLogger', () => {
+  it('creates a silent logger', () => {
+    const logger = createSilentLogger();
+    expect(logger.level).toBe('silent');
+  });
+});
+
+describe('createLoggerToFolder', () => {
   it('creates a silent logger when silent option is true', () => {
-    const logger = createLogger({ silent: true });
+    const logger = createLoggerToFolder('/tmp/test', { silent: true });
     expect(logger.level).toBe('silent');
   });
 
   it('creates a logger with debug level by default', () => {
-    const logger = createLogger({ silent: false, title: 'test-story' });
+    const logger = createLoggerToFolder('/tmp/test');
     expect(logger.level).toBe('debug');
-  });
-
-  it('includes name in bindings based on title', () => {
-    const logger = createLogger({ silent: false, title: 'My Test Story' });
-    const bindings = logger.bindings();
-    expect(bindings.name).toMatch(/my-test-story/);
   });
 });
 

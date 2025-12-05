@@ -1,6 +1,7 @@
 import { generateObject } from '../services/ai';
 import { PlotStructureSchema, type StoryBrief, type PlotStructure } from '../schemas';
 import { getModel } from '../config';
+import type { Logger } from '../utils/logger';
 
 const SYSTEM_PROMPT = `Generate a story arc summary, plot beats, and enriched character descriptions from a StoryBrief.
 
@@ -41,13 +42,23 @@ Keep descriptions concrete and visual. The author will expand each beat into mul
  * Output contains ONLY the new fields (storyArcSummary, plotBeats, allowCreativeLiberty).
  * Caller composes the result: StoryWithPlot = { ...brief, plot: result }
  */
-export const plotAgent = async (brief: StoryBrief): Promise<PlotStructure> => {
+export const plotAgent = async (brief: StoryBrief, logger?: Logger): Promise<PlotStructure> => {
+  logger?.debug(
+    { agent: 'plotAgent', title: brief.title, characterCount: brief.characters.length },
+    'Generating plot structure'
+  );
+
   const { object } = await generateObject({
     model: getModel(),
     schema: PlotStructureSchema,
     system: SYSTEM_PROMPT,
     prompt: JSON.stringify(brief, null, 2),
-  });
+  }, logger, 'plotAgent');
+
+  logger?.info(
+    { agent: 'plotAgent', beatCount: object.plotBeats.length, arcSummary: object.storyArcSummary?.substring(0, 100) },
+    'Plot structure generated'
+  );
 
   return object;
 };

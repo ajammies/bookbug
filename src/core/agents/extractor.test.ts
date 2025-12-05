@@ -135,7 +135,8 @@ describe('extract', () => {
       expect.objectContaining({
         system: expect.stringContaining('Custom instruction'),
       }),
-      undefined
+      undefined,
+      'extractAgent'
     );
   });
 
@@ -146,7 +147,7 @@ describe('extract', () => {
 
     await extract('text', schema, { logger });
 
-    expect(mockGenerateObject).toHaveBeenCalledWith(expect.any(Object), logger);
+    expect(mockGenerateObject).toHaveBeenCalledWith(expect.any(Object), logger, 'extractAgent');
   });
 
   it('deduplicates missing fields', async () => {

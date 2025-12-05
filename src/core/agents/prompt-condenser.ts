@@ -34,7 +34,8 @@ ${JSON.stringify(context, null, 2)}
 
 IMAGE PROMPT:`,
     },
-    logger
+    logger,
+    'promptCondenserAgent'
   );
 
   logger?.debug({ inputLength: JSON.stringify(context).length, outputLength: text.length }, 'Condensed prompt');

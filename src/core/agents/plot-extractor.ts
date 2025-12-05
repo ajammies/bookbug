@@ -2,6 +2,7 @@ import { generateObject } from '../services/ai';
 import { StoryWithPlotSchema, type StoryWithPlot } from '../schemas';
 import { getModel } from '../config';
 import { toExtractablePartial, stripNulls } from '../utils/extractable-schema';
+import type { Logger } from '../utils/logger';
 
 const SYSTEM_PROMPT = `Apply user's requested changes to the story.
 
@@ -26,8 +27,14 @@ Rules:
  */
 export const plotExtractorAgent = async (
   userFeedback: string,
-  story: StoryWithPlot
+  story: StoryWithPlot,
+  logger?: Logger
 ): Promise<Partial<StoryWithPlot>> => {
+  logger?.debug(
+    { agent: 'plotExtractorAgent', feedbackLength: userFeedback.length, title: story.title },
+    'Applying user feedback to plot'
+  );
+
   const prompt = `Current Story:\n${JSON.stringify(story, null, 2)}\n\nUser feedback:\n${userFeedback}`;
 
   const { object } = await generateObject({
@@ -35,8 +42,16 @@ export const plotExtractorAgent = async (
     schema: toExtractablePartial(StoryWithPlotSchema),
     system: SYSTEM_PROMPT,
     prompt,
-  });
+  }, logger, 'plotExtractorAgent');
 
   // Strip nulls/empty objects that the model returns for unchanged fields
-  return stripNulls(object as Record<string, unknown>) as Partial<StoryWithPlot>;
+  const updates = stripNulls(object as Record<string, unknown>) as Partial<StoryWithPlot>;
+  const changedFields = Object.keys(updates);
+
+  logger?.info(
+    { agent: 'plotExtractorAgent', changedFields, fieldCount: changedFields.length },
+    'Plot updates extracted'
+  );
+
+  return updates;
 };

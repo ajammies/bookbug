@@ -104,7 +104,12 @@ Output only the prose fields:
  * Caller composes the result: StoryWithProse = { ...story, prose: result }
  */
 export const proseAgent = async (story: StoryWithPlot, logger?: Logger): Promise<Prose> => {
-  return streamObjectWithProgress(
+  logger?.debug(
+    { agent: 'proseAgent', title: story.title, pageCount: story.pageCount, beatCount: story.plot.plotBeats.length },
+    'Generating full prose'
+  );
+
+  const prose = await streamObjectWithProgress(
     {
       model: getModel(),
       schema: ProseSchema,
@@ -113,8 +118,16 @@ export const proseAgent = async (story: StoryWithPlot, logger?: Logger): Promise
       maxOutputTokens: 64000,
     },
     createRepairFunction(),
-    logger
+    logger,
+    'proseAgent'
   );
+
+  logger?.info(
+    { agent: 'proseAgent', pageCount: prose.pages.length, logline: prose.logline?.substring(0, 80) },
+    'Full prose generated'
+  );
+
+  return prose;
 };
 
 /**
@@ -140,14 +153,24 @@ ${AGE_GUIDELINES}`;
 /**
  * ProseSetupAgent: Generates story-wide prose metadata (once, upfront)
  */
-export const proseSetupAgent = async (story: StoryWithPlot): Promise<ProseSetup> => {
+export const proseSetupAgent = async (story: StoryWithPlot, logger?: Logger): Promise<ProseSetup> => {
+  logger?.debug(
+    { agent: 'proseSetupAgent', title: story.title },
+    'Generating prose setup'
+  );
+
   const { object } = await generateObject({
     model: getModel(),
     schema: ProseSetupSchema,
     system: SETUP_PROMPT,
     prompt: JSON.stringify(story, null, 2),
     experimental_repairText: createRepairFunction(),
-  });
+  }, logger, 'proseSetupAgent');
+
+  logger?.info(
+    { agent: 'proseSetupAgent', logline: object.logline?.substring(0, 80), theme: object.theme?.substring(0, 50) },
+    'Prose setup generated'
+  );
 
   return object;
 };
@@ -160,6 +183,7 @@ export interface ProsePageInput {
   proseSetup: ProseSetup;
   pageNumber: number;
   previousPages: ProsePage[];
+  logger?: Logger;
 }
 
 const PAGE_PROMPT = `Write prose for a single page of a children's book.
@@ -191,7 +215,12 @@ Output a single page with:
  * ProsePageAgent: Generates prose for a single page
  */
 export const prosePageAgent = async (input: ProsePageInput): Promise<ProsePage> => {
-  const { story, proseSetup, pageNumber, previousPages } = input;
+  const { story, proseSetup, pageNumber, previousPages, logger } = input;
+
+  logger?.debug(
+    { agent: 'prosePageAgent', pageNumber, totalPages: story.pageCount, previousPagesCount: previousPages.length },
+    'Generating page prose'
+  );
 
   const context = {
     story,
@@ -207,7 +236,12 @@ export const prosePageAgent = async (input: ProsePageInput): Promise<ProsePage> 
     system: PAGE_PROMPT,
     prompt: JSON.stringify(context, null, 2),
     experimental_repairText: createRepairFunction(),
-  });
+  }, logger, 'prosePageAgent');
+
+  logger?.info(
+    { agent: 'prosePageAgent', pageNumber, textLength: object.text.length, summary: object.summary?.substring(0, 50) },
+    'Page prose generated'
+  );
 
   return object;
 };

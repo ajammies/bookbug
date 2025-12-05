@@ -75,7 +75,8 @@ export const extract = async <T extends ZodRawShape>(
           system: systemPrompt,
           prompt: text,
         },
-        logger
+        logger,
+        'extractAgent'
       );
 
       const stripped = stripNulls(object as Record<string, unknown>);

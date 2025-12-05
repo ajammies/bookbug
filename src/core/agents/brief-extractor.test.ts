@@ -40,7 +40,8 @@ describe('briefExtractorAgent', () => {
       expect.objectContaining({
         prompt: expect.stringContaining('Question:'),
       }),
-      undefined
+      undefined,
+      'extractAgent'
     );
   });
 
@@ -68,13 +69,15 @@ describe('briefExtractorAgent', () => {
       expect.objectContaining({
         prompt: expect.stringContaining('Current brief:'),
       }),
-      undefined
+      undefined,
+      'extractAgent'
     );
     expect(mockGenerateObject).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: expect.stringContaining('Luna the Brave'),
       }),
-      undefined
+      undefined,
+      'extractAgent'
     );
   });
 
@@ -94,7 +97,8 @@ describe('briefExtractorAgent', () => {
       expect.objectContaining({
         prompt: expect.not.stringContaining('Current brief:'),
       }),
-      undefined
+      undefined,
+      'extractAgent'
     );
   });
 
@@ -112,7 +116,8 @@ describe('briefExtractorAgent', () => {
       expect.objectContaining({
         system: expect.stringContaining('watercolor'),
       }),
-      undefined
+      undefined,
+      'extractAgent'
     );
   });
 
@@ -122,7 +127,7 @@ describe('briefExtractorAgent', () => {
 
     await briefExtractorAgent('Question?', 'Answer', {}, { logger });
 
-    expect(mockGenerateObject).toHaveBeenCalledWith(expect.any(Object), logger);
+    expect(mockGenerateObject).toHaveBeenCalledWith(expect.any(Object), logger, 'extractAgent');
   });
 
   it('extracts from confirmation answers', async () => {

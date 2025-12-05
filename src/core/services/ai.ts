@@ -57,12 +57,16 @@ const getRetryAfterSeconds = (error: unknown): number | null => {
 
 export async function generateObject<T>(
   options: GenerateObjectParams & { schema: { parse: (data: unknown) => T } },
-  logger?: Logger
+  logger?: Logger,
+  agentName?: string
 ): Promise<GenerateObjectResult<T>> {
-  const agent = 'generateObject';
+  const agent = agentName ?? 'generateObject';
+
+  logger?.debug({ agent, promptLength: options.prompt?.length ?? 0 }, 'API call starting');
 
   try {
     const result = await aiGenerateObject(options) as GenerateObjectResult<T>;
+    logger?.debug({ agent, usage: result.usage }, 'API call complete');
     logApiSuccess(logger, agent);
     return result;
   } catch (error) {
@@ -77,6 +81,7 @@ export async function generateObject<T>(
     logRateLimit(logger, agent, retryAfter);
     await sleep(retryAfter * 1000);
     const result = await aiGenerateObject({ ...options, maxRetries: 0 }) as GenerateObjectResult<T>;
+    logger?.debug({ agent, usage: result.usage }, 'API call complete after retry');
     logApiSuccess(logger, agent);
     return result;
   }
@@ -90,12 +95,16 @@ type GenerateTextParams = Parameters<typeof aiGenerateText>[0];
 
 export async function generateText(
   options: GenerateTextParams,
-  logger?: Logger
+  logger?: Logger,
+  agentName?: string
 ): Promise<string> {
-  const agent = 'generateText';
+  const agent = agentName ?? 'generateText';
+
+  logger?.debug({ agent, promptLength: options.prompt?.length ?? 0 }, 'Text generation starting');
 
   try {
     const result = await aiGenerateText(options);
+    logger?.debug({ agent, usage: result.usage, textLength: result.text.length }, 'Text generation complete');
     logApiSuccess(logger, agent);
     return result.text;
   } catch (error) {
@@ -110,6 +119,7 @@ export async function generateText(
     logRateLimit(logger, agent, retryAfter);
     await sleep(retryAfter * 1000);
     const result = await aiGenerateText({ ...options, maxRetries: 0 });
+    logger?.debug({ agent, usage: result.usage, textLength: result.text.length }, 'Text generation complete after retry');
     logApiSuccess(logger, agent);
     return result.text;
   }
@@ -131,8 +141,13 @@ export type RepairFunction = (opts: {
 export async function streamObjectWithProgress<T>(
   options: StreamObjectParams & { schema: { parse: (data: unknown) => T } },
   repair?: RepairFunction,
-  logger?: Logger
+  logger?: Logger,
+  agentName?: string
 ): Promise<T> {
+  const agent = agentName ?? 'streamObject';
+
+  logger?.debug({ agent, promptLength: options.prompt?.length ?? 0 }, 'Stream starting');
+
   const result = aiStreamObject(options);
 
   // Consume the stream to completion
@@ -141,27 +156,36 @@ export async function streamObjectWithProgress<T>(
   }
 
   try {
-    return (await result.object) as T;
+    const obj = (await result.object) as T;
+    logger?.debug({ agent }, 'Stream complete');
+    logApiSuccess(logger, agent);
+    return obj;
   } catch (error) {
     // Attempt repair if provided and error is a validation error with text
     if (!repair || !NoObjectGeneratedError.isInstance(error) || !error.text) {
+      logApiError(logger, agent, error instanceof Error ? error.message : String(error));
       throw error;
     }
 
+    logger?.warn({ agent }, 'Stream validation failed, attempting repair');
     const cause = error.cause as JSONParseError | TypeValidationError;
     const repairedText = await repair({ text: error.text, error: cause });
 
     if (!repairedText) {
+      logApiError(logger, agent, 'Repair returned null');
       throw error;
     }
 
     // Parse and validate repaired output
     try {
       const parsed = JSON.parse(repairedText);
-      return options.schema.parse(parsed);
+      const obj = options.schema.parse(parsed);
+      logger?.info({ agent }, 'Repair successful');
+      logApiSuccess(logger, agent);
+      return obj;
     } catch (parseError) {
       // Repair produced invalid JSON - throw original error with context
-      logger?.error({ parseError }, 'Repair produced invalid JSON');
+      logger?.error({ agent, parseError }, 'Repair produced invalid JSON');
       throw error;
     }
   }

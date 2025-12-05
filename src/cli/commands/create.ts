@@ -1,9 +1,8 @@
 import { Command } from 'commander';
-import path from 'path';
 import { runPipeline } from '../../core/pipeline';
 import { displayBook } from '../output/display';
 import { createOutputManager } from '../utils/output';
-import { createLogger } from '../../core/utils/logger';
+import { createLoggerToFolder } from '../../core/utils/logger';
 import { createCliUI } from '../../utils/cli';
 
 export const createCommand = new Command('create')
@@ -17,12 +16,9 @@ export const createCommand = new Command('create')
       console.log('\n📚 Let\'s create a children\'s book!\n');
 
       const outputManager = await createOutputManager('untitled');
-      const logger = createLogger({ title: 'create' });
-      const logName = logger.bindings()?.name as string | undefined;
-      const logPath = logName ? path.join(process.cwd(), 'logs', `${logName}.log`) : null;
+      const logger = createLoggerToFolder(outputManager.folder);
 
       console.log(`Story folder: ${outputManager.folder}`);
-      if (logPath) console.log(`Logging to: ${logPath}`);
 
       const { book } = await runPipeline({
         ui,
