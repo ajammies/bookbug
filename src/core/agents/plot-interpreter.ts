@@ -1,6 +1,7 @@
 import { generateObject } from '../services/ai';
 import { StoryWithPlotSchema, type StoryWithPlot } from '../schemas';
 import { getModel } from '../config';
+import { toExtractablePartial, stripNulls } from '../utils/extractable-schema';
 
 const SYSTEM_PROMPT = `Apply user's requested changes to the story.
 
@@ -28,10 +29,11 @@ export const plotInterpreterAgent = async (
 
   const { object } = await generateObject({
     model: getModel(),
-    schema: StoryWithPlotSchema.partial(),
+    schema: toExtractablePartial(StoryWithPlotSchema),
     system: SYSTEM_PROMPT,
     prompt: contextualPrompt,
   });
 
-  return object;
+  // Strip nulls/empty objects that the model returns for unchanged fields
+  return stripNulls(object as Record<string, unknown>) as Partial<StoryWithPlot>;
 };
