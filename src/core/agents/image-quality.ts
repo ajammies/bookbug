@@ -72,7 +72,8 @@ ${JSON.stringify(context, null, 2)}`,
       ],
       maxOutputTokens: 1024,
     },
-    logger
+    logger,
+    'imageQualityAgent'
   );
 
   return result.object;

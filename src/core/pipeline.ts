@@ -135,9 +135,11 @@ export const runIntakeStage = async (
     history = [{ role: 'assistant', content: 'Let\'s create a children\'s book!' }];
   }
 
+  logger?.info({ stage: 'intake' }, 'Starting intake stage');
+
   while (!StoryBriefSchema.safeParse(workingBrief).success) {
     ui.progress('Thinking...');
-    const response = await conversationAgent(workingBrief, history, { availableStyles, missingFields });
+    const response = await conversationAgent(workingBrief, history, { availableStyles, missingFields, logger });
 
     // Only accept completion if brief is valid
     if (response.isComplete && StoryBriefSchema.safeParse(workingBrief).success) break;
@@ -154,6 +156,7 @@ export const runIntakeStage = async (
   }
 
   const brief = StoryBriefSchema.parse(workingBrief);
+  logger?.info({ stage: 'intake', title: brief.title }, 'Intake stage complete');
   return { ...state, brief, history };
 };
 
@@ -168,7 +171,7 @@ export const runPlotStage = async (
 ): Promise<PipelineState> => {
   if (state.plot) return state;
 
-  const { ui } = options;
+  const { ui, logger } = options;
   let { history } = state;
 
   if (!state.brief) {
@@ -176,9 +179,11 @@ export const runPlotStage = async (
   }
   const brief = state.brief;
 
+  logger?.info({ stage: 'plot', title: brief.title }, 'Starting plot stage');
+
   // Generate initial plot
   ui.progress('Creating plot outline...');
-  let plot = await plotAgent(brief);
+  let plot = await plotAgent(brief, logger);
 
   // Convert Message history to PlotMessage for plot conversation
   // History from intake flows in so plot agent sees any plot details mentioned
@@ -187,7 +192,7 @@ export const runPlotStage = async (
   while (true) {
     ui.progress('Preparing...');
     const storyWithPlot = assembleStoryWithPlot(brief, plot);
-    const response = await plotConversationAgent(storyWithPlot, plotHistory);
+    const response = await plotConversationAgent(storyWithPlot, plotHistory, logger);
 
     if (response.isComplete) break;
 
@@ -197,7 +202,7 @@ export const runPlotStage = async (
     ui.progress('Updating story...');
     // Pass Q&A pair for focused interpretation
     const messageWithContext = `Question: ${response.message}\nAnswer: ${answer}`;
-    const updates = await plotExtractorAgent(messageWithContext, storyWithPlot);
+    const updates = await plotExtractorAgent(messageWithContext, storyWithPlot, logger);
     if (updates.plot) plot = updates.plot;
     plotHistory.push({ role: 'assistant', content: response.message }, { role: 'user', content: answer });
   }
@@ -205,6 +210,7 @@ export const runPlotStage = async (
   // Merge plot history back into main history
   const newHistory: Message[] = plotHistory.map((m): Message => ({ role: m.role, content: m.content }));
 
+  logger?.info({ stage: 'plot', beatCount: plot.plotBeats.length }, 'Plot stage complete');
   return { ...state, plot, history: newHistory };
 };
 
@@ -298,9 +304,11 @@ export const runPipelineIncremental = async (
   const story = assembleStoryWithPlot(state.brief, state.plot);
   const stylePreset = optionsPreset ?? (story.stylePreset ? await loadStylePreset(story.stylePreset) : undefined);
 
+  logger?.info({ stage: 'incremental', title: story.title, pageCount: story.pageCount }, 'Starting incremental pipeline');
+
   // Setup phase
   ui?.progress('Creating style guide...');
-  const styleGuide = state.styleGuide ?? await styleGuideAgent(story, stylePreset);
+  const styleGuide = state.styleGuide ?? await styleGuideAgent(story, stylePreset, logger);
 
   // Save initial visuals (style guide only, no pages yet)
   if (outputManager && !state.styleGuide) {
@@ -308,7 +316,7 @@ export const runPipelineIncremental = async (
   }
 
   ui?.progress('Setting up prose...');
-  const proseSetup = state.proseSetup ?? await proseSetupAgent(story);
+  const proseSetup = state.proseSetup ?? await proseSetupAgent(story, logger);
 
   ui?.progress('Generating character designs...');
   const characters = story.plot.characters ?? story.characters;
@@ -324,12 +332,14 @@ export const runPipelineIncremental = async (
   let heroPage = state.heroPage ?? renderedPages[0];
 
   for (let pageNumber = renderedPages.length + 1; pageNumber <= story.pageCount; pageNumber++) {
+    logger?.debug({ pageNumber, totalPages: story.pageCount }, 'Processing page');
+
     ui?.progress(`Writing page ${pageNumber}...`);
-    const prosePage = await prosePageAgent({ story, proseSetup, pageNumber, previousPages: prosePages });
+    const prosePage = await prosePageAgent({ story, proseSetup, pageNumber, previousPages: prosePages, logger });
     prosePages.push(prosePage);
 
     ui?.progress(`Directing page ${pageNumber}...`);
-    const illustratedPage = await pageVisualsAgent({ story, styleGuide, pageNumber, prosePage });
+    const illustratedPage = await pageVisualsAgent({ story, styleGuide, pageNumber, prosePage, logger });
     illustratedPages.push(illustratedPage);
 
     // Save visuals incrementally after each page
@@ -384,6 +394,7 @@ export const runPipelineIncremental = async (
   await outputManager?.saveStory(finalStory);
   await outputManager?.saveBook(book);
 
+  logger?.info({ stage: 'incremental', pageCount: renderedPages.length }, 'Incremental pipeline complete');
   return { story: finalStory, book };
 };
 

@@ -1,6 +1,7 @@
-import { generateText } from 'ai';
+import { generateText } from '../services/ai';
 import { getModel } from '../config';
 import type { JSONParseError, TypeValidationError } from '@ai-sdk/provider';
+import type { Logger } from './logger';
 
 /**
  * Creates a repair function for generateObject that uses the LLM to fix validation errors.
@@ -8,7 +9,7 @@ import type { JSONParseError, TypeValidationError } from '@ai-sdk/provider';
  * When the model generates output that doesn't match the schema, this function
  * asks the model to fix the specific validation error.
  */
-export function createRepairFunction(schemaDescription?: string) {
+export function createRepairFunction(schemaDescription?: string, logger?: Logger) {
   return async ({
     text,
     error,
@@ -18,6 +19,11 @@ export function createRepairFunction(schemaDescription?: string) {
   }): Promise<string | null> => {
     const errorMessage = error.message;
     const errorName = error.name;
+
+    logger?.debug(
+      { errorName, errorMessage: errorMessage.substring(0, 200), textLength: text.length },
+      'Attempting to repair invalid output'
+    );
 
     // Build repair prompt based on error type
     let repairPrompt: string;
@@ -47,23 +53,29 @@ Fix the invalid field(s) to match the schema. Return ONLY the corrected JSON, no
     }
 
     try {
-      const { text: repairedText } = await generateText({
-        model: getModel(),
-        prompt: repairPrompt,
-        maxOutputTokens: 16000,
-      });
+      const repairedText = await generateText(
+        {
+          model: getModel(),
+          prompt: repairPrompt,
+          maxOutputTokens: 16000,
+        },
+        logger,
+        'repairFunction'
+      );
 
       // Extract JSON from response (in case model added markdown fences)
       const jsonMatch = repairedText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
+        logger?.info({ repairedLength: jsonMatch[0].length }, 'Repair successful');
         return jsonMatch[0];
       }
 
       // If no JSON found, return as-is and let it fail
+      logger?.warn('Repair returned non-JSON response');
       return repairedText;
     } catch (repairError) {
       // If repair fails, return null to use original error
-      console.warn('Repair attempt failed:', repairError);
+      logger?.warn({ repairError }, 'Repair attempt failed');
       return null;
     }
   };
@@ -73,7 +85,7 @@ Fix the invalid field(s) to match the schema. Return ONLY the corrected JSON, no
  * Simple repair function that logs errors but doesn't attempt LLM repair.
  * Useful for debugging - shows what the model generated.
  */
-export function createLoggingRepairFunction(agentName: string) {
+export function createLoggingRepairFunction(agentName: string, logger?: Logger) {
   return async ({
     text,
     error,
@@ -81,9 +93,10 @@ export function createLoggingRepairFunction(agentName: string) {
     text: string;
     error: JSONParseError | TypeValidationError;
   }): Promise<string | null> => {
-    console.warn(`[${agentName}] Schema validation failed:`);
-    console.warn(`  Error: ${error.message.substring(0, 200)}`);
-    console.warn(`  Generated text: ${text.substring(0, 500)}...`);
+    logger?.warn(
+      { agent: agentName, errorMessage: error.message.substring(0, 200), generatedText: text.substring(0, 500) },
+      'Schema validation failed (no repair attempted)'
+    );
 
     // Return null to use original error (no repair attempt)
     return null;

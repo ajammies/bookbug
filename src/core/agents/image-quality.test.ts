@@ -80,7 +80,8 @@ describe('imageQualityAgent', () => {
           }),
         ]),
       }),
-      undefined
+      undefined,
+      'imageQualityAgent'
     );
   });
 
@@ -128,7 +129,7 @@ describe('imageQualityAgent', () => {
       logger: mockLogger as never,
     });
 
-    expect(mockedGenerateObject).toHaveBeenCalledWith(expect.any(Object), mockLogger);
+    expect(mockedGenerateObject).toHaveBeenCalledWith(expect.any(Object), mockLogger, 'imageQualityAgent');
   });
 
   it('includes context JSON in prompt', async () => {

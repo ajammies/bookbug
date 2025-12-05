@@ -87,16 +87,10 @@ export const extractImageUrl = (output: unknown): string => {
     return output;
   }
 
-  // Log the actual output for debugging
-  console.error('Unexpected Replicate output:', {
-    type: typeof output,
-    isArray: Array.isArray(output),
-    value: JSON.stringify(output, null, 2).substring(0, 500),
-  });
-
   throw new Error(
     `Unexpected output format from Replicate model. ` +
-    `Expected FileOutput[] or string[], got ${typeof output}`
+    `Expected FileOutput[] or string[], got ${typeof output}. ` +
+    `Output: ${JSON.stringify(output, null, 2).substring(0, 300)}`
   );
 };
 

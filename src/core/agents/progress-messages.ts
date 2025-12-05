@@ -52,7 +52,8 @@ export const progressMessagesAgent = async (
       prompt: JSON.stringify(context, null, 2),
       maxOutputTokens: 1000,
     },
-    logger
+    logger,
+    'progressMessagesAgent'
   );
 
   return object.messages;

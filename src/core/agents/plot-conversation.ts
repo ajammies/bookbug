@@ -5,6 +5,7 @@ import {
   type StoryWithPlot,
 } from '../schemas';
 import { getModel } from '../config';
+import type { Logger } from '../utils/logger';
 
 const SYSTEM_PROMPT = `Display the story arc and plot beats, then ask which to change.
 
@@ -41,8 +42,14 @@ export type PlotMessage = {
  */
 export const plotConversationAgent = async (
   story: StoryWithPlot,
-  history: PlotMessage[]
+  history: PlotMessage[],
+  logger?: Logger
 ): Promise<PlotConversationResponse> => {
+  logger?.debug(
+    { agent: 'plotConversationAgent', historyLength: history.length, title: story.title },
+    'Generating plot conversation response'
+  );
+
   const storyContext = `Current Story:\n${JSON.stringify(story, null, 2)}`;
 
   const { object } = await generateObject({
@@ -53,7 +60,12 @@ export const plotConversationAgent = async (
       { role: 'user', content: storyContext },
       ...history,
     ],
-  });
+  }, logger, 'plotConversationAgent');
+
+  logger?.info(
+    { agent: 'plotConversationAgent', isComplete: object.isComplete, optionCount: object.options.length },
+    'Plot conversation response generated'
+  );
 
   return object;
 };

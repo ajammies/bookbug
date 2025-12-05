@@ -61,7 +61,12 @@ CRITICAL: Generate illustratedPages for EVERY page in the story. Do not stop aft
  * Caller composes the result: ComposedStory = { ...story, visuals: result }
  */
 export const visualsAgent = async (story: StoryWithProse, logger?: Logger): Promise<VisualDirection> => {
-  return streamObjectWithProgress(
+  logger?.debug(
+    { agent: 'visualsAgent', title: story.title, pageCount: story.pageCount },
+    'Generating full visual direction'
+  );
+
+  const visuals = await streamObjectWithProgress(
     {
       model: getModel(),
       schema: VisualDirectionSchema,
@@ -70,8 +75,16 @@ export const visualsAgent = async (story: StoryWithProse, logger?: Logger): Prom
       maxOutputTokens: 64000,
     },
     createRepairFunction('IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button'),
-    logger
+    logger,
+    'visualsAgent'
   );
+
+  logger?.info(
+    { agent: 'visualsAgent', illustratedPageCount: visuals.illustratedPages.length, artStyle: visuals.style.art_style },
+    'Full visual direction generated'
+  );
+
+  return visuals;
 };
 
 /**
@@ -124,8 +137,14 @@ export interface StylePreset {
  */
 export const styleGuideAgent = async (
   story: StoryWithPlot,
-  stylePreset?: StylePreset
+  stylePreset?: StylePreset,
+  logger?: Logger
 ): Promise<VisualStyleGuide> => {
+  logger?.debug(
+    { agent: 'styleGuideAgent', title: story.title, hasPreset: !!stylePreset },
+    'Generating style guide'
+  );
+
   const prompt = stylePreset
     ? JSON.stringify({ story, stylePreset }, null, 2)
     : JSON.stringify(story, null, 2);
@@ -136,12 +155,17 @@ export const styleGuideAgent = async (
     system: stylePreset ? STYLE_GUIDE_WITH_PRESET_PROMPT : STYLE_GUIDE_PROMPT,
     prompt,
     experimental_repairText: createRepairFunction(),
-  });
+  }, logger, 'styleGuideAgent');
 
   // If preset provided, ensure it's used exactly
   if (stylePreset) {
     object.art_style = stylePreset;
   }
+
+  logger?.info(
+    { agent: 'styleGuideAgent', artStyle: object.art_style, mood: object.mood_narrative?.tone?.join(', ') },
+    'Style guide generated'
+  );
 
   return object;
 };
@@ -154,6 +178,7 @@ export interface PageVisualsInput {
   styleGuide: VisualStyleGuide;
   pageNumber: number;
   prosePage: ProsePage;
+  logger?: Logger;
 }
 
 const PAGE_VISUALS_PROMPT = `Create illustration beats for a single page of a children's picture book.
@@ -201,7 +226,12 @@ const PageBeatsSchema = z.object({
  * PageVisualsAgent: Generates illustration beats for a single page
  */
 export const pageVisualsAgent = async (input: PageVisualsInput): Promise<IllustratedPage> => {
-  const { story, styleGuide, pageNumber, prosePage } = input;
+  const { story, styleGuide, pageNumber, prosePage, logger } = input;
+
+  logger?.debug(
+    { agent: 'pageVisualsAgent', pageNumber, totalPages: story.pageCount },
+    'Generating page visuals'
+  );
 
   const context = {
     story,
@@ -219,7 +249,12 @@ export const pageVisualsAgent = async (input: PageVisualsInput): Promise<Illustr
     experimental_repairText: createRepairFunction(
       'IllustrationBeat.purpose must be: setup, build, twist, climax, payoff, or button'
     ),
-  });
+  }, logger, 'pageVisualsAgent');
+
+  logger?.info(
+    { agent: 'pageVisualsAgent', pageNumber, beatCount: object.beats.length },
+    'Page visuals generated'
+  );
 
   // Construct IllustratedPage with known pageNumber
   return {

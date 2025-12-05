@@ -5,6 +5,7 @@ import {
   type StoryBrief,
 } from '../schemas';
 import { getModel } from '../config';
+import type { Logger } from '../utils/logger';
 
 const buildSystemPrompt = (availableStyles: string[]): string => {
   const hasPresets = availableStyles.length > 0;
@@ -34,6 +35,7 @@ export interface ConversationAgentOptions {
   availableStyles?: string[];
   /** Fields that failed validation - helps agent ask targeted follow-up */
   missingFields?: string[];
+  logger?: Logger;
 }
 
 /**
@@ -45,7 +47,13 @@ export const conversationAgent = async (
   history: Message[],
   options: ConversationAgentOptions = {}
 ): Promise<ConversationResponse> => {
-  const { availableStyles = [], missingFields = [] } = options;
+  const { availableStyles = [], missingFields = [], logger } = options;
+
+  const currentFields = Object.keys(currentBrief).filter(k => currentBrief[k as keyof StoryBrief] !== undefined);
+  logger?.debug(
+    { agent: 'conversationAgent', historyLength: history.length, currentFields, missingFields },
+    'Generating conversation response'
+  );
 
   const missingHint = missingFields.length > 0
     ? `\n\nIMPORTANT: These fields failed validation and need to be collected: ${missingFields.join(', ')}. Ask about these specifically.`
@@ -61,7 +69,12 @@ export const conversationAgent = async (
       { role: 'user', content: briefContext },
       ...history,
     ],
-  });
+  }, logger, 'conversationAgent');
+
+  logger?.info(
+    { agent: 'conversationAgent', isComplete: object.isComplete, question: object.question?.substring(0, 80), optionCount: object.options.length },
+    'Conversation response generated'
+  );
 
   return object;
 };
