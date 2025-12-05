@@ -31,19 +31,21 @@ export { renderPage, renderPageMock, createBook, filterStoryForPage } from './re
 export { progressMessagesAgent } from './progress-messages';
 
 // Chat intake agents (StoryBrief)
-export { interpreterAgent, type InterpreterAgentOptions } from './interpreter';
 export { conversationAgent, type Message, type MessageRole, type ConversationAgentOptions } from './conversation';
 
 // Plot iteration agents (PlotStructure)
 export { plotAgent } from './plot';
 export { plotConversationAgent, type PlotMessage } from './plot-conversation';
-export { plotInterpreterAgent } from './plot-interpreter';
+export { plotExtractorAgent } from './plot-extractor';
 
-// Brief extractor (outputs Partial<StoryBrief>)
-export { briefExtractorAgent, type BriefExtractorOptions } from './brief-extractor';
+// Brief extractor (outputs BriefExtractionResult)
+export { briefExtractorAgent, type BriefExtractorOptions, type BriefExtractionResult } from './brief-extractor';
 
 // Generic extractor (outputs ExtractionResult<T>)
 export { extract, type ExtractionResult, type ExtractOptions } from './extractor';
 
 // Image quality analysis (outputs ImageQualityResult)
 export { imageQualityAgent, type ImageQualityOptions, type ImageInput } from './image-quality';
+
+// Prompt condenser for image generation (outputs plain text prompt)
+export { promptCondenserAgent } from './prompt-condenser';

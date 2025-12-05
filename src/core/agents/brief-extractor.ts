@@ -29,6 +29,11 @@ export interface BriefExtractorOptions {
   logger?: Logger;
 }
 
+export interface BriefExtractionResult {
+  brief: Partial<StoryBrief>;
+  missingFields: string[];
+}
+
 /**
  * BriefExtractorAgent: Extracts StoryBrief fields from a Q&A exchange.
  * Focused on brief fields only - uses StoryBriefSchema.partial().
@@ -37,14 +42,14 @@ export interface BriefExtractorOptions {
  * @param answer - The user's answer
  * @param currentBrief - Current accumulated brief state
  * @param options - Available styles and logger
- * @returns Merged partial brief with new extractions
+ * @returns Merged partial brief with new extractions and any missing fields
  */
 export const briefExtractorAgent = async (
   question: string,
   answer: string,
   currentBrief: Partial<StoryBrief> = {},
   options: BriefExtractorOptions = {}
-): Promise<Partial<StoryBrief>> => {
+): Promise<BriefExtractionResult> => {
   const { availableStyles = [], logger } = options;
 
   const prompt = buildContextualPrompt(question, answer, currentBrief);
@@ -58,5 +63,8 @@ export const briefExtractorAgent = async (
     extracted.characters = filterValidCharacters(extracted.characters);
   }
 
-  return { ...currentBrief, ...extracted };
+  const brief = { ...currentBrief, ...extracted };
+  const missingFields = result.status === 'incomplete' ? result.missingFields : [];
+
+  return { brief, missingFields };
 };

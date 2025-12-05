@@ -34,8 +34,8 @@ describe('AgeRangeSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects max above 12', () => {
-    const result = AgeRangeSchema.safeParse({ min: 4, max: 15 });
+  it('rejects max above 18', () => {
+    const result = AgeRangeSchema.safeParse({ min: 4, max: 20 });
     expect(result.success).toBe(false);
   });
 

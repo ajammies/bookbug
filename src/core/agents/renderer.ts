@@ -1,6 +1,6 @@
 import type { ComposedStory, RenderedBook, RenderedPage, BookFormatKey, PageRenderContext, ImageQualityResult } from '../schemas';
 import { BOOK_FORMATS } from '../schemas';
-import { generatePageImage } from '../services/image-generation';
+import { generatePageImage, type ImageModel } from '../services/image-generation';
 import { imageQualityAgent } from './image-quality';
 import type { Logger } from '../utils/logger';
 
@@ -16,6 +16,8 @@ export interface RenderPageOptions {
   /** Enable quality checking with optional threshold (default 70) */
   qualityCheck?: boolean | { threshold?: number; maxRetries?: number };
   logger?: Logger;
+  /** Image generation model (default: nano-banana) */
+  model?: ImageModel;
 }
 
 /** Render a single page image. Pass heroPageUrl (page 1) for style consistency. */
@@ -24,13 +26,13 @@ export const renderPage = async (
   pageNumber: number,
   options: RenderPageOptions = {}
 ): Promise<RenderedPage & { quality?: ImageQualityResult; failedAttempts?: Array<{ url: string; quality: ImageQualityResult }> }> => {
-  const { format = 'square-large', heroPageUrl, qualityCheck, logger } = options;
+  const { format = 'square-large', heroPageUrl, qualityCheck, logger, model } = options;
   const storySlice = filterStoryForPage(story, pageNumber);
   const formatSpec = BOOK_FORMATS[format];
 
   // No quality check - simple render
   if (!qualityCheck) {
-    const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl, logger });
+    const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl, logger, model });
     return { pageNumber, url: result.url };
   }
 
@@ -40,7 +42,7 @@ export const renderPage = async (
   const failedAttempts: Array<{ url: string; quality: ImageQualityResult }> = [];
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
-    const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl, logger });
+    const result = await generatePageImage(storySlice, formatSpec, { heroPageUrl, logger, model });
     const quality = await imageQualityAgent(result.url, storySlice, { qualityThreshold: threshold, logger });
 
     if (quality.passesQualityBar || attempt > maxRetries) {

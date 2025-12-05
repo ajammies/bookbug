@@ -1,6 +1,7 @@
 import { generateObject } from '../services/ai';
 import { StoryWithPlotSchema, type StoryWithPlot } from '../schemas';
 import { getModel } from '../config';
+import { toExtractablePartial, stripNulls } from '../utils/extractable-schema';
 
 const SYSTEM_PROMPT = `Apply user's requested changes to the story.
 
@@ -15,23 +16,27 @@ Rules:
 - If user approves without changes, return empty object`;
 
 /**
- * PlotInterpreterAgent: Applies user's requested changes to story
+ * PlotExtractorAgent: Applies user's requested changes to story
  *
  * Takes StoryWithPlot and user feedback, outputs partial updates.
  * Caller merges: { ...story, ...updates }
+ *
+ * Note: Does not use extract() because this is interpretation (applying changes)
+ * not extraction (pulling data from text). We want partial output without validation.
  */
-export const plotInterpreterAgent = async (
+export const plotExtractorAgent = async (
   userFeedback: string,
   story: StoryWithPlot
 ): Promise<Partial<StoryWithPlot>> => {
-  const contextualPrompt = `Current Story:\n${JSON.stringify(story, null, 2)}\n\nUser feedback:\n${userFeedback}`;
+  const prompt = `Current Story:\n${JSON.stringify(story, null, 2)}\n\nUser feedback:\n${userFeedback}`;
 
   const { object } = await generateObject({
     model: getModel(),
-    schema: StoryWithPlotSchema.partial(),
+    schema: toExtractablePartial(StoryWithPlotSchema),
     system: SYSTEM_PROMPT,
-    prompt: contextualPrompt,
+    prompt,
   });
 
-  return object;
+  // Strip nulls/empty objects that the model returns for unchanged fields
+  return stripNulls(object as Record<string, unknown>) as Partial<StoryWithPlot>;
 };
