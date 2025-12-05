@@ -1,0 +1,9 @@
+{
+  "name": "Pixar / Illumination 3D",
+  "art_style": {
+    "genre": ["childrens-illustration", "3d-animated-film"],
+    "medium": ["3d-cgi-render", "toy-like-aesthetic"],
+    "technique": ["subsurface-scattering", "rounded-plastic-surfaces", "vibrant-saturated-colors", "soft-ambient-occlusion", "big-expressive-eyes"],
+    "style_strength": 0.95
+  }
+}
