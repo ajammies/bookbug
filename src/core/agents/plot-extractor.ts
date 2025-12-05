@@ -14,12 +14,12 @@ Rules:
 - If user approves without changes, return empty object`;
 
 /**
- * PlotInterpreterAgent: Applies user's requested changes to story
+ * PlotExtractorAgent: Applies user's requested changes to story
  *
  * Takes StoryWithPlot and user feedback, outputs partial updates.
  * Caller merges: { ...story, ...updates }
  */
-export const plotInterpreterAgent = async (
+export const plotExtractorAgent = async (
   userFeedback: string,
   story: StoryWithPlot
 ): Promise<Partial<StoryWithPlot>> => {

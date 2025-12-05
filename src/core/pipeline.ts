@@ -31,7 +31,7 @@ import {
   conversationAgent,
   plotAgent,
   plotConversationAgent,
-  plotInterpreterAgent,
+  plotExtractorAgent,
   type StylePreset,
   type Message,
   type PlotMessage,
@@ -197,7 +197,7 @@ export const runPlotStage = async (
     ui.progress('Updating story...');
     // Pass Q&A pair for focused interpretation
     const messageWithContext = `Question: ${response.message}\nAnswer: ${answer}`;
-    const updates = await plotInterpreterAgent(messageWithContext, storyWithPlot);
+    const updates = await plotExtractorAgent(messageWithContext, storyWithPlot);
     if (updates.plot) plot = updates.plot;
     plotHistory.push({ role: 'assistant', content: response.message }, { role: 'user', content: answer });
   }
