@@ -35,7 +35,7 @@ describe('briefExtractorAgent', () => {
       'Luna the Brave - about a rabbit finding courage'
     );
 
-    expect(result).toEqual(extracted);
+    expect(result.brief).toEqual(extracted);
     expect(mockGenerateObject).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: expect.stringContaining('Question:'),
@@ -55,7 +55,7 @@ describe('briefExtractorAgent', () => {
       current
     );
 
-    expect(result).toEqual({ title: 'Luna the Brave', storyArc: 'A rabbit finds courage' });
+    expect(result.brief).toEqual({ title: 'Luna the Brave', storyArc: 'A rabbit finds courage' });
   });
 
   it('includes current brief context in prompt', async () => {
@@ -88,7 +88,7 @@ describe('briefExtractorAgent', () => {
       {}
     );
 
-    expect(result).toEqual(extracted);
+    expect(result.brief).toEqual(extracted);
     // Should not include "Current brief:" when empty
     expect(mockGenerateObject).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -137,8 +137,8 @@ describe('briefExtractorAgent', () => {
       current
     );
 
-    expect(result.title).toBe("Luna's Big Day");
-    expect(result.storyArc).toBe('A rabbit adventure');
+    expect(result.brief.title).toBe("Luna's Big Day");
+    expect(result.brief.storyArc).toBe('A rabbit adventure');
   });
 
   it('overwrites fields with new extractions', async () => {
@@ -152,7 +152,7 @@ describe('briefExtractorAgent', () => {
       current
     );
 
-    expect(result.title).toBe('New Title');
-    expect(result.pageCount).toBe(12);
+    expect(result.brief.title).toBe('New Title');
+    expect(result.brief.pageCount).toBe(12);
   });
 });

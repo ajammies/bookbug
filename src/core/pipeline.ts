@@ -128,6 +128,7 @@ export const runIntakeStage = async (
   const availableStyles = await listStyles();
   let { history } = state;
   let workingBrief: Partial<StoryBrief> = {};
+  let missingFields: string[] = [];
 
   // Initial greeting if no history
   if (history.length === 0) {
@@ -136,7 +137,7 @@ export const runIntakeStage = async (
 
   while (!StoryBriefSchema.safeParse(workingBrief).success) {
     ui.progress('Thinking...');
-    const response = await conversationAgent(workingBrief, history, { availableStyles });
+    const response = await conversationAgent(workingBrief, history, { availableStyles, missingFields });
 
     // Only accept completion if brief is valid
     if (response.isComplete && StoryBriefSchema.safeParse(workingBrief).success) break;
@@ -146,7 +147,9 @@ export const runIntakeStage = async (
 
     ui.progress('Processing...');
     // Extract from Q&A pair (focused extraction is more reliable)
-    workingBrief = await briefExtractorAgent(response.question, answer, workingBrief, { availableStyles, logger });
+    const result = await briefExtractorAgent(response.question, answer, workingBrief, { availableStyles, logger });
+    workingBrief = result.brief;
+    missingFields = result.missingFields;
     history = [...history, { role: 'assistant', content: response.question }, { role: 'user', content: answer }];
   }
 

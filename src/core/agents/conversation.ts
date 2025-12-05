@@ -32,6 +32,8 @@ export type Message = {
 
 export interface ConversationAgentOptions {
   availableStyles?: string[];
+  /** Fields that failed validation - helps agent ask targeted follow-up */
+  missingFields?: string[];
 }
 
 /**
@@ -43,8 +45,13 @@ export const conversationAgent = async (
   history: Message[],
   options: ConversationAgentOptions = {}
 ): Promise<ConversationResponse> => {
-  const { availableStyles = [] } = options;
-  const briefContext = `Current StoryBrief state:\n${JSON.stringify(currentBrief, null, 2)}`;
+  const { availableStyles = [], missingFields = [] } = options;
+
+  const missingHint = missingFields.length > 0
+    ? `\n\nIMPORTANT: These fields failed validation and need to be collected: ${missingFields.join(', ')}. Ask about these specifically.`
+    : '';
+
+  const briefContext = `Current StoryBrief state:\n${JSON.stringify(currentBrief, null, 2)}${missingHint}`;
 
   const { object } = await generateObject({
     model: getModel(),
