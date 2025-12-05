@@ -138,7 +138,8 @@ export const runIntakeStage = async (
     ui.progress('Thinking...');
     const response = await conversationAgent(workingBrief, history, { availableStyles });
 
-    if (response.isComplete) break;
+    // Only accept completion if brief is valid
+    if (response.isComplete && StoryBriefSchema.safeParse(workingBrief).success) break;
 
     // ui.prompt auto-stops spinner before showing selector
     const answer = await ui.prompt({ question: response.question, options: response.options });
