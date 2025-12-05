@@ -1,9 +1,7 @@
-import { generateObject } from '../services/ai';
 import { StoryWithPlotSchema, type StoryWithPlot } from '../schemas';
-import { getModel } from '../config';
-import { toExtractablePartial, stripNulls } from '../utils/extractable-schema';
+import { extract } from './extractor';
 
-const SYSTEM_PROMPT = `Apply user's requested changes to the story.
+const CONTEXT = `Apply user's requested changes to the story.
 
 Users may:
 - Reference beats by number ("change beat 3") or purpose ("strengthen the climax")
@@ -25,15 +23,10 @@ export const plotInterpreterAgent = async (
   userFeedback: string,
   story: StoryWithPlot
 ): Promise<Partial<StoryWithPlot>> => {
-  const contextualPrompt = `Current Story:\n${JSON.stringify(story, null, 2)}\n\nUser feedback:\n${userFeedback}`;
+  const prompt = `Current Story:\n${JSON.stringify(story, null, 2)}\n\nUser feedback:\n${userFeedback}`;
 
-  const { object } = await generateObject({
-    model: getModel(),
-    schema: toExtractablePartial(StoryWithPlotSchema),
-    system: SYSTEM_PROMPT,
-    prompt: contextualPrompt,
-  });
+  const result = await extract(prompt, StoryWithPlotSchema, { context: CONTEXT, maxRetries: 0 });
 
-  // Strip nulls/empty objects that the model returns for unchanged fields
-  return stripNulls(object as Record<string, unknown>) as Partial<StoryWithPlot>;
+  // Return whatever was extracted (complete or partial)
+  return result.data;
 };

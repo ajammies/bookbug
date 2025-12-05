@@ -31,7 +31,6 @@ export { renderPage, renderPageMock, createBook, filterStoryForPage } from './re
 export { progressMessagesAgent } from './progress-messages';
 
 // Chat intake agents (StoryBrief)
-export { interpreterAgent, type InterpreterAgentOptions } from './interpreter';
 export { conversationAgent, type Message, type MessageRole, type ConversationAgentOptions } from './conversation';
 
 // Plot iteration agents (PlotStructure)
