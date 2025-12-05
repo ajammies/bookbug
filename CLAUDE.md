@@ -66,7 +66,27 @@ IMPORTANT: As an agent, you MUST read and follow ALL guidelines in this document
 - 2-3 params: direct arguments; 4+: options object
 - External services injectable via optional params with factory defaults
 - Zod schemas for external API responses
-- Use logger (pino) not console.log - pass logger via options, use `logger?.debug()` for debug info
+
+# Logging (pino)
+- NEVER use console.log - always use pino logger via options parameter
+- Pass logger through function options: `{ logger?: Logger }`
+- Use optional chaining: `logger?.info()`, `logger?.debug()`
+- Log levels (severity ascending): trace → debug → info → warn → error → fatal
+  - `trace`: Extremely detailed (loop iterations, every function call)
+  - `debug`: Development details (inputs/outputs, intermediate state)
+  - `info`: Key business events (stage started, completed, API calls)
+  - `warn`: Recoverable issues (retries, fallbacks, missing optional data)
+  - `error`: Failed operations that stopped a task
+  - `fatal`: Application-crashing errors
+- Always log structured data as first param: `logger.info({ userId, action }, 'message')`
+- Include context in logs: `{ agent, pageNumber, step, input, output }`
+- Use child loggers for scoped context: `const scopedLog = logger.child({ stage: 'plot' })`
+- Log at entry/exit of important functions with input/output summaries
+- Log all API calls: before (params), after (success), error (full error)
+- Log conversation history at each intake step
+- Log extraction results: what was extracted, what was missing
+- Redact sensitive data (API keys, tokens) - use pino redact option if needed
+- Performance: use `logger.isLevelEnabled('debug')` before expensive debug computations
 
 # Branch naming
 - `feat/` new features, `fix/` bug fixes, `refactor/` no behavior change, `docs/` documentation, 
