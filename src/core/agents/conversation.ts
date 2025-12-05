@@ -1,11 +1,17 @@
-import { generateObject } from '../services/ai';
-import {
-  ConversationResponseSchema,
-  type ConversationResponse,
-  type StoryBrief,
-} from '../schemas';
+import { z } from 'zod';
+import { generateObject, withOptionsResponse } from '../services/ai';
+import { type ConversationResponse, type StoryBrief } from '../schemas';
 import { getModel } from '../config';
 import type { Logger } from '../utils/logger';
+
+/** Create conversation response schema with configurable options max */
+const createConversationSchema = (maxOptions: number) =>
+  withOptionsResponse(
+    z.object({
+      question: z.string().min(1).describe('The next question to ask the user'),
+    }),
+    { max: maxOptions }
+  );
 
 const buildSystemPrompt = (availableStyles: string[]): string => {
   const hasPresets = availableStyles.length > 0;
@@ -61,9 +67,13 @@ export const conversationAgent = async (
 
   const briefContext = `Current StoryBrief state:\n${JSON.stringify(currentBrief, null, 2)}${missingHint}`;
 
+  // +1 for "Generate new style" option when showing style presets
+  const maxOptions = Math.max(8, availableStyles.length + 1);
+  const schema = createConversationSchema(maxOptions);
+
   const { object } = await generateObject({
     model: getModel(),
-    schema: ConversationResponseSchema,
+    schema,
     system: buildSystemPrompt(availableStyles),
     messages: [
       { role: 'user', content: briefContext },

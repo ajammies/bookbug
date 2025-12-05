@@ -22,24 +22,35 @@ import { type Logger, logApiSuccess, logApiError, logRateLimit } from '../utils/
 // Composable Options Response Pattern
 // ============================================================================
 
-/**
- * Prompt fragment for options-based conversational responses.
- * Include in agent system prompts that use withOptionsResponse schemas.
- */
-export const OPTIONS_PROMPT = `Generate 2-8 short, clickable option suggestions based on the conversation context.
-Set isComplete=true only when all required information has been gathered.`;
+/** Options for configuring the options response schema */
+export interface OptionsResponseConfig {
+  /** Minimum number of options (default: 2) */
+  min?: number;
+  /** Maximum number of options (default: 8) */
+  max?: number;
+}
 
 /**
  * Extends a Zod object schema with options response fields.
  * Use for any agent that returns conversational responses with suggestions.
+ *
+ * @param inner - The base schema to extend
+ * @param config - Optional min/max for options array
  */
-export const withOptionsResponse = <T extends ZodRawShape>(inner: ZodObject<T>) =>
-  inner.extend({
-    options: z.array(z.string().min(1)).min(2).max(8)
-      .describe('2-8 clickable options. When isComplete=true, include both a "continue" and "keep editing" option'),
+export const withOptionsResponse = <T extends ZodRawShape>(
+  inner: ZodObject<T>,
+  config: OptionsResponseConfig = {}
+) => {
+  const min = config.min ?? 2;
+  const max = config.max ?? 8;
+
+  return inner.extend({
+    options: z.array(z.string().min(1)).min(min).max(max)
+      .describe(`${min}-${max} clickable options. When isComplete=true, include both a "continue" and "keep editing" option`),
     isComplete: z.boolean()
       .describe('True when conversation can end'),
   });
+};
 
 type GenerateObjectParams = Parameters<typeof aiGenerateObject>[0];
 
