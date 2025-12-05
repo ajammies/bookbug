@@ -117,7 +117,7 @@ describe('briefExtractorAgent', () => {
   });
 
   it('passes logger to generateObject', async () => {
-    const logger = { debug: vi.fn() } as unknown as NonNullable<Parameters<typeof briefExtractorAgent>[3]>['logger'];
+    const logger = { debug: vi.fn(), warn: vi.fn() } as unknown as NonNullable<Parameters<typeof briefExtractorAgent>[3]>['logger'];
     mockGenerateObject.mockResolvedValue(mockResult({}));
 
     await briefExtractorAgent('Question?', 'Answer', {}, { logger });

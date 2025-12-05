@@ -2,6 +2,7 @@ import { z, type ZodObject, type ZodRawShape } from 'zod';
 import { generateObject } from '../services/ai';
 import { getModel } from '../config';
 import { toExtractablePartial, stripNulls } from '../utils/extractable-schema';
+import { retryWithBackoff } from '../utils/retry';
 import type { Logger } from '../utils/logger';
 
 /**
@@ -19,6 +20,8 @@ export interface ExtractOptions {
   context?: string;
   /** Logger instance for debugging */
   logger?: Logger;
+  /** Max retries for incomplete extractions (default: 2) */
+  maxRetries?: number;
 }
 
 const DEFAULT_SYSTEM_PROMPT = `Extract structured data from the provided text.
@@ -57,33 +60,59 @@ export const extract = async <T extends ZodRawShape>(
   schema: ZodObject<T>,
   options: ExtractOptions = {}
 ): Promise<ExtractionResult<z.infer<ZodObject<T>>>> => {
-  const { context, logger } = options;
+  const { context, logger, maxRetries = 2 } = options;
 
   const systemPrompt = context ? `${DEFAULT_SYSTEM_PROMPT}\n\n${context}` : DEFAULT_SYSTEM_PROMPT;
-
   const extractableSchema = toExtractablePartial(schema);
 
-  const { object } = await generateObject(
-    {
-      model: getModel(),
-      schema: extractableSchema,
-      system: systemPrompt,
-      prompt: text,
+  // Retry extraction if incomplete
+  return retryWithBackoff(
+    async () => {
+      const { object } = await generateObject(
+        {
+          model: getModel(),
+          schema: extractableSchema,
+          system: systemPrompt,
+          prompt: text,
+        },
+        logger
+      );
+
+      const stripped = stripNulls(object as Record<string, unknown>);
+      const validation = schema.safeParse(stripped);
+
+      if (validation.success) {
+        return { status: 'complete' as const, data: validation.data };
+      }
+
+      // Throw to trigger retry
+      const missingFields = getMissingFields(validation.error);
+      throw new IncompleteExtractionError(stripped, missingFields);
     },
-    logger
-  );
-
-  const stripped = stripNulls(object as Record<string, unknown>);
-
-  const validation = schema.safeParse(stripped);
-
-  if (validation.success) {
-    return { status: 'complete', data: validation.data };
-  }
-
-  return {
-    status: 'incomplete',
-    data: stripped as Partial<z.infer<ZodObject<T>>>,
-    missingFields: getMissingFields(validation.error),
-  };
+    {
+      maxRetries,
+      initialDelayMs: 100,
+      shouldRetry: (error) => error instanceof IncompleteExtractionError,
+      logger,
+    }
+  ).catch((error) => {
+    // Return incomplete result after retries exhausted
+    if (error instanceof IncompleteExtractionError) {
+      return {
+        status: 'incomplete' as const,
+        data: error.data as Partial<z.infer<ZodObject<T>>>,
+        missingFields: error.missingFields,
+      };
+    }
+    throw error;
+  });
 };
+
+class IncompleteExtractionError extends Error {
+  constructor(
+    public data: Record<string, unknown>,
+    public missingFields: string[]
+  ) {
+    super(`Incomplete extraction: missing ${missingFields.join(', ')}`);
+  }
+}
