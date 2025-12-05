@@ -261,7 +261,7 @@ export const generatePageImage = async (
 
     // Debug logging for prompt and reference images
     logger?.debug(
-      { pageNumber: context.page.pageNumber, model, promptLength: prompt.length, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
+      { pageNumber: context.page.pageNumber, model, prompt, characterDesigns: context.characterDesigns?.length ?? 0, referenceImages },
       'Preparing image generation'
     );
 
