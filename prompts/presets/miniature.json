@@ -1,0 +1,9 @@
+{
+  "name": "Miniature",
+  "art_style": {
+    "genre": ["miniature-photography", "tabletop-gaming", "hyper-realistic"],
+    "medium": ["photography", "macro-lens", "studio-lit"],
+    "technique": ["perfectly-painted-figurines", "immaculate-detail", "sharp-focus", "shallow-depth-of-field", "professional-lighting", "display-quality-miniatures", "non-metallic-metal", "edge-highlighting", "smooth-blending", "realistic-basing"],
+    "style_strength": 0.95
+  }
+}
