@@ -160,4 +160,82 @@ describe('briefExtractorAgent', () => {
     expect(result.brief.title).toBe('New Title');
     expect(result.brief.pageCount).toBe(12);
   });
+
+  // Bug reproduction tests for issue #96
+  describe('character extraction (issue #96)', () => {
+    it('merges new characters with existing characters instead of overwriting', async () => {
+      // Turn 1: User mentioned protagonist
+      const current: Partial<StoryBrief> = {
+        title: 'Transcendence',
+        characters: [
+          { name: 'Samus Maximus', description: 'A rogue trader protagonist', role: 'protagonist', traits: [], notes: [] }
+        ]
+      };
+
+      // Turn 2: User adds a sidekick - extraction returns only the new character
+      const extracted: Partial<StoryBrief> = {
+        characters: [
+          { name: 'Tech-Priest', description: 'An adeptus mechanicus sidekick', role: 'sidekick', traits: [], notes: [] }
+        ]
+      };
+      mockGenerateObject.mockResolvedValue(mockResult(extracted));
+
+      const result = await briefExtractorAgent(
+        'Any other characters?',
+        'Add an adeptus mechanicus sidekick who provides weapons',
+        current
+      );
+
+      // Should have BOTH characters, not just the new one
+      expect(result.brief.characters).toHaveLength(2);
+      expect(result.brief.characters?.map(c => c.name)).toContain('Samus Maximus');
+      expect(result.brief.characters?.map(c => c.name)).toContain('Tech-Priest');
+    });
+
+    it('does not drop characters that have description but no name', async () => {
+      // Model extracts a character with description but fails to provide name
+      const extracted: Partial<StoryBrief> = {
+        characters: [
+          { name: 'Samus', description: 'The protagonist', role: 'protagonist', traits: [], notes: [] },
+          { name: '', description: 'An adeptus mechanicus sidekick who provides weapons', role: 'sidekick', traits: [], notes: [] }
+        ]
+      };
+      mockGenerateObject.mockResolvedValue(mockResult(extracted));
+
+      const result = await briefExtractorAgent(
+        'Tell me about your characters',
+        'A rogue trader named Samus and his mechanicus sidekick',
+        {}
+      );
+
+      // Currently this silently drops the second character - we should at least preserve it
+      // or report it as incomplete so the conversation can ask for the name
+      expect(result.missingFields).toContain('characters');
+    });
+
+    it('deduplicates characters by name when merging', async () => {
+      const current: Partial<StoryBrief> = {
+        characters: [
+          { name: 'Samus', description: 'Original description', role: 'protagonist', traits: [], notes: [] }
+        ]
+      };
+
+      // Extraction returns same character with updated info
+      const extracted: Partial<StoryBrief> = {
+        characters: [
+          { name: 'Samus', description: 'Updated description with more detail', role: 'protagonist', traits: ['brave'], notes: [] }
+        ]
+      };
+      mockGenerateObject.mockResolvedValue(mockResult(extracted));
+
+      const result = await briefExtractorAgent(
+        'Tell me more about Samus',
+        'He is brave and determined',
+        current
+      );
+
+      // Should not duplicate - should have 1 character (could keep original or update)
+      expect(result.brief.characters).toHaveLength(1);
+    });
+  });
 });
