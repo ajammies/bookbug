@@ -6,6 +6,9 @@ import { StorySchema, type ImageQualityResult, type PageRenderContext } from '..
 import { createSpinner } from '../output/progress';
 import { loadJson } from '../../utils';
 
+// TODO: Add --fast flag for ensemble pipeline when implemented
+// See https://github.com/ajammies/bookbug/issues/79
+
 interface QualityOptions {
   threshold?: string;
 }
