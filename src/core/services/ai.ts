@@ -46,7 +46,7 @@ export const withOptionsResponse = <T extends ZodRawShape>(
 
   return inner.extend({
     options: z.array(z.string().min(1)).min(min).max(max)
-      .describe(`${min}-${max} clickable options. When isComplete=true, include both a "continue" and "keep editing" option`),
+      .describe(`${min}-${max} clickable options. Each option should be a specific concrete choice. NEVER include generic options like "Other", "Something else", "Tell my own idea", or "None of the above" - the UI already provides a custom input option`),
     isComplete: z.boolean()
       .describe('True when conversation can end'),
   });
