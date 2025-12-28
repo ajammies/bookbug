@@ -27,14 +27,15 @@ import {
   renderPage,
   renderPageMock,
   createBook,
-  briefExtractorAgent,
-  conversationAgent,
   plotAgent,
   plotConversationAgent,
   plotExtractorAgent,
+  intakeAgent,
   type StylePreset,
   type Message,
   type PlotMessage,
+  type IntakeState,
+  type IntakeMessage,
 } from './agents';
 import type { StoryOutputManager } from '../cli/utils/output';
 import type { Logger } from './utils/logger';
@@ -117,6 +118,9 @@ export interface PipelineState {
  * Intake stage: Gather story brief through conversation.
  * Pure function: (state, options) → state
  * Skips if brief already exists.
+ *
+ * Uses the unified intake agent with tool calling for
+ * combined conversation + extraction in a single LLM call.
  */
 export const runIntakeStage = async (
   state: PipelineState,
@@ -126,9 +130,19 @@ export const runIntakeStage = async (
 
   const { ui, logger } = options;
   const availableStyles = await listStyles();
-  let { history } = state;
-  let workingBrief: Partial<StoryBrief> = {};
-  let missingFields: string[] = [];
+
+  // Initialize intake state
+  const intakeState: IntakeState = {
+    brief: {},
+    plot: {},
+    isComplete: false,
+  };
+
+  // Convert pipeline history to intake history
+  let history: IntakeMessage[] = state.history.map((m): IntakeMessage => ({
+    role: m.role,
+    content: m.content,
+  }));
 
   // Initial greeting if no history
   if (history.length === 0) {
@@ -137,27 +151,52 @@ export const runIntakeStage = async (
 
   logger?.info({ stage: 'intake' }, 'Starting intake stage');
 
-  while (!StoryBriefSchema.safeParse(workingBrief).success) {
+  while (!intakeState.isComplete) {
     ui.progress('Thinking...');
-    const response = await conversationAgent(workingBrief, history, { availableStyles, missingFields, logger });
+    const result = await intakeAgent(intakeState, history, {
+      mode: 'brief',
+      availableStyles,
+      logger,
+    });
 
-    // Only accept completion if brief is valid
-    if (response.isComplete && StoryBriefSchema.safeParse(workingBrief).success) break;
+    // Update state from agent
+    intakeState.brief = result.brief;
+    intakeState.isComplete = result.isComplete;
 
-    // ui.prompt auto-stops spinner before showing selector
-    const answer = await ui.prompt({ question: response.question, options: response.options });
+    // If complete, break out of loop
+    if (result.isComplete) {
+      logger?.debug({ stage: 'intake' }, 'Agent signaled completion');
+      break;
+    }
 
-    ui.progress('Processing...');
-    // Extract from Q&A pair (focused extraction is more reliable)
-    const result = await briefExtractorAgent(response.question, answer, workingBrief, { availableStyles, logger });
-    workingBrief = result.brief;
-    missingFields = result.missingFields;
-    history = [...history, { role: 'assistant', content: response.question }, { role: 'user', content: answer }];
+    // If no question, something went wrong - break to avoid infinite loop
+    if (!result.question || !result.options) {
+      logger?.warn({ stage: 'intake' }, 'Agent returned no question - forcing completion');
+      break;
+    }
+
+    // Show question to user and get answer
+    const answer = await ui.prompt({ question: result.question, options: result.options });
+
+    // Add Q&A to history for next turn
+    history = [
+      ...history,
+      { role: 'assistant', content: result.question },
+      { role: 'user', content: answer },
+    ];
   }
 
-  const brief = StoryBriefSchema.parse(workingBrief);
+  // Parse and validate the brief
+  const brief = StoryBriefSchema.parse(intakeState.brief);
+
+  // Convert history back to pipeline format
+  const pipelineHistory: Message[] = history.map((m): Message => ({
+    role: m.role,
+    content: m.content,
+  }));
+
   logger?.info({ stage: 'intake', title: brief.title }, 'Intake stage complete');
-  return { ...state, brief, history };
+  return { ...state, brief, history: pipelineHistory };
 };
 
 /**

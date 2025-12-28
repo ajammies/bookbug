@@ -41,6 +41,16 @@ export { plotExtractorAgent } from './plot-extractor';
 // Brief extractor (outputs BriefExtractionResult)
 export { briefExtractorAgent, type BriefExtractorOptions, type BriefExtractionResult } from './brief-extractor';
 
+// Intake agent (unified conversation + extraction)
+export {
+  intakeAgent,
+  type IntakeAgentOptions,
+  type IntakeAgentResult,
+  type IntakeMessage,
+  type IntakeMode,
+} from './intake-agent';
+export { createIntakeTools, type IntakeState, type IntakeTools, type ToolResult } from './intake-tools';
+
 // Generic extractor (outputs ExtractionResult<T>)
 export { extract, type ExtractionResult, type ExtractOptions } from './extractor';
 
