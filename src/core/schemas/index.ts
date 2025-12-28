@@ -124,3 +124,15 @@ export {
   type BookFormatKey,
   type AspectRatio,
 } from './formats';
+
+// Field policies for intake agent
+export {
+  briefFieldPolicies,
+  plotFieldPolicies,
+  getRequiredFields,
+  getSuggestedFields,
+  getPromptedFields,
+  hasRequiredFields,
+  getMissingRequiredFields,
+  type FieldPolicy,
+} from './field-policies';
