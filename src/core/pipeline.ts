@@ -28,12 +28,9 @@ import {
   renderPageMock,
   createBook,
   plotAgent,
-  plotConversationAgent,
-  plotExtractorAgent,
   intakeAgent,
   type StylePreset,
   type Message,
-  type PlotMessage,
   type IntakeState,
   type IntakeMessage,
 } from './agents';
@@ -203,6 +200,9 @@ export const runIntakeStage = async (
  * Plot stage: Generate and refine plot structure.
  * Pure function: (state, options) → state
  * Skips if plot already exists.
+ *
+ * Uses plotAgent for initial generation, then intake agent
+ * for user refinement via tool calling.
  */
 export const runPlotStage = async (
   state: PipelineState,
@@ -211,7 +211,6 @@ export const runPlotStage = async (
   if (state.plot) return state;
 
   const { ui, logger } = options;
-  let { history } = state;
 
   if (!state.brief) {
     throw new Error('Cannot generate plot: brief is missing');
@@ -222,35 +221,72 @@ export const runPlotStage = async (
 
   // Generate initial plot
   ui.progress('Creating plot outline...');
-  let plot = await plotAgent(brief, logger);
+  const initialPlot = await plotAgent(brief, logger);
 
-  // Convert Message history to PlotMessage for plot conversation
-  // History from intake flows in so plot agent sees any plot details mentioned
-  const plotHistory: PlotMessage[] = history.map((m): PlotMessage => ({ role: m.role, content: m.content }));
+  // Initialize intake state with the generated plot
+  const intakeState: IntakeState = {
+    brief: brief,
+    plot: initialPlot,
+    isComplete: false,
+  };
 
-  while (true) {
+  // Convert pipeline history to intake history
+  let history: IntakeMessage[] = state.history.map((m): IntakeMessage => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  // Add context about the generated plot
+  history = [
+    ...history,
+    { role: 'assistant', content: `I've created a plot outline for "${brief.title}". Let me show you the story beats and we can refine them together.` },
+  ];
+
+  while (!intakeState.isComplete) {
     ui.progress('Preparing...');
-    const storyWithPlot = assembleStoryWithPlot(brief, plot);
-    const response = await plotConversationAgent(storyWithPlot, plotHistory, logger);
+    const result = await intakeAgent(intakeState, history, {
+      mode: 'plot',
+      logger,
+    });
 
-    if (response.isComplete) break;
+    // Update state from agent
+    intakeState.plot = result.plot;
+    intakeState.isComplete = result.isComplete;
 
-    // ui.prompt auto-stops spinner before showing selector
-    const answer = await ui.prompt({ question: response.message, options: response.options });
+    // If complete, break out of loop
+    if (result.isComplete) {
+      logger?.debug({ stage: 'plot' }, 'Agent signaled completion');
+      break;
+    }
 
-    ui.progress('Updating story...');
-    // Pass Q&A pair for focused interpretation
-    const messageWithContext = `Question: ${response.message}\nAnswer: ${answer}`;
-    const updates = await plotExtractorAgent(messageWithContext, storyWithPlot, logger);
-    if (updates.plot) plot = updates.plot;
-    plotHistory.push({ role: 'assistant', content: response.message }, { role: 'user', content: answer });
+    // If no question, something went wrong - break to avoid infinite loop
+    if (!result.question || !result.options) {
+      logger?.warn({ stage: 'plot' }, 'Agent returned no question - forcing completion');
+      break;
+    }
+
+    // Show question to user and get answer
+    const answer = await ui.prompt({ question: result.question, options: result.options });
+
+    // Add Q&A to history for next turn
+    history = [
+      ...history,
+      { role: 'assistant', content: result.question },
+      { role: 'user', content: answer },
+    ];
   }
 
-  // Merge plot history back into main history
-  const newHistory: Message[] = plotHistory.map((m): Message => ({ role: m.role, content: m.content }));
+  // Get the final plot from intake state
+  const plot = intakeState.plot as PlotStructure;
 
-  logger?.info({ stage: 'plot', beatCount: plot.plotBeats.length }, 'Plot stage complete');
-  return { ...state, plot, history: newHistory };
+  // Convert history back to pipeline format
+  const pipelineHistory: Message[] = history.map((m): Message => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  logger?.info({ stage: 'plot', beatCount: plot.plotBeats?.length ?? 0 }, 'Plot stage complete');
+  return { ...state, plot, history: pipelineHistory };
 };
 
 // ============================================================================
