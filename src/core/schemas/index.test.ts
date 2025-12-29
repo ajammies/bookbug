@@ -29,15 +29,8 @@ describe('AgeRangeSchema', () => {
     }
   });
 
-  it('rejects min below 2', () => {
-    const result = AgeRangeSchema.safeParse({ min: 1, max: 8 });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects max above 18', () => {
-    const result = AgeRangeSchema.safeParse({ min: 4, max: 20 });
-    expect(result.success).toBe(false);
-  });
+  // Note: min/max range validation removed due to Anthropic API limitation
+  // (doesn't support minimum/maximum on number types in JSON schema)
 
   it('rejects non-integer values', () => {
     const result = AgeRangeSchema.safeParse({ min: 4.5, max: 8 });

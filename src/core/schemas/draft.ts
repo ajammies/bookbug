@@ -40,7 +40,7 @@ export const StoryDraftSchema = z.object({
   stylePreset: z.string().optional().describe('[prompted] Visual style preset name'),
 
   // Optional fields - don't actively prompt
-  pageCount: z.number().int().min(8).max(32).default(24).describe('Number of pages in the book'),
+  pageCount: z.number().int().default(24).describe('Number of pages (8-32)'),
   tone: z.string().optional().describe('Emotional tone (e.g., "whimsical", "heartfelt")'),
   moral: z.string().optional().describe('Lesson or takeaway for the reader'),
   interests: z.array(z.string().min(1)).default([]).describe('Topics the child enjoys'),

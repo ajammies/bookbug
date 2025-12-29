@@ -195,7 +195,7 @@ export const createDraftTools = (state: DraftState): Record<string, any> => {
   tools.updatePlotBeat = tool({
     description: 'Update an existing plot beat by index',
     inputSchema: z.object({
-      index: z.number().int().min(0).describe('Index of the beat (0-based)'),
+      index: z.number().int().describe('Index of the beat (0-based)'),
       purpose: z.enum(['setup', 'build', 'conflict', 'twist', 'climax', 'payoff', 'button']).optional(),
       description: z.string().optional(),
     }),
