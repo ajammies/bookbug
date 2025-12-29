@@ -6,8 +6,8 @@ import { z } from 'zod';
 
 export const AgeRangeSchema = z
   .object({
-    min: z.number().int().min(2).max(18).describe('Minimum age of target reader (2-18)'),
-    max: z.number().int().min(2).max(18).describe('Maximum age of target reader (2-18)'),
+    min: z.number().int().describe('Minimum age of target reader (2-18)'),
+    max: z.number().int().describe('Maximum age of target reader (2-18)'),
   })
   .refine((range) => range.min <= range.max, {
     message: 'ageRange.min must be <= ageRange.max',

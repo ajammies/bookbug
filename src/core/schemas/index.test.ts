@@ -29,15 +29,8 @@ describe('AgeRangeSchema', () => {
     }
   });
 
-  it('rejects min below 2', () => {
-    const result = AgeRangeSchema.safeParse({ min: 1, max: 8 });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects max above 18', () => {
-    const result = AgeRangeSchema.safeParse({ min: 4, max: 20 });
-    expect(result.success).toBe(false);
-  });
+  // Note: min/max range validation removed due to Anthropic API limitation
+  // (doesn't support minimum/maximum on number types in JSON schema)
 
   it('rejects non-integer values', () => {
     const result = AgeRangeSchema.safeParse({ min: 4.5, max: 8 });
@@ -116,15 +109,8 @@ describe('StoryBriefSchema', () => {
     }
   });
 
-  it('rejects pageCount below 8', () => {
-    const result = StoryBriefSchema.safeParse({ ...validBrief, pageCount: 4 });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects pageCount above 32', () => {
-    const result = StoryBriefSchema.safeParse({ ...validBrief, pageCount: 64 });
-    expect(result.success).toBe(false);
-  });
+  // Note: pageCount min/max validation removed due to Anthropic API limitation
+  // (doesn't support minimum/maximum on number types in JSON schema)
 
   it('rejects empty characters array', () => {
     const result = StoryBriefSchema.safeParse({ ...validBrief, characters: [] });

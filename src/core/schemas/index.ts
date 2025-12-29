@@ -1,7 +1,7 @@
 /**
  * Domain Schemas for Bookbug Children's Book Generator
  *
- * Pipeline: StoryBrief → StoryWithPlot → StoryWithProse → ComposedStory → RenderedBook
+ * Pipeline: Story → StoryWithProse → ComposedStory → RenderedBook
  */
 
 // Common types
@@ -14,7 +14,7 @@ export {
   type BeatPurpose,
 } from './common';
 
-// Stage 1: Brief (book builder)
+// Legacy: Brief (for backward compatibility)
 export {
   StoryBriefSchema,
   ConversationResponseSchema,
@@ -22,19 +22,42 @@ export {
   type ConversationResponse,
 } from './brief';
 
-// Stage 2: Plot (plotAgent)
+// Legacy: Plot (for backward compatibility)
 export {
   PlotBeatPurposeSchema,
-  PlotBeatSchema,
+  PlotBeatSchema as LegacyPlotBeatSchema,
   PlotStructureSchema,
   PlotConversationResponseSchema,
   type PlotBeatPurpose,
-  type PlotBeat,
+  type PlotBeat as LegacyPlotBeat,
   type PlotStructure,
   type PlotConversationResponse,
 } from './plot';
 
-// Stage 3: Prose (proseAgent)
+// Story schema (the unified schema)
+export {
+  StorySchema,
+  PlotBeatSchema,
+  parseFieldPolicy,
+  getCleanDescription,
+  getFieldPolicies,
+  getRequiredFields,
+  getMissingRequiredFields,
+  hasAllRequiredFields,
+  type Story,
+  type PlotBeat,
+  type FieldPolicy,
+} from './story';
+
+// Story tools (auto-generated from schema)
+export {
+  createStoryTools,
+  type StoryState,
+  type StoryTools,
+  type ToolResult,
+} from './story-tools';
+
+// Prose (proseAgent)
 export {
   ProseSetupSchema,
   ProsePageSchema,
@@ -44,7 +67,7 @@ export {
   type Prose,
 } from './prose';
 
-// Stage 4: Visuals (visualsAgent)
+// Visuals (visualsAgent)
 export {
   LightingSchema,
   ColorScriptSchema,
@@ -88,20 +111,16 @@ export {
 
 // Composed types
 export {
-  StoryWithPlotSchema,
   StoryWithProseSchema,
   ComposedStorySchema,
-  StorySchema,
-  type StoryWithPlot,
   type StoryWithProse,
   type ComposedStory,
-  type Story,
 } from './composed';
 
 // Stage validators (check if stage can be skipped)
-export { hasCompleteBrief, hasCompletePlot } from './partial';
+export { hasCompleteStory, hasCompleteBrief, hasCompletePlot } from './partial';
 
-// Stage 5: Render
+// Render
 export {
   RenderedPageSchema,
   RenderedBookSchema,

@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { hasCompleteBrief, hasCompletePlot } from './partial';
+import { hasCompleteStory, hasCompleteBrief, hasCompletePlot } from './partial';
 import type { PipelineState } from '../pipeline';
-import type { StoryBrief, PlotStructure } from './index';
+import type { Story } from './story';
 
-const minimalBrief: StoryBrief = {
+const validStory: Story = {
   title: 'Test Story',
   storyArc: 'hero overcomes fear',
   setting: 'magical forest',
@@ -13,10 +13,6 @@ const minimalBrief: StoryBrief = {
     { name: 'Hero', description: 'brave child', role: 'protagonist', traits: ['brave'], notes: [] },
   ],
   interests: [],
-};
-
-const validPlot: PlotStructure = {
-  storyArcSummary: 'Hero overcomes fear in the forest',
   plotBeats: [
     { purpose: 'setup', description: 'Hero enters forest' },
     { purpose: 'conflict', description: 'Hero faces fear' },
@@ -26,36 +22,26 @@ const validPlot: PlotStructure = {
   allowCreativeLiberty: true,
 };
 
-describe('hasCompleteBrief', () => {
-  it('returns false when brief is undefined', () => {
-    const state: PipelineState = { history: [] };
-    expect(hasCompleteBrief(state)).toBe(false);
+describe('hasCompleteStory', () => {
+  it('returns false when story is undefined', () => {
+    const state: PipelineState = {};
+    expect(hasCompleteStory(state)).toBe(false);
   });
 
-  it('returns true when brief is defined', () => {
-    const state: PipelineState = { history: [], brief: minimalBrief };
-    expect(hasCompleteBrief(state)).toBe(true);
-  });
-
-  it('returns true when both brief and plot are present', () => {
-    const state: PipelineState = { history: [], brief: minimalBrief, plot: validPlot };
-    expect(hasCompleteBrief(state)).toBe(true);
+  it('returns true when story is defined', () => {
+    const state: PipelineState = { story: validStory };
+    expect(hasCompleteStory(state)).toBe(true);
   });
 });
 
-describe('hasCompletePlot', () => {
-  it('returns false when brief is undefined', () => {
-    const state: PipelineState = { history: [] };
-    expect(hasCompletePlot(state)).toBe(false);
+describe('legacy aliases', () => {
+  it('hasCompleteBrief is alias for hasCompleteStory', () => {
+    expect(hasCompleteBrief({})).toBe(false);
+    expect(hasCompleteBrief({ story: validStory })).toBe(true);
   });
 
-  it('returns false when plot is undefined', () => {
-    const state: PipelineState = { history: [], brief: minimalBrief };
-    expect(hasCompletePlot(state)).toBe(false);
-  });
-
-  it('returns true when both brief and plot are defined', () => {
-    const state: PipelineState = { history: [], brief: minimalBrief, plot: validPlot };
-    expect(hasCompletePlot(state)).toBe(true);
+  it('hasCompletePlot is alias for hasCompleteStory', () => {
+    expect(hasCompletePlot({})).toBe(false);
+    expect(hasCompletePlot({ story: validStory })).toBe(true);
   });
 });

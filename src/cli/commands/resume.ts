@@ -1,14 +1,14 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, runPlotStage, renderBook, type PipelineState } from '../../core/pipeline';
+import { runPipelineIncremental, renderBook, type PipelineState } from '../../core/pipeline';
 import {
-  StoryBriefSchema,
-  StoryWithPlotSchema,
   StoryWithProseSchema,
   StorySchema,
+  ComposedStorySchema,
   RenderedBookSchema,
   type BookFormatKey,
+  type Story,
 } from '../../core/schemas';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
@@ -17,7 +17,7 @@ import { createCliUI } from '../../utils/cli';
 
 const OUTPUT_DIR = './output';
 
-type ResumeStage = 'brief' | 'plot' | 'prose' | 'story' | 'complete';
+type ResumeStage = 'draft' | 'prose' | 'story' | 'complete';
 
 interface StoryFolderInfo {
   folder: string;
@@ -47,10 +47,20 @@ const findLatestStoryFolder = async (): Promise<string | null> => {
 const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
   const files = await fs.readdir(folder);
   if (files.includes('book.json')) return { folder, stage: 'complete', latestFile: path.join(folder, 'book.json') };
-  if (files.includes('story.json')) return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
+  if (files.includes('story.json')) {
+    // Check if story.json has prose/visuals (composed) or just base story
+    const data = await loadJson(path.join(folder, 'story.json')) as Record<string, unknown>;
+    const isComposed = 'prose' in data && 'visuals' in data;
+    return {
+      folder,
+      stage: isComposed ? 'story' : 'draft',  // If not composed, treat as draft stage
+      latestFile: path.join(folder, 'story.json')
+    };
+  }
   if (files.includes('prose.json')) return { folder, stage: 'prose', latestFile: path.join(folder, 'prose.json') };
-  if (files.includes('plot.json')) return { folder, stage: 'plot', latestFile: path.join(folder, 'plot.json') };
-  if (files.includes('brief.json')) return { folder, stage: 'brief', latestFile: path.join(folder, 'brief.json') };
+  // plot.json and brief.json are legacy - treat as draft stage
+  if (files.includes('plot.json')) return { folder, stage: 'draft', latestFile: path.join(folder, 'plot.json') };
+  if (files.includes('brief.json')) return { folder, stage: 'draft', latestFile: path.join(folder, 'brief.json') };
   throw new Error(`No resumable artifacts found in ${folder}`);
 };
 
@@ -58,38 +68,46 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   const files = await fs.readdir(folder);
 
   if (files.includes('story.json')) {
-    const story = StorySchema.parse(await loadJson(path.join(folder, 'story.json')));
-    return {
-      history: [],
-      brief: story,
-      plot: story.plot,
-      styleGuide: story.visuals.style,
-      proseSetup: { logline: story.prose.logline, theme: story.prose.theme, styleNotes: story.prose.styleNotes },
-      characterDesigns: story.characterDesigns,
-      prosePages: story.prose.pages,
-      illustratedPages: story.visuals.illustratedPages,
-    };
+    // Try to parse as ComposedStory first (has prose/visuals), fallback to base Story
+    const data = await loadJson(path.join(folder, 'story.json')) as Record<string, unknown>;
+    const story = StorySchema.parse(data);
+
+    // Check if it has prose/visuals (composed story)
+    const hasExtras = 'prose' in data && 'visuals' in data;
+    if (hasExtras) {
+      const composed = data as { prose: { logline: string; theme: string; styleNotes?: string; pages: unknown[] }; visuals: { style: unknown; illustratedPages: unknown[] }; characterDesigns?: unknown[] };
+      return {
+        story,
+        styleGuide: composed.visuals.style as import('../../core/schemas').VisualStyleGuide,
+        proseSetup: { logline: composed.prose.logline, theme: composed.prose.theme, styleNotes: composed.prose.styleNotes },
+        characterDesigns: composed.characterDesigns as import('../../core/schemas').CharacterDesign[],
+        prosePages: composed.prose.pages as import('../../core/schemas').ProsePage[],
+        illustratedPages: composed.visuals.illustratedPages as import('../../core/schemas').IllustratedPage[],
+      };
+    }
+
+    // Base story only
+    return { story };
   }
 
   if (files.includes('prose.json')) {
     const storyWithProse = StoryWithProseSchema.parse(await loadJson(path.join(folder, 'prose.json')));
     return {
-      history: [],
-      brief: storyWithProse,
-      plot: storyWithProse.plot,
+      story: storyWithProse,
       proseSetup: { logline: storyWithProse.prose.logline, theme: storyWithProse.prose.theme, styleNotes: storyWithProse.prose.styleNotes },
       prosePages: storyWithProse.prose.pages,
     };
   }
 
   if (files.includes('plot.json')) {
-    const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
-    return { history: [], brief: storyWithPlot, plot: storyWithPlot.plot };
+    const story = StorySchema.parse(await loadJson(path.join(folder, 'plot.json')));
+    return { story };
   }
 
+  // Legacy brief.json - need to run through draft stage (not supported in simplified pipeline)
   if (files.includes('brief.json')) {
-    const brief = StoryBriefSchema.parse(await loadJson(path.join(folder, 'brief.json')));
-    return { history: [], brief };
+    console.warn('Warning: brief.json is a legacy format. Please re-run the draft stage.');
+    return null;
   }
 
   return null;
@@ -126,7 +144,7 @@ export const resumeCommand = new Command('resume')
 
         case 'story': {
           console.log('\n📍 Resuming from: story.json (rendering images)');
-          const story = StorySchema.parse(await loadJson(info.latestFile));
+          const story = ComposedStorySchema.parse(await loadJson(info.latestFile));
           const onStep = (step: string) => ui.progress(`Rendering page ${step.replace('render-', '')}...`);
           const book = await renderBook(story, { mock: options.mock, format: options.format, outputManager, onStep });
           ui.succeed('Book rendered');
@@ -137,23 +155,10 @@ export const resumeCommand = new Command('resume')
         }
 
         case 'prose':
-        case 'plot': {
-          console.log(`\n📍 Resuming from: ${info.stage}.json`);
+        case 'draft': {
+          console.log(`\n📍 Resuming from: ${info.latestFile.split('/').pop()}`);
           const pipelineState = await loadPipelineState(folder);
           if (!pipelineState) throw new Error('Failed to load pipeline state');
-          const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
-          ui.succeed('Book complete!');
-          displayBook(result.book);
-          console.log(`\nAll files saved to: ${folder}`);
-          break;
-        }
-
-        case 'brief': {
-          console.log('\n📍 Resuming from: brief.json');
-          let pipelineState = await loadPipelineState(folder);
-          if (!pipelineState) throw new Error('Failed to load pipeline state');
-          // Brief exists but no plot - run plot stage first
-          pipelineState = await runPlotStage(pipelineState, { ui });
           const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
           ui.succeed('Book complete!');
           displayBook(result.book);

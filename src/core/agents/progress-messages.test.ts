@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { StoryWithPlot } from '../schemas';
+import type { Story } from '../schemas';
 
 // Mock the ai utils wrapper
 vi.mock('../services/ai', () => ({
@@ -14,7 +14,7 @@ vi.mock('@ai-sdk/anthropic', () => ({
 import { generateObject } from '../services/ai';
 import { progressMessagesAgent } from './progress-messages';
 
-const mockStory: StoryWithPlot = {
+const mockStory: Story = {
   title: 'The Brave Little Fox',
   storyArc: 'overcoming fear',
   setting: 'A magical forest',
@@ -26,16 +26,13 @@ const mockStory: StoryWithPlot = {
   ],
   tone: 'whimsical',
   interests: ['animals', 'adventure'],
-  plot: {
-    storyArcSummary: 'Felix overcomes his fear of the dark to find treasure',
-    plotBeats: [
-      { purpose: 'setup', description: 'Felix discovers a mysterious cave' },
-      { purpose: 'conflict', description: 'Felix is scared to enter' },
-      { purpose: 'climax', description: 'Felix overcomes his fear' },
-      { purpose: 'payoff', description: 'Felix finds treasure inside' },
-    ],
-    allowCreativeLiberty: true,
-  },
+  plotBeats: [
+    { purpose: 'setup', description: 'Felix discovers a mysterious cave' },
+    { purpose: 'conflict', description: 'Felix is scared to enter' },
+    { purpose: 'climax', description: 'Felix overcomes his fear' },
+    { purpose: 'payoff', description: 'Felix finds treasure inside' },
+  ],
+  allowCreativeLiberty: true,
 };
 
 describe('progressMessagesAgent', () => {

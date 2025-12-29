@@ -8,7 +8,7 @@ import { BookFormatKeySchema } from './formats';
  */
 
 export const RenderedPageSchema = z.object({
-  pageNumber: z.number().int().min(1),
+  pageNumber: z.number().int().describe('Page number (1+)'),
   url: z.string().url(),
 });
 
@@ -32,7 +32,7 @@ export const PageRenderContextSchema = z.object({
   style: VisualStyleGuideSchema,
   characterDesigns: z.array(CharacterDesignSchema).describe('Sprite sheets for characters on this page'),
   page: z.object({
-    pageNumber: z.number().int().min(1),
+    pageNumber: z.number().int().describe('Page number (1+)'),
     text: z.string().optional(),
     beats: z.array(IllustrationBeatSchema).optional(),
   }),
@@ -55,10 +55,10 @@ export type ImageGenerationResult = z.infer<typeof ImageGenerationResultSchema>;
  * ImageQualityResult: Analysis of a rendered image for quality issues
  */
 export const ImageQualityResultSchema = z.object({
-  score: z.number().min(0).max(100).describe('Overall quality score 0-100'),
-  characterConsistency: z.number().min(0).max(100).describe('How well characters match their designs'),
-  environmentConsistency: z.number().min(0).max(100).describe('How well environment matches style guide'),
-  aiArtifacts: z.number().min(0).max(100).describe('100 = no artifacts, 0 = severe artifacts'),
+  score: z.number().describe('Overall quality score 0-100'),
+  characterConsistency: z.number().describe('How well characters match their designs (0-100)'),
+  environmentConsistency: z.number().describe('How well environment matches style guide (0-100)'),
+  aiArtifacts: z.number().describe('100 = no artifacts, 0 = severe artifacts'),
   issues: z.array(z.string()).describe('Specific problems found in the image'),
   passesQualityBar: z.boolean().describe('Whether image meets minimum quality threshold'),
 });

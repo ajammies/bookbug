@@ -1,5 +1,5 @@
 import type {
-  StoryWithPlot,
+  Story,
   StoryWithProse,
   Prose,
   VisualDirection,
@@ -13,7 +13,7 @@ export type Agent<Input, Output> = (input: Input) => Promise<Output>;
 /**
  * Pipeline agent types with concrete input/output (named after output)
  */
-export type ProseAgentType = Agent<StoryWithPlot, Prose>;
+export type ProseAgentType = Agent<Story, Prose>;
 export type VisualsAgentType = Agent<StoryWithProse, VisualDirection>;
 
 /**
@@ -30,16 +30,20 @@ export { renderPage, renderPageMock, createBook, filterStoryForPage } from './re
 // Progress messages for CLI display
 export { progressMessagesAgent } from './progress-messages';
 
-// Chat intake agents (StoryBrief)
-export { conversationAgent, type Message, type MessageRole, type ConversationAgentOptions } from './conversation';
-
-// Plot iteration agents (PlotStructure)
+// Plot generation agent (PlotStructure) - still used for initial generation
 export { plotAgent } from './plot';
-export { plotConversationAgent, type PlotMessage } from './plot-conversation';
-export { plotExtractorAgent } from './plot-extractor';
 
-// Brief extractor (outputs BriefExtractionResult)
-export { briefExtractorAgent, type BriefExtractorOptions, type BriefExtractionResult } from './brief-extractor';
+// Intake agent (unified conversation + progressive extraction)
+export {
+  intakeAgent,
+  type IntakeAgentOptions,
+  type IntakeAgentResult,
+  type IntakeMessage,
+} from './intake-agent';
+
+// Re-export IntakeMessage as Message for backward compatibility
+export type { IntakeMessage as Message } from './intake-agent';
+export type MessageRole = 'user' | 'assistant';
 
 // Generic extractor (outputs ExtractionResult<T>)
 export { extract, type ExtractionResult, type ExtractOptions } from './extractor';

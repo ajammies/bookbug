@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { renderPage, renderPageMock, createBook } from '../../core/pipeline';
-import { StorySchema, type BookFormatKey, type RenderedBook, type RenderedPage } from '../../core/schemas';
+import { ComposedStorySchema, type BookFormatKey, type RenderedBook, type RenderedPage } from '../../core/schemas';
 import type { ImageModel } from '../../core/services/image-generation';
 import { createSpinner } from '../output/progress';
 import { displayBook } from '../output/display';
@@ -29,7 +29,7 @@ export const renderCommand = new Command('render')
     try {
       // Load and validate story
       spinner.start('Loading story...');
-      const story = StorySchema.parse(await loadJson(storyFile));
+      const story = ComposedStorySchema.parse(await loadJson(storyFile));
       spinner.succeed('Story loaded');
 
       // Set up output manager (custom path takes precedence)

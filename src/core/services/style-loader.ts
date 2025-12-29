@@ -9,7 +9,7 @@ const ArtStyleSchema = z.object({
   genre: z.array(z.string().min(1)).default([]),
   medium: z.array(z.string().min(1)).default([]),
   technique: z.array(z.string().min(1)).default([]),
-  style_strength: z.number().min(0).max(1).optional(),
+  style_strength: z.number().optional().describe('Style strength 0-1'),
 });
 
 const StylePresetFileSchema = z.object({
