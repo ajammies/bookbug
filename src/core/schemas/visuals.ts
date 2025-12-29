@@ -29,12 +29,12 @@ export const ColorScriptSchema = z.object({
 export const MoodSchema = z.object({
   beat: z.string().optional().describe('Emotional beat of this moment (e.g., "wonder", "tension")'),
   tone: z.array(z.string().min(1)).default([]).describe('Mood descriptors (e.g., "cozy", "mysterious", "joyful")'),
-  sliders: z.record(z.number()).optional().describe('Mood intensity values 0-1 (e.g., {"warmth": 0.8})'),
+  // Note: sliders removed - Anthropic API doesn't support z.record() (additionalProperties)
 });
 
 export const FocalHierarchySchema = z.object({
   priority: z.array(z.string().min(1)).default([]).describe('Elements in order of visual importance'),
-  min_visibility: z.record(z.array(z.string().min(1))).optional().describe('Required visible parts per element'),
+  // Note: min_visibility removed - Anthropic API doesn't support z.record() (additionalProperties)
   no_crop: z.array(z.string().min(1)).default([]).describe('Elements that must be fully visible'),
   focus_plane: z.string().optional().describe('Depth of field focus (e.g., "foreground", "midground")'),
 });
@@ -65,7 +65,7 @@ export const MaterialsMicrodetailSchema = z.object({
 
 export const ConstraintsSchema = z.object({
   negative: z.array(z.string().min(1)).default([]).describe('Things to avoid (e.g., "scary imagery", "text")'),
-  style_caps: z.record(z.string().min(1)).optional().describe('Style limitations per element'),
+  // Note: style_caps removed - Anthropic API doesn't support z.record() (additionalProperties)
 });
 
 export const SettingSchema = z.object({
