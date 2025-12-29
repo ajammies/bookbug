@@ -77,7 +77,7 @@ export const createBook = (
   format: BookFormatKey = 'square-large'
 ): RenderedBook => ({
   storyTitle: story.title,
-  ageRange: story.ageRange,
+  ageRange: story.ageRange ?? { min: 4, max: 8 },
   format,
   pages,
   createdAt: new Date().toISOString(),

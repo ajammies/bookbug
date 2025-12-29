@@ -26,16 +26,13 @@ const mockStory: StoryWithPlot = {
   ],
   tone: 'whimsical',
   interests: ['animals', 'adventure'],
-  plot: {
-    storyArcSummary: 'Felix overcomes his fear of the dark to find treasure',
-    plotBeats: [
-      { purpose: 'setup', description: 'Felix discovers a mysterious cave' },
-      { purpose: 'conflict', description: 'Felix is scared to enter' },
-      { purpose: 'climax', description: 'Felix overcomes his fear' },
-      { purpose: 'payoff', description: 'Felix finds treasure inside' },
-    ],
-    allowCreativeLiberty: true,
-  },
+  plotBeats: [
+    { purpose: 'setup', description: 'Felix discovers a mysterious cave' },
+    { purpose: 'conflict', description: 'Felix is scared to enter' },
+    { purpose: 'climax', description: 'Felix overcomes his fear' },
+    { purpose: 'payoff', description: 'Felix finds treasure inside' },
+  ],
+  allowCreativeLiberty: true,
 };
 
 describe('progressMessagesAgent', () => {

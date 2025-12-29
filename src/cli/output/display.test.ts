@@ -88,7 +88,7 @@ describe('displayBrief', () => {
 
 describe('displayStory', () => {
   const minimalStory: Story = {
-    // StoryBrief fields
+    // StoryDraft fields
     title: 'The Magic Garden',
     storyArc: 'A rabbit discovers a hidden garden',
     setting: 'Garden',
@@ -98,18 +98,13 @@ describe('displayStory', () => {
       { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [] },
     ],
     interests: [],
-    
-    // PlotStructure
-    plot: {
-      storyArcSummary: 'A rabbit discovers wonder',
-      plotBeats: [
-        { purpose: 'setup', description: 'Luna finds the gate' },
-        { purpose: 'conflict', description: 'She hesitates' },
-        { purpose: 'climax', description: 'She enters' },
-        { purpose: 'payoff', description: 'She finds a friend' },
-      ],
-      allowCreativeLiberty: true,
-    },
+    plotBeats: [
+      { purpose: 'setup', description: 'Luna finds the gate' },
+      { purpose: 'conflict', description: 'She hesitates' },
+      { purpose: 'climax', description: 'She enters' },
+      { purpose: 'payoff', description: 'She finds a friend' },
+    ],
+    allowCreativeLiberty: true,
     // Prose
     prose: {
       logline: 'A rabbit finds wonder',

@@ -1,6 +1,4 @@
 import type {
-  StoryBrief,
-  PlotStructure,
   StoryWithPlot,
   StoryWithProse,
   ComposedStory,
@@ -30,7 +28,7 @@ import {
 } from './agents';
 import { draftAgent, type DraftMessage } from './agents/draft-agent';
 import { type DraftState } from './schemas/draft-tools';
-import { type StoryDraft } from './schemas/draft';
+import { StoryDraftSchema, type StoryDraft } from './schemas/draft';
 import type { StoryOutputManager } from '../cli/utils/output';
 import type { Logger } from './utils/logger';
 import { loadStylePreset, listStyles } from './services/style-loader';
@@ -80,19 +78,14 @@ export type Message = DraftMessage;
 
 /**
  * Pipeline state - single type throughout pipeline.
- * draft is optional (absent until draft stage completes).
- * history flows through the pipeline so context isn't lost.
+ * story is the StoryDraft (unified schema with all story details).
  */
 export interface PipelineState {
   // Conversation history
   history: Message[];
 
-  // Draft (progressively filled during draft stage)
-  draft?: Partial<StoryDraft>;
-
-  // Legacy: brief/plot for backward compatibility with incremental pipeline
-  brief?: StoryBrief;
-  plot?: PlotStructure;
+  // Story draft (progressively filled, then complete)
+  story?: StoryDraft;
 
   // Setup artifacts
   styleGuide?: VisualStyleGuide;
@@ -113,38 +106,9 @@ export interface PipelineState {
 // ============================================================================
 
 /**
- * Convert StoryDraft to StoryBrief + PlotStructure for downstream pipeline.
- * This bridges the unified draft schema to the existing composed types.
- */
-const convertDraftToStoryWithPlot = (draft: StoryDraft): { brief: StoryBrief; plot: PlotStructure } => {
-  const brief: StoryBrief = {
-    title: draft.title,
-    storyArc: draft.storyArc,
-    setting: draft.setting,
-    characters: draft.characters,
-    ageRange: draft.ageRange ?? { min: 4, max: 8 }, // Default age range
-    pageCount: draft.pageCount,
-    tone: draft.tone,
-    moral: draft.moral,
-    interests: draft.interests,
-    customInstructions: draft.customInstructions,
-    stylePreset: draft.stylePreset,
-  };
-
-  const plot: PlotStructure = {
-    storyArcSummary: draft.storyArc,
-    plotBeats: draft.plotBeats,
-    allowCreativeLiberty: draft.allowCreativeLiberty,
-    characters: draft.characters, // Pass through for visual descriptions
-  };
-
-  return { brief, plot };
-};
-
-/**
  * Draft stage: Gather story details through single progressive conversation.
  * Pure function: (state, options) → state
- * Skips if brief and plot already exist.
+ * Skips if story already exists.
  *
  * Uses the unified draft agent with tool calling for
  * combined conversation + extraction in a single loop.
@@ -153,15 +117,15 @@ export const runDraftStage = async (
   state: PipelineState,
   options: StageOptions
 ): Promise<PipelineState> => {
-  // Skip if already have brief and plot
-  if (state.brief && state.plot) return state;
+  // Skip if already have a complete story
+  if (state.story) return state;
 
   const { ui, logger } = options;
   const availableStyles = await listStyles();
 
-  // Initialize draft state (or continue from existing draft)
+  // Initialize draft state
   const draftState: DraftState = {
-    draft: state.draft ?? {},
+    draft: {},
     isComplete: false,
   };
 
@@ -206,21 +170,15 @@ export const runDraftStage = async (
     ];
   }
 
-  // Convert draft to brief + plot for downstream compatibility
-  const { brief, plot } = convertDraftToStoryWithPlot(draftState.draft as StoryDraft);
+  // Parse and validate the completed draft
+  const story = StoryDraftSchema.parse(draftState.draft);
 
   logger?.info(
-    { stage: 'draft', title: brief.title, beatCount: plot.plotBeats?.length ?? 0 },
+    { stage: 'draft', title: story.title, beatCount: story.plotBeats?.length ?? 0 },
     'Draft stage complete'
   );
 
-  return {
-    ...state,
-    draft: draftState.draft,
-    brief,
-    plot,
-    history,
-  };
+  return { ...state, story, history };
 };
 
 // ============================================================================
@@ -252,11 +210,6 @@ const assembleComposedStory = (
   ...story,
   visuals,
   characterDesigns,
-});
-
-const assembleStoryWithPlot = (brief: StoryBrief, plot: PlotStructure): StoryWithPlot => ({
-  ...brief,
-  plot,
 });
 
 // ============================================================================
@@ -307,10 +260,9 @@ export const runPipelineIncremental = async (
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
   const { ui, outputManager, format = 'square-large', stylePreset: optionsPreset, qualityCheck, logger } = options;
 
-  if (!state.brief) throw new Error('PipelineState requires brief to run pipeline');
-  if (!state.plot) throw new Error('PipelineState requires plot to run pipeline');
+  if (!state.story) throw new Error('PipelineState requires story to run pipeline');
 
-  const story = assembleStoryWithPlot(state.brief, state.plot);
+  const story = state.story;
   const stylePreset = optionsPreset ?? (story.stylePreset ? await loadStylePreset(story.stylePreset) : undefined);
 
   logger?.info({ stage: 'incremental', title: story.title, pageCount: story.pageCount }, 'Starting incremental pipeline');
@@ -328,7 +280,7 @@ export const runPipelineIncremental = async (
   const proseSetup = state.proseSetup ?? await proseSetupAgent(story, logger);
 
   ui?.progress('Generating character designs...');
-  const characters = story.plot.characters ?? story.characters;
+  const characters = story.characters;
   const characterDesigns = state.characterDesigns ?? await generateCharacterDesigns(characters, styleGuide, options);
   if (outputManager && !state.characterDesigns) {
     for (const design of characterDesigns) await outputManager.saveCharacterDesign(design);
@@ -429,19 +381,15 @@ export const runPipeline = async (
 
   let state: PipelineState = { history: [] };
 
-  // Run draft stage (gathers brief + plot through single conversation)
+  // Run draft stage (gathers story through single conversation)
   state = await runDraftStage(state, { ui, logger });
 
-  // Save brief and plot
-  if (state.brief) {
-    await outputManager?.saveBrief(state.brief);
-  }
-  if (state.brief && state.plot) {
-    const storyWithPlot = assembleStoryWithPlot(state.brief, state.plot);
-    await outputManager?.savePlot(storyWithPlot);
+  // Save story draft
+  if (state.story) {
+    await outputManager?.saveStory(state.story as ComposedStory);
   }
 
-  const stylePreset = optionsPreset ?? (state.brief?.stylePreset ? await loadStylePreset(state.brief.stylePreset) : undefined);
+  const stylePreset = optionsPreset ?? (state.story?.stylePreset ? await loadStylePreset(state.story.stylePreset) : undefined);
 
   return runPipelineIncremental(state, { ui, outputManager, format, logger, stylePreset });
 };

@@ -105,7 +105,7 @@ Output only the prose fields:
  */
 export const proseAgent = async (story: StoryWithPlot, logger?: Logger): Promise<Prose> => {
   logger?.debug(
-    { agent: 'proseAgent', title: story.title, pageCount: story.pageCount, beatCount: story.plot.plotBeats.length },
+    { agent: 'proseAgent', title: story.title, pageCount: story.pageCount, beatCount: story.plotBeats.length },
     'Generating full prose'
   );
 

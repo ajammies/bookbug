@@ -35,7 +35,7 @@ describe('StoryDraftSchema', () => {
     title: 'Luna\'s Adventure',
     storyArc: 'A rabbit learns to be brave',
     setting: 'A magical forest',
-    characters: [{ name: 'Luna', description: 'A curious little rabbit' }],
+    characters: [{ name: 'Luna', description: 'A curious little rabbit', traits: [], notes: [] }],
     plotBeats: [
       { purpose: 'setup', description: 'Luna lives peacefully' },
       { purpose: 'conflict', description: 'A storm approaches' },
@@ -55,7 +55,7 @@ describe('StoryDraftSchema', () => {
       title: 'Test',
       storyArc: 'Test arc',
       setting: 'Test setting',
-      characters: [{ name: 'A', description: 'B' }],
+      characters: [{ name: 'A', description: 'B', traits: [], notes: [] }],
       plotBeats: [
         { purpose: 'setup', description: '1' },
         { purpose: 'conflict', description: '2' },
@@ -170,7 +170,7 @@ describe('getMissingRequiredFields', () => {
       title: 'Test',
       storyArc: 'Test arc',
       setting: 'Test setting',
-      characters: [{ name: 'A', description: 'B' }],
+      characters: [{ name: 'A', description: 'B', traits: [], notes: [] }],
       plotBeats: [
         { purpose: 'setup', description: '1' },
         { purpose: 'conflict', description: '2' },
@@ -204,7 +204,7 @@ describe('hasAllRequiredFields', () => {
       title: 'Test',
       storyArc: 'Test arc',
       setting: 'Test setting',
-      characters: [{ name: 'A', description: 'B' }],
+      characters: [{ name: 'A', description: 'B', traits: [], notes: [] }],
       plotBeats: [
         { purpose: 'setup', description: '1' },
         { purpose: 'conflict', description: '2' },

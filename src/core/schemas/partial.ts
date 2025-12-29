@@ -5,13 +5,11 @@ import type { PipelineState } from '../pipeline';
 // ============================================================================
 
 /**
- * Check if state has complete brief (can skip intake stage)
+ * Check if state has complete story (can skip draft stage)
  */
-export const hasCompleteBrief = (state: PipelineState): boolean =>
-  state.brief !== undefined;
+export const hasCompleteStory = (state: PipelineState): boolean =>
+  state.story !== undefined;
 
-/**
- * Check if state has complete plot (can skip plot stage)
- */
-export const hasCompletePlot = (state: PipelineState): boolean =>
-  state.brief !== undefined && state.plot !== undefined;
+// Legacy aliases for backward compatibility
+export const hasCompleteBrief = hasCompleteStory;
+export const hasCompletePlot = hasCompleteStory;

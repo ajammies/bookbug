@@ -21,7 +21,7 @@ import { generatePageImage } from '../services/image-generation';
 import { imageQualityAgent } from './image-quality';
 
 const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory => ({
-  // StoryBrief fields
+  // StoryDraft fields
   title: 'The Magic Garden',
   storyArc: 'A rabbit discovers a hidden garden',
   setting: 'A hidden garden in the woods',
@@ -32,23 +32,18 @@ const createMinimalStory = (overrides?: Partial<ComposedStory>): ComposedStory =
     { name: 'Pip', description: 'A friendly bird', traits: [], notes: [], visualDescription: 'Small blue bird with orange beak' },
   ],
   interests: [],
+  plotBeats: [
+    { purpose: 'setup', description: 'Luna finds the gate' },
+    { purpose: 'conflict', description: 'She hesitates' },
+    { purpose: 'climax', description: 'She enters' },
+    { purpose: 'payoff', description: 'She finds a friend' },
+  ],
+  allowCreativeLiberty: true,
   // Character designs with sprite sheets
   characterDesigns: [
     { character: { name: 'Luna', description: 'A curious rabbit', traits: [], notes: [], visualDescription: 'Small white rabbit with big curious eyes' }, spriteSheetUrl: 'https://example.com/luna-sprite.png' },
     { character: { name: 'Pip', description: 'A friendly bird', traits: [], notes: [], visualDescription: 'Small blue bird with orange beak' }, spriteSheetUrl: 'https://example.com/pip-sprite.png' },
   ],
-  
-  // PlotStructure
-  plot: {
-    storyArcSummary: 'A rabbit discovers wonder in a hidden garden',
-    plotBeats: [
-      { purpose: 'setup', description: 'Luna finds the gate' },
-      { purpose: 'conflict', description: 'She hesitates' },
-      { purpose: 'climax', description: 'She enters' },
-      { purpose: 'payoff', description: 'She finds a friend' },
-    ],
-    allowCreativeLiberty: true,
-  },
   // Prose
   prose: {
     logline: 'A rabbit discovers wonder',

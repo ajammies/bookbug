@@ -60,16 +60,13 @@ const mockStoryWithPlot: StoryWithPlot = {
   pageCount: 2,
   characters: [{ name: 'Hero', description: 'The main character', traits: [], notes: [] }],
   interests: [],
-  plot: {
-    storyArcSummary: 'A hero goes on a journey',
-    plotBeats: [
-      { purpose: 'setup', description: 'Hero starts journey' },
-      { purpose: 'conflict', description: 'Hero faces challenge' },
-      { purpose: 'climax', description: 'Hero overcomes' },
-      { purpose: 'payoff', description: 'Hero succeeds' },
-    ],
-    allowCreativeLiberty: true,
-  },
+  plotBeats: [
+    { purpose: 'setup', description: 'Hero starts journey' },
+    { purpose: 'conflict', description: 'Hero faces challenge' },
+    { purpose: 'climax', description: 'Hero overcomes' },
+    { purpose: 'payoff', description: 'Hero succeeds' },
+  ],
+  allowCreativeLiberty: true,
 };
 
 const mockProse: Prose = {
@@ -197,7 +194,7 @@ describe('renderBook', () => {
 
 describe('runPipelineIncremental', () => {
   const mockProseSetup = { logline: mockProse.logline, theme: mockProse.theme, styleNotes: mockProse.styleNotes };
-  const mockPipelineState: PipelineState = { history: [], brief: mockStoryWithPlot, plot: mockStoryWithPlot.plot };
+  const mockPipelineState: PipelineState = { history: [], story: mockStoryWithPlot };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -279,8 +276,8 @@ describe('runPipelineIncremental', () => {
     expect(mockedProseSetupAgent).not.toHaveBeenCalled();
   });
 
-  it('throws when plot is missing', async () => {
-    const stateWithoutPlot: PipelineState = { history: [], brief: mockStoryWithPlot, plot: undefined };
-    await expect(runPipelineIncremental(stateWithoutPlot)).rejects.toThrow('requires plot');
+  it('throws when story is missing', async () => {
+    const stateWithoutStory: PipelineState = { history: [], story: undefined };
+    await expect(runPipelineIncremental(stateWithoutStory)).rejects.toThrow('requires story');
   });
 });

@@ -1,14 +1,14 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, runDraftStage, renderBook, type PipelineState } from '../../core/pipeline';
+import { runPipelineIncremental, renderBook, type PipelineState } from '../../core/pipeline';
 import {
-  StoryBriefSchema,
   StoryWithPlotSchema,
   StoryWithProseSchema,
   StorySchema,
   RenderedBookSchema,
   type BookFormatKey,
+  type StoryDraft,
 } from '../../core/schemas';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
@@ -17,7 +17,7 @@ import { createCliUI } from '../../utils/cli';
 
 const OUTPUT_DIR = './output';
 
-type ResumeStage = 'brief' | 'plot' | 'prose' | 'story' | 'complete';
+type ResumeStage = 'draft' | 'prose' | 'story' | 'complete';
 
 interface StoryFolderInfo {
   folder: string;
@@ -49,8 +49,9 @@ const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
   if (files.includes('book.json')) return { folder, stage: 'complete', latestFile: path.join(folder, 'book.json') };
   if (files.includes('story.json')) return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
   if (files.includes('prose.json')) return { folder, stage: 'prose', latestFile: path.join(folder, 'prose.json') };
-  if (files.includes('plot.json')) return { folder, stage: 'plot', latestFile: path.join(folder, 'plot.json') };
-  if (files.includes('brief.json')) return { folder, stage: 'brief', latestFile: path.join(folder, 'brief.json') };
+  // plot.json and brief.json are legacy - treat as draft stage
+  if (files.includes('plot.json')) return { folder, stage: 'draft', latestFile: path.join(folder, 'plot.json') };
+  if (files.includes('brief.json')) return { folder, stage: 'draft', latestFile: path.join(folder, 'brief.json') };
   throw new Error(`No resumable artifacts found in ${folder}`);
 };
 
@@ -58,16 +59,31 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   const files = await fs.readdir(folder);
 
   if (files.includes('story.json')) {
-    const story = StorySchema.parse(await loadJson(path.join(folder, 'story.json')));
+    const composedStory = StorySchema.parse(await loadJson(path.join(folder, 'story.json')));
+    // Extract the story draft from composed story
+    const story: StoryDraft = {
+      title: composedStory.title,
+      storyArc: composedStory.storyArc,
+      setting: composedStory.setting,
+      characters: composedStory.characters,
+      plotBeats: composedStory.plotBeats,
+      ageRange: composedStory.ageRange,
+      pageCount: composedStory.pageCount,
+      stylePreset: composedStory.stylePreset,
+      tone: composedStory.tone,
+      moral: composedStory.moral,
+      interests: composedStory.interests,
+      customInstructions: composedStory.customInstructions,
+      allowCreativeLiberty: composedStory.allowCreativeLiberty,
+    };
     return {
       history: [],
-      brief: story,
-      plot: story.plot,
-      styleGuide: story.visuals.style,
-      proseSetup: { logline: story.prose.logline, theme: story.prose.theme, styleNotes: story.prose.styleNotes },
-      characterDesigns: story.characterDesigns,
-      prosePages: story.prose.pages,
-      illustratedPages: story.visuals.illustratedPages,
+      story,
+      styleGuide: composedStory.visuals.style,
+      proseSetup: { logline: composedStory.prose.logline, theme: composedStory.prose.theme, styleNotes: composedStory.prose.styleNotes },
+      characterDesigns: composedStory.characterDesigns,
+      prosePages: composedStory.prose.pages,
+      illustratedPages: composedStory.visuals.illustratedPages,
     };
   }
 
@@ -75,21 +91,21 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
     const storyWithProse = StoryWithProseSchema.parse(await loadJson(path.join(folder, 'prose.json')));
     return {
       history: [],
-      brief: storyWithProse,
-      plot: storyWithProse.plot,
+      story: storyWithProse,
       proseSetup: { logline: storyWithProse.prose.logline, theme: storyWithProse.prose.theme, styleNotes: storyWithProse.prose.styleNotes },
       prosePages: storyWithProse.prose.pages,
     };
   }
 
   if (files.includes('plot.json')) {
-    const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
-    return { history: [], brief: storyWithPlot, plot: storyWithPlot.plot };
+    const story = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
+    return { history: [], story };
   }
 
+  // Legacy brief.json - need to run through draft stage (not supported in simplified pipeline)
   if (files.includes('brief.json')) {
-    const brief = StoryBriefSchema.parse(await loadJson(path.join(folder, 'brief.json')));
-    return { history: [], brief };
+    console.warn('Warning: brief.json is a legacy format. Please re-run the draft stage.');
+    return null;
   }
 
   return null;
@@ -137,27 +153,11 @@ export const resumeCommand = new Command('resume')
         }
 
         case 'prose':
-        case 'plot': {
-          console.log(`\n📍 Resuming from: ${info.stage}.json`);
+        case 'draft': {
+          console.log(`\n📍 Resuming from: ${info.latestFile.split('/').pop()}`);
           const pipelineState = await loadPipelineState(folder);
           if (!pipelineState) throw new Error('Failed to load pipeline state');
           const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
-          ui.succeed('Book complete!');
-          displayBook(result.book);
-          console.log(`\nAll files saved to: ${folder}`);
-          break;
-        }
-
-        case 'brief': {
-          console.log('\n📍 Resuming from: brief.json');
-          const pipelineState = await loadPipelineState(folder);
-          if (!pipelineState || !pipelineState.brief) throw new Error('Failed to load pipeline state');
-          // Brief exists but no plot - generate plot using plotAgent
-          ui.progress('Generating plot...');
-          const { plotAgent } = await import('../../core/agents');
-          const plot = await plotAgent(pipelineState.brief);
-          const stateWithPlot: PipelineState = { ...pipelineState, plot };
-          const result = await runPipelineIncremental(stateWithPlot, { ui, outputManager, format: options.format });
           ui.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);

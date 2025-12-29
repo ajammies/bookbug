@@ -1,29 +1,27 @@
 import { z } from 'zod';
-import { StoryBriefSchema } from './brief';
-import { PlotStructureSchema } from './plot';
+import { StoryDraftSchema } from './draft';
 import { ProseSchema } from './prose';
 import { VisualDirectionSchema, CharacterDesignSchema } from './visuals';
 
 /**
  * Composed Types: Linear pipeline composition
  * Each stage adds new fields to the previous.
+ *
+ * Base is StoryDraft (unified schema with all story details).
  */
 
 /**
- * StoryWithPlot: StoryBrief + PlotStructure
- * Result of running plotAgent on a StoryBrief.
+ * StoryWithPlot: Alias for StoryDraft (backward compatibility)
+ * The draft already contains plot beats directly - no nested plot object.
  */
-export const StoryWithPlotSchema = StoryBriefSchema.extend({
-  plot: PlotStructureSchema,
-});
-
+export const StoryWithPlotSchema = StoryDraftSchema;
 export type StoryWithPlot = z.infer<typeof StoryWithPlotSchema>;
 
 /**
- * StoryWithProse: StoryWithPlot + Prose
- * Result of running proseAgent on a StoryWithPlot.
+ * StoryWithProse: StoryDraft + Prose
+ * Result of running proseAgent on a story.
  */
-export const StoryWithProseSchema = StoryWithPlotSchema.extend({
+export const StoryWithProseSchema = StoryDraftSchema.extend({
   prose: ProseSchema,
 });
 

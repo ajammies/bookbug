@@ -66,7 +66,7 @@ describe('createDraftTools', () => {
 
       expect(result.success).toBe(true);
       expect(state.draft.characters).toHaveLength(1);
-      expect(state.draft.characters![0].name).toBe('Luna');
+      expect(state.draft.characters?.[0]?.name).toBe('Luna');
     });
 
     it('addCharacter accumulates multiple characters', async () => {
@@ -78,7 +78,7 @@ describe('createDraftTools', () => {
       await tools.addCharacter.execute({ name: 'Owl', description: 'A wise owl' });
 
       expect(state.draft.characters).toHaveLength(3);
-      expect(state.draft.characters!.map(c => c.name)).toEqual(['Luna', 'Max', 'Owl']);
+      expect(state.draft.characters?.map(c => c.name)).toEqual(['Luna', 'Max', 'Owl']);
     });
 
     it('addPlotBeat accumulates beats', async () => {
@@ -90,8 +90,8 @@ describe('createDraftTools', () => {
       await tools.addPlotBeat.execute({ purpose: 'climax', description: 'Luna finds courage' });
 
       expect(state.draft.plotBeats).toHaveLength(3);
-      expect(state.draft.plotBeats![0].purpose).toBe('setup');
-      expect(state.draft.plotBeats![2].purpose).toBe('climax');
+      expect(state.draft.plotBeats?.[0]?.purpose).toBe('setup');
+      expect(state.draft.plotBeats?.[2]?.purpose).toBe('climax');
     });
 
     it('addInterest accumulates interests', async () => {
@@ -118,8 +118,8 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.characters![0].description).toBe('A brave little rabbit');
-      expect(state.draft.characters![0].traits).toEqual(['brave', 'curious']);
+      expect(state.draft.characters?.[0]?.description).toBe('A brave little rabbit');
+      expect(state.draft.characters?.[0]?.traits).toEqual(['brave', 'curious']);
     });
 
     it('matches name case-insensitively', async () => {
@@ -134,7 +134,7 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.characters![0].role).toBe('hero');
+      expect(state.draft.characters?.[0]?.role).toBe('hero');
     });
 
     it('returns error for non-existent character', async () => {
@@ -164,8 +164,8 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.plotBeats![0].description).toBe('Updated description');
-      expect(state.draft.plotBeats![0].purpose).toBe('setup'); // unchanged
+      expect(state.draft.plotBeats?.[0]?.description).toBe('Updated description');
+      expect(state.draft.plotBeats?.[0]?.purpose).toBe('setup'); // unchanged
     });
 
     it('can update purpose', async () => {
@@ -180,7 +180,7 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.plotBeats![0].purpose).toBe('conflict');
+      expect(state.draft.plotBeats?.[0]?.purpose).toBe('conflict');
     });
 
     it('returns error for invalid index', async () => {
