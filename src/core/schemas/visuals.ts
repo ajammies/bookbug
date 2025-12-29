@@ -29,7 +29,7 @@ export const ColorScriptSchema = z.object({
 export const MoodSchema = z.object({
   beat: z.string().optional().describe('Emotional beat of this moment (e.g., "wonder", "tension")'),
   tone: z.array(z.string().min(1)).default([]).describe('Mood descriptors (e.g., "cozy", "mysterious", "joyful")'),
-  sliders: z.record(z.number().min(0).max(1)).optional().describe('Mood intensity values 0-1 (e.g., {"warmth": 0.8})'),
+  sliders: z.record(z.number()).optional().describe('Mood intensity values 0-1 (e.g., {"warmth": 0.8})'),
 });
 
 export const FocalHierarchySchema = z.object({
@@ -154,7 +154,7 @@ export type BeatCharacter = z.infer<typeof BeatCharacterSchema>;
 
 // IllustrationBeat: one visual moment with shot composition
 export const IllustrationBeatSchema = z.object({
-  order: z.number().int().min(1).describe('Sequence within the page (1, 2, 3...)'),
+  order: z.number().int().describe('Sequence within the page (1, 2, 3...)'),
   purpose: BeatPurposeSchema,
   summary: z.string().min(1).describe('What is happening visually'),
   emotion: z.string().min(1).describe('The emotional tone to convey'),
@@ -171,7 +171,7 @@ export const VisualStyleGuideSchema = z.object({
     genre: z.array(z.string().min(1)).default([]).describe('Art genres (e.g., "picture book", "storybook", "whimsical")'),
     medium: z.array(z.string().min(1)).default([]).describe('Artistic mediums (e.g., "watercolor", "digital", "gouache")'),
     technique: z.array(z.string().min(1)).default([]).describe('Rendering techniques (e.g., "soft edges", "bold outlines")'),
-    style_strength: z.number().min(0).max(1).optional().describe('How strongly to apply style (0=subtle, 1=dominant)'),
+    style_strength: z.number().optional().describe('How strongly to apply style (0=subtle, 1=dominant)'),
   }).describe('Overall artistic style'),
   actionSequence: z.string().optional().describe('The visual action arc of the story (e.g., "discovery → challenge → triumph")'),
   coreEmotion: z.string().optional().describe('The primary emotional throughline (e.g., "wonder", "courage", "belonging")'),
@@ -188,7 +188,7 @@ export type VisualStyleGuide = z.infer<typeof VisualStyleGuideSchema>;
 
 // IllustratedPage: a single page with visual beats
 export const IllustratedPageSchema = z.object({
-  pageNumber: z.number().int().min(1),
+  pageNumber: z.number().int().describe('Page number (1+)'),
   beats: z.array(IllustrationBeatSchema).min(1),
 });
 

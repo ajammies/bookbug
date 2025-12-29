@@ -3,12 +3,12 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { runPipelineIncremental, renderBook, type PipelineState } from '../../core/pipeline';
 import {
-  StoryWithPlotSchema,
   StoryWithProseSchema,
   StorySchema,
+  ComposedStorySchema,
   RenderedBookSchema,
   type BookFormatKey,
-  type StoryDraft,
+  type Story,
 } from '../../core/schemas';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
@@ -47,7 +47,16 @@ const findLatestStoryFolder = async (): Promise<string | null> => {
 const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
   const files = await fs.readdir(folder);
   if (files.includes('book.json')) return { folder, stage: 'complete', latestFile: path.join(folder, 'book.json') };
-  if (files.includes('story.json')) return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
+  if (files.includes('story.json')) {
+    // Check if story.json has prose/visuals (composed) or just base story
+    const data = await loadJson(path.join(folder, 'story.json')) as Record<string, unknown>;
+    const isComposed = 'prose' in data && 'visuals' in data;
+    return {
+      folder,
+      stage: isComposed ? 'story' : 'draft',  // If not composed, treat as draft stage
+      latestFile: path.join(folder, 'story.json')
+    };
+  }
   if (files.includes('prose.json')) return { folder, stage: 'prose', latestFile: path.join(folder, 'prose.json') };
   // plot.json and brief.json are legacy - treat as draft stage
   if (files.includes('plot.json')) return { folder, stage: 'draft', latestFile: path.join(folder, 'plot.json') };
@@ -59,31 +68,26 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   const files = await fs.readdir(folder);
 
   if (files.includes('story.json')) {
-    const composedStory = StorySchema.parse(await loadJson(path.join(folder, 'story.json')));
-    // Extract the story draft from composed story
-    const story: StoryDraft = {
-      title: composedStory.title,
-      storyArc: composedStory.storyArc,
-      setting: composedStory.setting,
-      characters: composedStory.characters,
-      plotBeats: composedStory.plotBeats,
-      ageRange: composedStory.ageRange,
-      pageCount: composedStory.pageCount,
-      stylePreset: composedStory.stylePreset,
-      tone: composedStory.tone,
-      moral: composedStory.moral,
-      interests: composedStory.interests,
-      customInstructions: composedStory.customInstructions,
-      allowCreativeLiberty: composedStory.allowCreativeLiberty,
-    };
-    return {
-      story,
-      styleGuide: composedStory.visuals.style,
-      proseSetup: { logline: composedStory.prose.logline, theme: composedStory.prose.theme, styleNotes: composedStory.prose.styleNotes },
-      characterDesigns: composedStory.characterDesigns,
-      prosePages: composedStory.prose.pages,
-      illustratedPages: composedStory.visuals.illustratedPages,
-    };
+    // Try to parse as ComposedStory first (has prose/visuals), fallback to base Story
+    const data = await loadJson(path.join(folder, 'story.json')) as Record<string, unknown>;
+    const story = StorySchema.parse(data);
+
+    // Check if it has prose/visuals (composed story)
+    const hasExtras = 'prose' in data && 'visuals' in data;
+    if (hasExtras) {
+      const composed = data as { prose: { logline: string; theme: string; styleNotes?: string; pages: unknown[] }; visuals: { style: unknown; illustratedPages: unknown[] }; characterDesigns?: unknown[] };
+      return {
+        story,
+        styleGuide: composed.visuals.style as import('../../core/schemas').VisualStyleGuide,
+        proseSetup: { logline: composed.prose.logline, theme: composed.prose.theme, styleNotes: composed.prose.styleNotes },
+        characterDesigns: composed.characterDesigns as import('../../core/schemas').CharacterDesign[],
+        prosePages: composed.prose.pages as import('../../core/schemas').ProsePage[],
+        illustratedPages: composed.visuals.illustratedPages as import('../../core/schemas').IllustratedPage[],
+      };
+    }
+
+    // Base story only
+    return { story };
   }
 
   if (files.includes('prose.json')) {
@@ -96,7 +100,7 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   }
 
   if (files.includes('plot.json')) {
-    const story = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
+    const story = StorySchema.parse(await loadJson(path.join(folder, 'plot.json')));
     return { story };
   }
 
@@ -140,7 +144,7 @@ export const resumeCommand = new Command('resume')
 
         case 'story': {
           console.log('\n📍 Resuming from: story.json (rendering images)');
-          const story = StorySchema.parse(await loadJson(info.latestFile));
+          const story = ComposedStorySchema.parse(await loadJson(info.latestFile));
           const onStep = (step: string) => ui.progress(`Rendering page ${step.replace('render-', '')}...`);
           const book = await renderBook(story, { mock: options.mock, format: options.format, outputManager, onStep });
           ui.succeed('Book rendered');

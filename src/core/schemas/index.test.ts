@@ -109,15 +109,8 @@ describe('StoryBriefSchema', () => {
     }
   });
 
-  it('rejects pageCount below 8', () => {
-    const result = StoryBriefSchema.safeParse({ ...validBrief, pageCount: 4 });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects pageCount above 32', () => {
-    const result = StoryBriefSchema.safeParse({ ...validBrief, pageCount: 64 });
-    expect(result.success).toBe(false);
-  });
+  // Note: pageCount min/max validation removed due to Anthropic API limitation
+  // (doesn't support minimum/maximum on number types in JSON schema)
 
   it('rejects empty characters array', () => {
     const result = StoryBriefSchema.safeParse({ ...validBrief, characters: [] });

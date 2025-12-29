@@ -11,7 +11,7 @@ export const StoryBriefSchema = z.object({
   storyArc: z.string().min(1).describe('The narrative arc or journey (e.g., "hero overcomes fear")'),
   setting: z.string().min(1).describe('Where and when the story takes place'),
   ageRange: AgeRangeSchema.describe('REQUIRED: Target reader age range object with min and max numbers'),
-  pageCount: z.number().int().min(8).max(32).default(24),
+  pageCount: z.number().int().default(24).describe('Number of pages (8-32)'),
   characters: z.array(StoryCharacterSchema).min(1).describe('REQUIRED: Array of characters, each must have name and description'),
   tone: z.string().optional().describe('Emotional tone (e.g., "whimsical", "heartfelt")'),
   moral: z.string().optional().describe('Lesson or takeaway for the reader'),
