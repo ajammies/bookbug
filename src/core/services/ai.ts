@@ -75,8 +75,21 @@ export async function generateObject<T>(
 
   logger?.debug({ agent, promptLength: options.prompt?.length ?? 0 }, 'API call starting');
 
+  // Use jsonTool mode to bypass Anthropic's 24 optional parameter limit for outputFormat
+  const existingAnthropicOptions = (options.providerOptions as { anthropic?: Record<string, unknown> } | undefined)?.anthropic ?? {};
+  const optionsWithProvider = {
+    ...options,
+    providerOptions: {
+      ...options.providerOptions,
+      anthropic: {
+        ...existingAnthropicOptions,
+        structuredOutputMode: 'jsonTool' as const,
+      },
+    },
+  };
+
   try {
-    const result = await aiGenerateObject(options) as GenerateObjectResult<T>;
+    const result = await aiGenerateObject(optionsWithProvider) as GenerateObjectResult<T>;
     logger?.debug({ agent, usage: result.usage }, 'API call complete');
     logApiSuccess(logger, agent);
     return result;
@@ -91,7 +104,7 @@ export async function generateObject<T>(
     // Provider sent retry-after header - wait exact duration and retry once
     logRateLimit(logger, agent, retryAfter);
     await sleep(retryAfter * 1000);
-    const result = await aiGenerateObject({ ...options, maxRetries: 0 }) as GenerateObjectResult<T>;
+    const result = await aiGenerateObject({ ...optionsWithProvider, maxRetries: 0 }) as GenerateObjectResult<T>;
     logger?.debug({ agent, usage: result.usage }, 'API call complete after retry');
     logApiSuccess(logger, agent);
     return result;
@@ -159,7 +172,20 @@ export async function streamObjectWithProgress<T>(
 
   logger?.debug({ agent, promptLength: options.prompt?.length ?? 0 }, 'Stream starting');
 
-  const result = aiStreamObject(options);
+  // Use jsonTool mode to bypass Anthropic's 24 optional parameter limit for outputFormat
+  const existingAnthropicOptions = (options.providerOptions as { anthropic?: Record<string, unknown> } | undefined)?.anthropic ?? {};
+  const optionsWithProvider = {
+    ...options,
+    providerOptions: {
+      ...options.providerOptions,
+      anthropic: {
+        ...existingAnthropicOptions,
+        structuredOutputMode: 'jsonTool' as const,
+      },
+    },
+  };
+
+  const result = aiStreamObject(optionsWithProvider);
 
   // Consume the stream to completion
   for await (const _partial of result.partialObjectStream) {
