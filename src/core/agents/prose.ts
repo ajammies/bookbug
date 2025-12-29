@@ -3,7 +3,7 @@ import {
   ProseSchema,
   ProseSetupSchema,
   ProsePageSchema,
-  type StoryWithPlot,
+  type Story,
   type Prose,
   type ProseSetup,
   type ProsePage,
@@ -103,7 +103,7 @@ Output only the prose fields:
  * Output contains ONLY the new fields (logline, theme, styleNotes, pages).
  * Caller composes the result: StoryWithProse = { ...story, prose: result }
  */
-export const proseAgent = async (story: StoryWithPlot, logger?: Logger): Promise<Prose> => {
+export const proseAgent = async (story: Story, logger?: Logger): Promise<Prose> => {
   logger?.debug(
     { agent: 'proseAgent', title: story.title, pageCount: story.pageCount, beatCount: story.plotBeats.length },
     'Generating full prose'
@@ -153,7 +153,7 @@ ${AGE_GUIDELINES}`;
 /**
  * ProseSetupAgent: Generates story-wide prose metadata (once, upfront)
  */
-export const proseSetupAgent = async (story: StoryWithPlot, logger?: Logger): Promise<ProseSetup> => {
+export const proseSetupAgent = async (story: Story, logger?: Logger): Promise<ProseSetup> => {
   logger?.debug(
     { agent: 'proseSetupAgent', title: story.title },
     'Generating prose setup'
@@ -179,7 +179,7 @@ export const proseSetupAgent = async (story: StoryWithPlot, logger?: Logger): Pr
  * Input for prosePageAgent - provides context for coherent page generation
  */
 export interface ProsePageInput {
-  story: StoryWithPlot;
+  story: Story;
   proseSetup: ProseSetup;
   pageNumber: number;
   previousPages: ProsePage[];

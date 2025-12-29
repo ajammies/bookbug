@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { hasCompleteStory, hasCompleteBrief, hasCompletePlot } from './partial';
 import type { PipelineState } from '../pipeline';
-import type { StoryDraft } from './draft';
+import type { Story } from './story';
 
-const validStory: StoryDraft = {
+const validStory: Story = {
   title: 'Test Story',
   storyArc: 'hero overcomes fear',
   setting: 'magical forest',

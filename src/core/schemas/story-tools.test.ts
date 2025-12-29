@@ -1,61 +1,61 @@
 /**
- * Tests for draft tools auto-generated from schema
+ * Tests for story tools auto-generated from schema
  */
 import { describe, it, expect } from 'vitest';
-import { createDraftTools, type DraftState } from './draft-tools';
+import { createStoryTools, type StoryState } from './story-tools';
 
-describe('createDraftTools', () => {
-  const createState = (): DraftState => ({
-    draft: {},
+describe('createStoryTools', () => {
+  const createState = (): StoryState => ({
+    story: {},
     isComplete: false,
   });
 
   describe('auto-generated setter tools', () => {
-    it('setTitle updates draft.title', async () => {
+    it('setTitle updates story.title', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       const result = await tools.setTitle.execute({ value: 'The Magic Garden' });
 
       expect(result.success).toBe(true);
-      expect(state.draft.title).toBe('The Magic Garden');
+      expect(state.story.title).toBe('The Magic Garden');
     });
 
-    it('setStoryArc updates draft.storyArc', async () => {
+    it('setStoryArc updates story.storyArc', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       const result = await tools.setStoryArc.execute({ value: 'A child discovers courage' });
 
       expect(result.success).toBe(true);
-      expect(state.draft.storyArc).toBe('A child discovers courage');
+      expect(state.story.storyArc).toBe('A child discovers courage');
     });
 
-    it('setSetting updates draft.setting', async () => {
+    it('setSetting updates story.setting', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       const result = await tools.setSetting.execute({ value: 'A magical forest in spring' });
 
       expect(result.success).toBe(true);
-      expect(state.draft.setting).toBe('A magical forest in spring');
+      expect(state.story.setting).toBe('A magical forest in spring');
     });
 
-    it('setPageCount updates draft.pageCount', async () => {
+    it('setPageCount updates story.pageCount', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       const result = await tools.setPageCount.execute({ value: 16 });
 
       expect(result.success).toBe(true);
-      expect(state.draft.pageCount).toBe(16);
+      expect(state.story.pageCount).toBe(16);
     });
   });
 
   describe('auto-generated adder tools', () => {
     it('addCharacter creates new character', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       const result = await tools.addCharacter.execute({
         name: 'Luna',
@@ -65,50 +65,50 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.characters).toHaveLength(1);
-      expect(state.draft.characters?.[0]?.name).toBe('Luna');
+      expect(state.story.characters).toHaveLength(1);
+      expect(state.story.characters?.[0]?.name).toBe('Luna');
     });
 
     it('addCharacter accumulates multiple characters', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       await tools.addCharacter.execute({ name: 'Luna', description: 'A rabbit' });
       await tools.addCharacter.execute({ name: 'Max', description: 'A fox' });
       await tools.addCharacter.execute({ name: 'Owl', description: 'A wise owl' });
 
-      expect(state.draft.characters).toHaveLength(3);
-      expect(state.draft.characters?.map(c => c.name)).toEqual(['Luna', 'Max', 'Owl']);
+      expect(state.story.characters).toHaveLength(3);
+      expect(state.story.characters?.map(c => c.name)).toEqual(['Luna', 'Max', 'Owl']);
     });
 
     it('addPlotBeat accumulates beats', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       await tools.addPlotBeat.execute({ purpose: 'setup', description: 'Luna lives peacefully' });
       await tools.addPlotBeat.execute({ purpose: 'conflict', description: 'A storm approaches' });
       await tools.addPlotBeat.execute({ purpose: 'climax', description: 'Luna finds courage' });
 
-      expect(state.draft.plotBeats).toHaveLength(3);
-      expect(state.draft.plotBeats?.[0]?.purpose).toBe('setup');
-      expect(state.draft.plotBeats?.[2]?.purpose).toBe('climax');
+      expect(state.story.plotBeats).toHaveLength(3);
+      expect(state.story.plotBeats?.[0]?.purpose).toBe('setup');
+      expect(state.story.plotBeats?.[2]?.purpose).toBe('climax');
     });
 
     it('addInterest accumulates interests', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       await tools.addInterest.execute({ value: 'dinosaurs' });
       await tools.addInterest.execute({ value: 'space' });
 
-      expect(state.draft.interests).toEqual(['dinosaurs', 'space']);
+      expect(state.story.interests).toEqual(['dinosaurs', 'space']);
     });
   });
 
   describe('updateCharacter tool', () => {
     it('updates existing character by name', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       await tools.addCharacter.execute({ name: 'Luna', description: 'A little rabbit' });
 
@@ -118,13 +118,13 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.characters?.[0]?.description).toBe('A brave little rabbit');
-      expect(state.draft.characters?.[0]?.traits).toEqual(['brave', 'curious']);
+      expect(state.story.characters?.[0]?.description).toBe('A brave little rabbit');
+      expect(state.story.characters?.[0]?.traits).toEqual(['brave', 'curious']);
     });
 
     it('matches name case-insensitively', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       await tools.addCharacter.execute({ name: 'Luna', description: 'A rabbit' });
 
@@ -134,12 +134,12 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.characters?.[0]?.role).toBe('hero');
+      expect(state.story.characters?.[0]?.role).toBe('hero');
     });
 
     it('returns error for non-existent character', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       const result = await tools.updateCharacter.execute({
         name: 'NonExistent',
@@ -154,7 +154,7 @@ describe('createDraftTools', () => {
   describe('updatePlotBeat tool', () => {
     it('updates existing beat by index', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       await tools.addPlotBeat.execute({ purpose: 'setup', description: 'Original' });
 
@@ -164,13 +164,13 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.plotBeats?.[0]?.description).toBe('Updated description');
-      expect(state.draft.plotBeats?.[0]?.purpose).toBe('setup'); // unchanged
+      expect(state.story.plotBeats?.[0]?.description).toBe('Updated description');
+      expect(state.story.plotBeats?.[0]?.purpose).toBe('setup'); // unchanged
     });
 
     it('can update purpose', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       await tools.addPlotBeat.execute({ purpose: 'setup', description: 'Test' });
 
@@ -180,12 +180,12 @@ describe('createDraftTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(state.draft.plotBeats?.[0]?.purpose).toBe('conflict');
+      expect(state.story.plotBeats?.[0]?.purpose).toBe('conflict');
     });
 
     it('returns error for invalid index', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       const result = await tools.updatePlotBeat.execute({
         index: 5,
@@ -200,7 +200,7 @@ describe('createDraftTools', () => {
   describe('conversation tools', () => {
     it('promptUser returns success with question details', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       const result = await tools.promptUser.execute({
         question: 'What kind of story would you like?',
@@ -213,7 +213,7 @@ describe('createDraftTools', () => {
 
     it('finishIntake sets isComplete flag', async () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       expect(state.isComplete).toBe(false);
 
@@ -227,7 +227,7 @@ describe('createDraftTools', () => {
   describe('tool generation', () => {
     it('generates expected tools from schema', () => {
       const state = createState();
-      const tools = createDraftTools(state);
+      const tools = createStoryTools(state);
 
       // Setters for scalar fields
       expect(tools.setTitle).toBeDefined();

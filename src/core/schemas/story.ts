@@ -1,7 +1,7 @@
 /**
- * StoryDraft: Unified schema for progressive story creation
+ * Story: Unified schema for progressive story creation
  *
- * Merges StoryBrief + PlotStructure into a single progressively-filled schema.
+ * Single schema that's progressively filled during intake.
  * Field policies are embedded in .describe() using prefix convention:
  * - [required] - Must be filled before completion
  * - [prompted] - Optional but agent should mention
@@ -24,10 +24,10 @@ export const PlotBeatSchema = z.object({
 export type PlotBeat = z.infer<typeof PlotBeatSchema>;
 
 // ============================================================================
-// StoryDraft: The unified schema
+// Story: The unified schema
 // ============================================================================
 
-export const StoryDraftSchema = z.object({
+export const StorySchema = z.object({
   // Required fields - must be filled
   title: z.string().min(1).describe('[required] Working title for the story'),
   storyArc: z.string().min(1).describe('[required] The narrative arc (e.g., "hero overcomes fear")'),
@@ -48,7 +48,7 @@ export const StoryDraftSchema = z.object({
   allowCreativeLiberty: z.boolean().default(true).describe('Whether author can embellish beyond plot beats'),
 });
 
-export type StoryDraft = z.infer<typeof StoryDraftSchema>;
+export type Story = z.infer<typeof StorySchema>;
 
 // ============================================================================
 // Policy extraction from schema (no separate mapping file needed)
@@ -99,15 +99,15 @@ export const getRequiredFields = <T extends z.ZodRawShape>(
 };
 
 /**
- * Get missing required fields from a partial draft
+ * Get missing required fields from a partial story
  */
 export const getMissingRequiredFields = (
-  draft: Partial<StoryDraft>,
-  schema: z.ZodObject<typeof StoryDraftSchema.shape> = StoryDraftSchema
+  story: Partial<Story>,
+  schema: z.ZodObject<typeof StorySchema.shape> = StorySchema
 ): string[] => {
   const required = getRequiredFields(schema);
   return required.filter(field => {
-    const value = draft[field as keyof StoryDraft];
+    const value = story[field as keyof Story];
     if (value === undefined || value === null) return true;
     if (Array.isArray(value) && value.length === 0) return true;
     return false;
@@ -117,6 +117,6 @@ export const getMissingRequiredFields = (
 /**
  * Check if all required fields are filled
  */
-export const hasAllRequiredFields = (draft: Partial<StoryDraft>): boolean => {
-  return getMissingRequiredFields(draft).length === 0;
+export const hasAllRequiredFields = (story: Partial<Story>): boolean => {
+  return getMissingRequiredFields(story).length === 0;
 };

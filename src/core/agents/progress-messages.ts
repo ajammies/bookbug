@@ -7,7 +7,7 @@
 import { generateObject } from '../services/ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
-import type { StoryWithPlot } from '../schemas';
+import type { Story } from '../schemas';
 import type { Logger } from '../utils/logger';
 
 const ProgressMessagesSchema = z.object({
@@ -34,7 +34,7 @@ Guidelines:
 - Don't spoil plot twists`;
 
 export const progressMessagesAgent = async (
-  story: StoryWithPlot,
+  story: Story,
   logger?: Logger
 ): Promise<string[]> => {
   const context = {

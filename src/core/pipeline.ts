@@ -1,5 +1,5 @@
 import type {
-  StoryWithPlot,
+  Story,
   StoryWithProse,
   ComposedStory,
   Prose,
@@ -26,9 +26,9 @@ import {
   createBook,
   type StylePreset,
 } from './agents';
-import { intakeAgent, type DraftMessage } from './agents/intake-agent';
-import { type DraftState } from './schemas/draft-tools';
-import { StoryDraftSchema, type StoryDraft } from './schemas/draft';
+import { intakeAgent, type IntakeMessage } from './agents/intake-agent';
+import { type StoryState } from './schemas/story-tools';
+import { StorySchema } from './schemas/story';
 import type { StoryOutputManager } from '../cli/utils/output';
 import type { Logger } from './utils/logger';
 import { loadStylePreset, listStyles } from './services/style-loader';
@@ -73,16 +73,16 @@ export interface StageOptions {
   logger?: Logger;
 }
 
-// Re-export DraftMessage as Message for backward compatibility
-export type Message = DraftMessage;
+// Re-export IntakeMessage as Message for backward compatibility
+export type Message = IntakeMessage;
 
 /**
  * Pipeline state - single type throughout pipeline.
- * story is the StoryDraft (unified schema with all story details).
+ * story is the Story (unified schema with all story details).
  */
 export interface PipelineState {
-  // Story draft (progressively filled, then complete)
-  story?: StoryDraft;
+  // Story (progressively filled, then complete)
+  story?: Story;
 
   // Setup artifacts
   styleGuide?: VisualStyleGuide;
@@ -120,29 +120,29 @@ export const runIntakeStage = async (
   const { ui, logger } = options;
   const availableStyles = await listStyles();
 
-  // Initialize draft state
-  const draftState: DraftState = {
-    draft: {},
+  // Initialize story state
+  const storyState: StoryState = {
+    story: {},
     isComplete: false,
   };
 
   // Conversation history is local to intake
-  let history: DraftMessage[] = [
+  let history: IntakeMessage[] = [
     { role: 'assistant', content: 'Let\'s create a children\'s book!' },
   ];
 
   logger?.info({ stage: 'intake' }, 'Starting intake stage');
 
-  while (!draftState.isComplete) {
+  while (!storyState.isComplete) {
     ui.progress('Thinking...');
-    const result = await intakeAgent(draftState, history, {
+    const result = await intakeAgent(storyState, history, {
       availableStyles,
       logger,
     });
 
     // Update state from agent
-    draftState.draft = result.draft;
-    draftState.isComplete = result.isComplete;
+    storyState.story = result.story;
+    storyState.isComplete = result.isComplete;
 
     // If complete, break out of loop
     if (result.isComplete) {
@@ -167,8 +167,8 @@ export const runIntakeStage = async (
     ];
   }
 
-  // Parse and validate the completed draft
-  const story = StoryDraftSchema.parse(draftState.draft);
+  // Parse and validate the completed story
+  const story = StorySchema.parse(storyState.story);
 
   logger?.info(
     { stage: 'intake', title: story.title, beatCount: story.plotBeats?.length ?? 0 },
@@ -194,7 +194,7 @@ const assembleVisuals = (style: VisualStyleGuide, pages: IllustratedPage[]): Vis
   illustratedPages: pages,
 });
 
-const assembleStoryWithProse = (story: StoryWithPlot, prose: Prose): StoryWithProse => ({
+const assembleStoryWithProse = (story: Story, prose: Prose): StoryWithProse => ({
   ...story,
   prose,
 });
@@ -213,7 +213,7 @@ const assembleComposedStory = (
 // Composable pipelines
 // ============================================================================
 
-export const generateProse = async (story: StoryWithPlot, logger?: Logger): Promise<StoryWithProse> => {
+export const generateProse = async (story: Story, logger?: Logger): Promise<StoryWithProse> => {
   const prose = await proseAgent(story, logger);
   return assembleStoryWithProse(story, prose);
 };
@@ -367,7 +367,7 @@ export interface RunPipelineOptions extends PipelineOptions {
 
 /**
  * Run the complete pipeline from scratch.
- * User provides story details during draft conversation.
+ * User provides story details during intake conversation.
  *
  * @param options - Pipeline options including ui for user interaction
  */
@@ -381,9 +381,9 @@ export const runPipeline = async (
   // Run intake stage (gathers story through single conversation)
   state = await runIntakeStage(state, { ui, logger });
 
-  // Save story draft (as plot.json - story.json is reserved for complete composed story)
+  // Save story after intake (intermediate checkpoint)
   if (state.story) {
-    await outputManager?.savePlot(state.story);
+    await outputManager?.saveStory(state.story as ComposedStory);
   }
 
   const stylePreset = optionsPreset ?? (state.story?.stylePreset ? await loadStylePreset(state.story.stylePreset) : undefined);

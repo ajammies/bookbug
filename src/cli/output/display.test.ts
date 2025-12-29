@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { displayBrief, displayStory, displayBook } from './display';
-import type { StoryBrief, Story, RenderedBook } from '../../core/schemas';
+import type { StoryBrief, ComposedStory, RenderedBook } from '../../core/schemas';
 
 // Mock console.log to capture output
 const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -87,8 +87,8 @@ describe('displayBrief', () => {
 });
 
 describe('displayStory', () => {
-  const minimalStory: Story = {
-    // StoryDraft fields
+  const minimalStory: ComposedStory = {
+    // Story fields
     title: 'The Magic Garden',
     storyArc: 'A rabbit discovers a hidden garden',
     setting: 'Garden',

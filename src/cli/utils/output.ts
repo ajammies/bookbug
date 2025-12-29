@@ -2,9 +2,9 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type {
   StoryBrief,
-  StoryWithPlot,
-  StoryWithProse,
   Story,
+  StoryWithProse,
+  ComposedStory,
   RenderedBook,
   RenderedPage,
   CharacterDesign,
@@ -28,14 +28,14 @@ export interface StoryOutputManager {
   folder: string;
   /** Save StoryBrief to brief.json */
   saveBrief(brief: StoryBrief): Promise<void>;
-  /** Save StoryWithPlot to plot.json (composed brief + plot) */
-  savePlot(story: StoryWithPlot): Promise<void>;
+  /** Save Story to plot.json (composed brief + plot) */
+  savePlot(story: Story): Promise<void>;
   /** Save VisualDirection to visuals.json (style guide + illustrated pages) */
   saveVisuals(visuals: VisualDirection): Promise<void>;
   /** Save StoryWithProse to prose.json (composed brief + plot + prose) */
   saveProse(story: StoryWithProse): Promise<void>;
-  /** Save Story to story.json */
-  saveStory(story: Story): Promise<void>;
+  /** Save ComposedStory to story.json */
+  saveStory(story: ComposedStory): Promise<void>;
   /** Save RenderedBook to book.json */
   saveBook(book: RenderedBook): Promise<void>;
   /** Save a single page image to assets folder (downloads from URL) */

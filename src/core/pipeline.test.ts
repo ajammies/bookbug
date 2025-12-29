@@ -7,7 +7,7 @@ import {
   type PipelineState,
 } from './pipeline';
 import type {
-  StoryWithPlot,
+  Story,
   StoryWithProse,
   ComposedStory,
   Prose,
@@ -52,7 +52,7 @@ const mockedStyleGuideAgent = vi.mocked(styleGuideAgent);
 const mockedGenerateCharacterDesigns = vi.mocked(generateCharacterDesigns);
 const mockedRenderPage = vi.mocked(renderPage);
 
-const mockStoryWithPlot: StoryWithPlot = {
+const mockStory: Story = {
   title: 'Test Story',
   storyArc: 'A test adventure',
   setting: 'Test land',
@@ -98,7 +98,7 @@ const mockVisuals: VisualDirection = {
   illustratedPages: [mockIllustratedPage1, mockIllustratedPage2],
 };
 
-const mockStoryWithProse: StoryWithProse = { ...mockStoryWithPlot, prose: mockProse };
+const mockStoryWithProse: StoryWithProse = { ...mockStory, prose: mockProse };
 const mockComposedStory: ComposedStory = { ...mockStoryWithProse, visuals: mockVisuals };
 
 describe('generateProse', () => {
@@ -108,16 +108,16 @@ describe('generateProse', () => {
   });
 
   it('generates prose and returns StoryWithProse', async () => {
-    const result = await generateProse(mockStoryWithPlot);
+    const result = await generateProse(mockStory);
     expect(result.title).toBe('Test Story');
     expect(result.prose.logline).toBe('A hero saves the day');
     expect(result.prose.pages).toHaveLength(2);
   });
 
   it('calls prose agent with story', async () => {
-    await generateProse(mockStoryWithPlot);
+    await generateProse(mockStory);
     expect(mockedProseAgent).toHaveBeenCalledTimes(1);
-    expect(mockedProseAgent).toHaveBeenCalledWith(mockStoryWithPlot, undefined);
+    expect(mockedProseAgent).toHaveBeenCalledWith(mockStory, undefined);
   });
 });
 
@@ -194,14 +194,14 @@ describe('renderBook', () => {
 
 describe('runPipelineIncremental', () => {
   const mockProseSetup = { logline: mockProse.logline, theme: mockProse.theme, styleNotes: mockProse.styleNotes };
-  const mockPipelineState: PipelineState = { story: mockStoryWithPlot };
+  const mockPipelineState: PipelineState = { story: mockStory };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockedStyleGuideAgent.mockResolvedValue(mockStyleGuide);
     mockedProseSetupAgent.mockResolvedValue(mockProseSetup);
     mockedGenerateCharacterDesigns.mockResolvedValue([
-      { character: mockStoryWithPlot.characters[0]!, spriteSheetUrl: 'https://example.com/sprite.png' },
+      { character: mockStory.characters[0]!, spriteSheetUrl: 'https://example.com/sprite.png' },
     ]);
     mockedProsePageAgent.mockImplementation(async ({ pageNumber }) => mockProse.pages[pageNumber - 1]!);
     mockedPageVisualsAgent.mockImplementation(async ({ pageNumber }) =>

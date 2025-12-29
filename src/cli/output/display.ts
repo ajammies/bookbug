@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { StoryBrief, Story, RenderedBook } from '../../core/schemas';
+import type { StoryBrief, ComposedStory, RenderedBook } from '../../core/schemas';
 
 /**
  * Display a StoryBrief summary
@@ -23,9 +23,9 @@ export function displayBrief(brief: StoryBrief): void {
 }
 
 /**
- * Display a Story summary
+ * Display a ComposedStory summary
  */
-export function displayStory(story: Story): void {
+export function displayStory(story: ComposedStory): void {
   console.log('\n' + chalk.bold.magenta('Visual Story'));
   console.log(chalk.gray('─'.repeat(50)));
   console.log(chalk.bold('Title:'), story.title);

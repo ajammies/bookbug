@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { generateProse } from '../../core/pipeline';
-import { StoryWithPlotSchema, type Prose } from '../../core/schemas';
+import { StorySchema, type Prose } from '../../core/schemas';
 import { getOrCreateOutputManager } from '../utils/output';
 import { loadJson } from '../../utils';
 
@@ -18,14 +18,14 @@ export const writeCommand = new Command('write')
   .action(async (storyFile: string) => {
     try {
       console.log('Loading story...');
-      const storyWithPlot = StoryWithPlotSchema.parse(await loadJson(storyFile));
+      const story = StorySchema.parse(await loadJson(storyFile));
 
       console.log('Writing prose...');
-      const storyWithProse = await generateProse(storyWithPlot);
+      const storyWithProse = await generateProse(story);
 
       displayProse(storyWithProse.prose);
 
-      const outputManager = await getOrCreateOutputManager(storyFile, storyWithPlot.title);
+      const outputManager = await getOrCreateOutputManager(storyFile, story.title);
       await outputManager.saveProse(storyWithProse);
       console.log(`\nProse saved to: ${outputManager.folder}/prose.json`);
     } catch (error) {

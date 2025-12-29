@@ -1,9 +1,9 @@
 /**
- * Tests for StoryDraft schema and policy utilities
+ * Tests for Story schema and policy utilities
  */
 import { describe, it, expect } from 'vitest';
 import {
-  StoryDraftSchema,
+  StorySchema,
   PlotBeatSchema,
   parseFieldPolicy,
   getCleanDescription,
@@ -11,9 +11,9 @@ import {
   getRequiredFields,
   getMissingRequiredFields,
   hasAllRequiredFields,
-  type StoryDraft,
+  type Story,
   type FieldPolicy,
-} from './draft';
+} from './story';
 
 describe('PlotBeatSchema', () => {
   it('validates a valid plot beat', () => {
@@ -30,8 +30,8 @@ describe('PlotBeatSchema', () => {
   });
 });
 
-describe('StoryDraftSchema', () => {
-  const validDraft: StoryDraft = {
+describe('StorySchema', () => {
+  const validStory: Story = {
     title: 'Luna\'s Adventure',
     storyArc: 'A rabbit learns to be brave',
     setting: 'A magical forest',
@@ -46,12 +46,12 @@ describe('StoryDraftSchema', () => {
     allowCreativeLiberty: true,
   };
 
-  it('validates a complete draft', () => {
-    expect(StoryDraftSchema.parse(validDraft)).toMatchObject(validDraft);
+  it('validates a complete story', () => {
+    expect(StorySchema.parse(validStory)).toMatchObject(validStory);
   });
 
   it('applies default values', () => {
-    const minimalDraft = {
+    const minimalStory = {
       title: 'Test',
       storyArc: 'Test arc',
       setting: 'Test setting',
@@ -62,25 +62,25 @@ describe('StoryDraftSchema', () => {
         { purpose: 'climax', description: '3' },
       ],
     };
-    const parsed = StoryDraftSchema.parse(minimalDraft);
+    const parsed = StorySchema.parse(minimalStory);
     expect(parsed.pageCount).toBe(24);
     expect(parsed.interests).toEqual([]);
     expect(parsed.allowCreativeLiberty).toBe(true);
   });
 
   it('rejects empty title', () => {
-    expect(() => StoryDraftSchema.parse({ ...validDraft, title: '' })).toThrow();
+    expect(() => StorySchema.parse({ ...validStory, title: '' })).toThrow();
   });
 
   it('rejects fewer than 3 plot beats', () => {
-    expect(() => StoryDraftSchema.parse({
-      ...validDraft,
+    expect(() => StorySchema.parse({
+      ...validStory,
       plotBeats: [{ purpose: 'setup', description: 'Only one' }],
     })).toThrow();
   });
 
   it('rejects empty characters array', () => {
-    expect(() => StoryDraftSchema.parse({ ...validDraft, characters: [] })).toThrow();
+    expect(() => StorySchema.parse({ ...validStory, characters: [] })).toThrow();
   });
 });
 
@@ -122,7 +122,7 @@ describe('getCleanDescription', () => {
 
 describe('getFieldPolicies', () => {
   it('extracts policies from schema', () => {
-    const policies = getFieldPolicies(StoryDraftSchema);
+    const policies = getFieldPolicies(StorySchema);
 
     // Required fields
     expect(policies.title).toBe('required');
@@ -144,7 +144,7 @@ describe('getFieldPolicies', () => {
 
 describe('getRequiredFields', () => {
   it('returns only required field names', () => {
-    const required = getRequiredFields(StoryDraftSchema);
+    const required = getRequiredFields(StorySchema);
     expect(required).toContain('title');
     expect(required).toContain('storyArc');
     expect(required).toContain('setting');
@@ -166,7 +166,7 @@ describe('getMissingRequiredFields', () => {
   });
 
   it('returns empty array when all required fields filled', () => {
-    const draft: Partial<StoryDraft> = {
+    const draft: Partial<Story> = {
       title: 'Test',
       storyArc: 'Test arc',
       setting: 'Test setting',
@@ -181,7 +181,7 @@ describe('getMissingRequiredFields', () => {
   });
 
   it('treats empty arrays as missing', () => {
-    const draft: Partial<StoryDraft> = {
+    const draft: Partial<Story> = {
       title: 'Test',
       storyArc: 'Arc',
       setting: 'Setting',
@@ -200,7 +200,7 @@ describe('hasAllRequiredFields', () => {
   });
 
   it('returns true when all required fields filled', () => {
-    const draft: Partial<StoryDraft> = {
+    const draft: Partial<Story> = {
       title: 'Test',
       storyArc: 'Test arc',
       setting: 'Test setting',

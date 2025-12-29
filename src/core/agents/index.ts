@@ -1,5 +1,5 @@
 import type {
-  StoryWithPlot,
+  Story,
   StoryWithProse,
   Prose,
   VisualDirection,
@@ -13,7 +13,7 @@ export type Agent<Input, Output> = (input: Input) => Promise<Output>;
 /**
  * Pipeline agent types with concrete input/output (named after output)
  */
-export type ProseAgentType = Agent<StoryWithPlot, Prose>;
+export type ProseAgentType = Agent<Story, Prose>;
 export type VisualsAgentType = Agent<StoryWithProse, VisualDirection>;
 
 /**
@@ -38,11 +38,11 @@ export {
   intakeAgent,
   type IntakeAgentOptions,
   type IntakeAgentResult,
-  type DraftMessage,
+  type IntakeMessage,
 } from './intake-agent';
 
-// Re-export DraftMessage as Message for backward compatibility
-export type { DraftMessage as Message } from './intake-agent';
+// Re-export IntakeMessage as Message for backward compatibility
+export type { IntakeMessage as Message } from './intake-agent';
 export type MessageRole = 'user' | 'assistant';
 
 // Generic extractor (outputs ExtractionResult<T>)

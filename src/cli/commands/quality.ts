@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { imageQualityAgent, filterStoryForPage } from '../../core/agents';
-import { StorySchema, type ImageQualityResult, type PageRenderContext } from '../../core/schemas';
+import { ComposedStorySchema, type ImageQualityResult, type PageRenderContext } from '../../core/schemas';
 import { createSpinner } from '../output/progress';
 import { loadJson } from '../../utils';
 
@@ -47,7 +47,7 @@ async function analyzeImage(imagePath: string, threshold: number, spinner: Retur
   const storyPath = path.join(folder, 'story.json');
 
   spinner.start('Loading story context...');
-  const story = StorySchema.parse(await loadJson(storyPath));
+  const story = ComposedStorySchema.parse(await loadJson(storyPath));
   spinner.succeed('Story loaded');
 
   // Extract page number from filename (page-1.png, page-2.png, etc.)
@@ -70,7 +70,7 @@ async function analyzeFolder(folderPath: string, threshold: number, spinner: Ret
   const assetsPath = path.join(folderPath, 'assets');
 
   spinner.start('Loading story context...');
-  const story = StorySchema.parse(await loadJson(storyPath));
+  const story = ComposedStorySchema.parse(await loadJson(storyPath));
   spinner.succeed('Story loaded');
 
   // Find all page images

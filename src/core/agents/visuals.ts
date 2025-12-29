@@ -4,7 +4,7 @@ import {
   VisualDirectionSchema,
   VisualStyleGuideSchema,
   IllustrationBeatSchema,
-  type StoryWithPlot,
+  type Story,
   type StoryWithProse,
   type VisualDirection,
   type VisualStyleGuide,
@@ -136,7 +136,7 @@ export interface StylePreset {
  * If stylePreset is provided, uses it and generates remaining fields
  */
 export const styleGuideAgent = async (
-  story: StoryWithPlot,
+  story: Story,
   stylePreset?: StylePreset,
   logger?: Logger
 ): Promise<VisualStyleGuide> => {
@@ -174,7 +174,7 @@ export const styleGuideAgent = async (
  * Input for pageVisualsAgent
  */
 export interface PageVisualsInput {
-  story: StoryWithPlot;
+  story: Story;
   styleGuide: VisualStyleGuide;
   pageNumber: number;
   prosePage: ProsePage;

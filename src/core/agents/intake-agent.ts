@@ -1,7 +1,7 @@
 /**
  * Intake Agent: Unified conversation + extraction for story creation
  *
- * Single agent that progressively fills the StoryDraft schema.
+ * Single agent that progressively fills the Story schema.
  * No mode switching - one conversation flow from start to finish.
  *
  * Following Carmack: "The real enemy is unexpected dependency and mutation of state"
@@ -9,13 +9,13 @@
 import { generateText, stepCountIs } from 'ai';
 import { getModel } from '../config';
 import {
-  StoryDraftSchema,
+  StorySchema,
   getMissingRequiredFields,
   getFieldPolicies,
-  type StoryDraft,
+  type Story,
   type FieldPolicy,
-} from '../schemas/draft';
-import { createDraftTools, type DraftState } from '../schemas/draft-tools';
+} from '../schemas/story';
+import { createStoryTools, type StoryState } from '../schemas/story-tools';
 import type { Logger } from '../utils/logger';
 
 // ============================================================================
@@ -30,17 +30,17 @@ export interface IntakeAgentOptions {
 }
 
 export interface IntakeAgentResult {
-  /** Updated draft state */
-  draft: Partial<StoryDraft>;
+  /** Updated story state */
+  story: Partial<Story>;
   /** Question to show user (from promptUser tool) */
   question?: string;
   /** Options for user to choose from */
   options?: string[];
-  /** Whether draft is complete */
+  /** Whether intake is complete */
   isComplete: boolean;
 }
 
-export type DraftMessage = {
+export type IntakeMessage = {
   role: 'user' | 'assistant';
   content: string;
 };
@@ -136,19 +136,19 @@ const wasFinishIntakeCalled = (
 /**
  * Run one turn of the intake agent.
  *
- * @param state - Current draft state
+ * @param state - Current story state
  * @param history - Conversation history
  * @param options - Agent options
  * @returns Updated state and next UI action
  */
 export const intakeAgent = async (
-  state: DraftState,
-  history: DraftMessage[],
+  state: StoryState,
+  history: IntakeMessage[],
   options: IntakeAgentOptions = {}
 ): Promise<IntakeAgentResult> => {
   const { availableStyles = [], logger } = options;
-  const policies = getFieldPolicies(StoryDraftSchema);
-  const missingFields = getMissingRequiredFields(state.draft);
+  const policies = getFieldPolicies(StorySchema);
+  const missingFields = getMissingRequiredFields(state.story);
 
   logger?.debug(
     { agent: 'intakeAgent', missingFields, historyLength: history.length },
@@ -157,10 +157,10 @@ export const intakeAgent = async (
 
   const systemPrompt = buildSystemPrompt(availableStyles, missingFields, policies);
 
-  const stateContext = `CURRENT STORY DRAFT:
-${JSON.stringify(state.draft, null, 2)}`;
+  const stateContext = `CURRENT STORY:
+${JSON.stringify(state.story, null, 2)}`;
 
-  const tools = createDraftTools(state);
+  const tools = createStoryTools(state);
 
   const result = await generateText({
     model: getModel(),
@@ -192,7 +192,7 @@ ${JSON.stringify(state.draft, null, 2)}`;
   );
 
   return {
-    draft: state.draft,
+    story: state.story,
     question: promptCall?.question,
     options: promptCall?.options,
     isComplete,

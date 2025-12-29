@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { StoryDraftSchema } from './draft';
+import { StorySchema } from './story';
 import { ProseSchema } from './prose';
 import { VisualDirectionSchema, CharacterDesignSchema } from './visuals';
 
@@ -7,21 +7,14 @@ import { VisualDirectionSchema, CharacterDesignSchema } from './visuals';
  * Composed Types: Linear pipeline composition
  * Each stage adds new fields to the previous.
  *
- * Base is StoryDraft (unified schema with all story details).
+ * Base is Story (the unified schema with all story details).
  */
 
 /**
- * StoryWithPlot: Alias for StoryDraft (backward compatibility)
- * The draft already contains plot beats directly - no nested plot object.
- */
-export const StoryWithPlotSchema = StoryDraftSchema;
-export type StoryWithPlot = z.infer<typeof StoryWithPlotSchema>;
-
-/**
- * StoryWithProse: StoryDraft + Prose
+ * StoryWithProse: Story + Prose
  * Result of running proseAgent on a story.
  */
-export const StoryWithProseSchema = StoryDraftSchema.extend({
+export const StoryWithProseSchema = StorySchema.extend({
   prose: ProseSchema,
 });
 
@@ -37,7 +30,3 @@ export const ComposedStorySchema = StoryWithProseSchema.extend({
 });
 
 export type ComposedStory = z.infer<typeof ComposedStorySchema>;
-
-// Alias for convenience
-export const StorySchema = ComposedStorySchema;
-export type Story = ComposedStory;
