@@ -381,9 +381,9 @@ export const runPipeline = async (
   // Run intake stage (gathers story through single conversation)
   state = await runIntakeStage(state, { ui, logger });
 
-  // Save story draft
+  // Save story draft (as plot.json - story.json is reserved for complete composed story)
   if (state.story) {
-    await outputManager?.saveStory(state.story as ComposedStory);
+    await outputManager?.savePlot(state.story);
   }
 
   const stylePreset = optionsPreset ?? (state.story?.stylePreset ? await loadStylePreset(state.story.stylePreset) : undefined);
