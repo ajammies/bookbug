@@ -30,22 +30,20 @@ export { renderPage, renderPageMock, createBook, filterStoryForPage } from './re
 // Progress messages for CLI display
 export { progressMessagesAgent } from './progress-messages';
 
-// Plot generation agent (PlotStructure)
+// Plot generation agent (PlotStructure) - still used for initial generation
 export { plotAgent } from './plot';
 
-// Intake agent (unified conversation + extraction)
+// Draft agent (unified conversation + progressive extraction)
 export {
-  intakeAgent,
-  type IntakeAgentOptions,
-  type IntakeAgentResult,
-  type IntakeMessage,
-  type IntakeMode,
-} from './intake-agent';
+  draftAgent,
+  type DraftAgentOptions,
+  type DraftAgentResult,
+  type DraftMessage,
+} from './draft-agent';
 
-// Re-export IntakeMessage as Message for backward compatibility with pipeline
-export type { IntakeMessage as Message } from './intake-agent';
+// Re-export DraftMessage as Message for backward compatibility
+export type { DraftMessage as Message } from './draft-agent';
 export type MessageRole = 'user' | 'assistant';
-export { createIntakeTools, type IntakeState, type IntakeTools, type ToolResult } from './intake-tools';
 
 // Generic extractor (outputs ExtractionResult<T>)
 export { extract, type ExtractionResult, type ExtractOptions } from './extractor';

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { runPipelineIncremental, runPlotStage, renderBook, type PipelineState } from '../../core/pipeline';
+import { runPipelineIncremental, runDraftStage, renderBook, type PipelineState } from '../../core/pipeline';
 import {
   StoryBriefSchema,
   StoryWithPlotSchema,
@@ -150,11 +150,14 @@ export const resumeCommand = new Command('resume')
 
         case 'brief': {
           console.log('\n📍 Resuming from: brief.json');
-          let pipelineState = await loadPipelineState(folder);
-          if (!pipelineState) throw new Error('Failed to load pipeline state');
-          // Brief exists but no plot - run plot stage first
-          pipelineState = await runPlotStage(pipelineState, { ui });
-          const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
+          const pipelineState = await loadPipelineState(folder);
+          if (!pipelineState || !pipelineState.brief) throw new Error('Failed to load pipeline state');
+          // Brief exists but no plot - generate plot using plotAgent
+          ui.progress('Generating plot...');
+          const { plotAgent } = await import('../../core/agents');
+          const plot = await plotAgent(pipelineState.brief);
+          const stateWithPlot: PipelineState = { ...pipelineState, plot };
+          const result = await runPipelineIncremental(stateWithPlot, { ui, outputManager, format: options.format });
           ui.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);

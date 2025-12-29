@@ -125,14 +125,25 @@ export {
   type AspectRatio,
 } from './formats';
 
-// Field policies for intake agent
+// Draft schema (unified brief + plot with embedded policies)
 export {
-  briefFieldPolicies,
-  plotFieldPolicies,
+  StoryDraftSchema,
+  PlotBeatSchema as DraftPlotBeatSchema,
+  parseFieldPolicy,
+  getCleanDescription,
+  getFieldPolicies,
   getRequiredFields,
-  getSuggestedFields,
-  getPromptedFields,
-  hasRequiredFields,
   getMissingRequiredFields,
+  hasAllRequiredFields,
+  type StoryDraft,
+  type PlotBeat as DraftPlotBeat,
   type FieldPolicy,
-} from './field-policies';
+} from './draft';
+
+// Draft tools (auto-generated from schema)
+export {
+  createDraftTools,
+  type DraftState,
+  type DraftTools,
+  type ToolResult,
+} from './draft-tools';

@@ -15,7 +15,6 @@ import type {
   ProseSetup,
   CharacterDesign,
 } from './schemas';
-import { StoryBriefSchema } from './schemas';
 import {
   proseAgent,
   proseSetupAgent,
@@ -27,13 +26,11 @@ import {
   renderPage,
   renderPageMock,
   createBook,
-  plotAgent,
-  intakeAgent,
   type StylePreset,
-  type Message,
-  type IntakeState,
-  type IntakeMessage,
 } from './agents';
+import { draftAgent, type DraftMessage } from './agents/draft-agent';
+import { type DraftState } from './schemas/draft-tools';
+import { type StoryDraft } from './schemas/draft';
 import type { StoryOutputManager } from '../cli/utils/output';
 import type { Logger } from './utils/logger';
 import { loadStylePreset, listStyles } from './services/style-loader';
@@ -78,19 +75,23 @@ export interface StageOptions {
   logger?: Logger;
 }
 
+// Re-export DraftMessage as Message for backward compatibility
+export type Message = DraftMessage;
+
 /**
  * Pipeline state - single type throughout pipeline.
- * brief/plot are optional (absent until their stage completes).
- * history flows between stages so context isn't lost.
+ * draft is optional (absent until draft stage completes).
+ * history flows through the pipeline so context isn't lost.
  */
 export interface PipelineState {
-  // Conversation history (flows intake → plot)
+  // Conversation history
   history: Message[];
 
-  // Brief (undefined until intake completes, then complete)
-  brief?: StoryBrief;
+  // Draft (progressively filled during draft stage)
+  draft?: Partial<StoryDraft>;
 
-  // Plot (undefined until plot stage completes)
+  // Legacy: brief/plot for backward compatibility with incremental pipeline
+  brief?: StoryBrief;
   plot?: PlotStructure;
 
   // Setup artifacts
@@ -112,63 +113,85 @@ export interface PipelineState {
 // ============================================================================
 
 /**
- * Intake stage: Gather story brief through conversation.
- * Pure function: (state, options) → state
- * Skips if brief already exists.
- *
- * Uses the unified intake agent with tool calling for
- * combined conversation + extraction in a single LLM call.
+ * Convert StoryDraft to StoryBrief + PlotStructure for downstream pipeline.
+ * This bridges the unified draft schema to the existing composed types.
  */
-export const runIntakeStage = async (
+const convertDraftToStoryWithPlot = (draft: StoryDraft): { brief: StoryBrief; plot: PlotStructure } => {
+  const brief: StoryBrief = {
+    title: draft.title,
+    storyArc: draft.storyArc,
+    setting: draft.setting,
+    characters: draft.characters,
+    ageRange: draft.ageRange ?? { min: 4, max: 8 }, // Default age range
+    pageCount: draft.pageCount,
+    tone: draft.tone,
+    moral: draft.moral,
+    interests: draft.interests,
+    customInstructions: draft.customInstructions,
+    stylePreset: draft.stylePreset,
+  };
+
+  const plot: PlotStructure = {
+    storyArcSummary: draft.storyArc,
+    plotBeats: draft.plotBeats,
+    allowCreativeLiberty: draft.allowCreativeLiberty,
+    characters: draft.characters, // Pass through for visual descriptions
+  };
+
+  return { brief, plot };
+};
+
+/**
+ * Draft stage: Gather story details through single progressive conversation.
+ * Pure function: (state, options) → state
+ * Skips if brief and plot already exist.
+ *
+ * Uses the unified draft agent with tool calling for
+ * combined conversation + extraction in a single loop.
+ */
+export const runDraftStage = async (
   state: PipelineState,
   options: StageOptions
 ): Promise<PipelineState> => {
-  if (state.brief) return state;
+  // Skip if already have brief and plot
+  if (state.brief && state.plot) return state;
 
   const { ui, logger } = options;
   const availableStyles = await listStyles();
 
-  // Initialize intake state
-  const intakeState: IntakeState = {
-    brief: {},
-    plot: {},
+  // Initialize draft state (or continue from existing draft)
+  const draftState: DraftState = {
+    draft: state.draft ?? {},
     isComplete: false,
   };
 
-  // Convert pipeline history to intake history
-  let history: IntakeMessage[] = state.history.map((m): IntakeMessage => ({
-    role: m.role,
-    content: m.content,
-  }));
+  // Use existing history or start fresh
+  let history: DraftMessage[] = state.history.length > 0
+    ? state.history
+    : [{ role: 'assistant', content: 'Let\'s create a children\'s book!' }];
 
-  // Initial greeting if no history
-  if (history.length === 0) {
-    history = [{ role: 'assistant', content: 'Let\'s create a children\'s book!' }];
-  }
+  logger?.info({ stage: 'draft' }, 'Starting draft stage');
 
-  logger?.info({ stage: 'intake' }, 'Starting intake stage');
-
-  while (!intakeState.isComplete) {
+  while (!draftState.isComplete) {
     ui.progress('Thinking...');
-    const result = await intakeAgent(intakeState, history, {
-      mode: 'brief',
+    const result = await draftAgent(draftState, history, {
       availableStyles,
       logger,
     });
 
     // Update state from agent
-    intakeState.brief = result.brief;
-    intakeState.isComplete = result.isComplete;
+    draftState.draft = result.draft;
+    draftState.isComplete = result.isComplete;
 
     // If complete, break out of loop
     if (result.isComplete) {
-      logger?.debug({ stage: 'intake' }, 'Agent signaled completion');
+      logger?.debug({ stage: 'draft' }, 'Agent signaled completion');
       break;
     }
 
     // If no question, something went wrong - break to avoid infinite loop
     if (!result.question || !result.options) {
-      logger?.warn({ stage: 'intake' }, 'Agent returned no question - forcing completion');
+      logger?.warn({ stage: 'draft' }, 'Agent returned no question - forcing completion');
       break;
     }
 
@@ -183,110 +206,21 @@ export const runIntakeStage = async (
     ];
   }
 
-  // Parse and validate the brief
-  const brief = StoryBriefSchema.parse(intakeState.brief);
+  // Convert draft to brief + plot for downstream compatibility
+  const { brief, plot } = convertDraftToStoryWithPlot(draftState.draft as StoryDraft);
 
-  // Convert history back to pipeline format
-  const pipelineHistory: Message[] = history.map((m): Message => ({
-    role: m.role,
-    content: m.content,
-  }));
+  logger?.info(
+    { stage: 'draft', title: brief.title, beatCount: plot.plotBeats?.length ?? 0 },
+    'Draft stage complete'
+  );
 
-  logger?.info({ stage: 'intake', title: brief.title }, 'Intake stage complete');
-  return { ...state, brief, history: pipelineHistory };
-};
-
-/**
- * Plot stage: Generate and refine plot structure.
- * Pure function: (state, options) → state
- * Skips if plot already exists.
- *
- * Uses plotAgent for initial generation, then intake agent
- * for user refinement via tool calling.
- */
-export const runPlotStage = async (
-  state: PipelineState,
-  options: StageOptions
-): Promise<PipelineState> => {
-  if (state.plot) return state;
-
-  const { ui, logger } = options;
-
-  if (!state.brief) {
-    throw new Error('Cannot generate plot: brief is missing');
-  }
-  const brief = state.brief;
-
-  logger?.info({ stage: 'plot', title: brief.title }, 'Starting plot stage');
-
-  // Generate initial plot
-  ui.progress('Creating plot outline...');
-  const initialPlot = await plotAgent(brief, logger);
-
-  // Initialize intake state with the generated plot
-  const intakeState: IntakeState = {
-    brief: brief,
-    plot: initialPlot,
-    isComplete: false,
+  return {
+    ...state,
+    draft: draftState.draft,
+    brief,
+    plot,
+    history,
   };
-
-  // Convert pipeline history to intake history
-  let history: IntakeMessage[] = state.history.map((m): IntakeMessage => ({
-    role: m.role,
-    content: m.content,
-  }));
-
-  // Add context about the generated plot
-  history = [
-    ...history,
-    { role: 'assistant', content: `I've created a plot outline for "${brief.title}". Let me show you the story beats and we can refine them together.` },
-  ];
-
-  while (!intakeState.isComplete) {
-    ui.progress('Preparing...');
-    const result = await intakeAgent(intakeState, history, {
-      mode: 'plot',
-      logger,
-    });
-
-    // Update state from agent
-    intakeState.plot = result.plot;
-    intakeState.isComplete = result.isComplete;
-
-    // If complete, break out of loop
-    if (result.isComplete) {
-      logger?.debug({ stage: 'plot' }, 'Agent signaled completion');
-      break;
-    }
-
-    // If no question, something went wrong - break to avoid infinite loop
-    if (!result.question || !result.options) {
-      logger?.warn({ stage: 'plot' }, 'Agent returned no question - forcing completion');
-      break;
-    }
-
-    // Show question to user and get answer
-    const answer = await ui.prompt({ question: result.question, options: result.options });
-
-    // Add Q&A to history for next turn
-    history = [
-      ...history,
-      { role: 'assistant', content: result.question },
-      { role: 'user', content: answer },
-    ];
-  }
-
-  // Get the final plot from intake state
-  const plot = intakeState.plot as PlotStructure;
-
-  // Convert history back to pipeline format
-  const pipelineHistory: Message[] = history.map((m): Message => ({
-    role: m.role,
-    content: m.content,
-  }));
-
-  logger?.info({ stage: 'plot', beatCount: plot.plotBeats?.length ?? 0 }, 'Plot stage complete');
-  return { ...state, plot, history: pipelineHistory };
 };
 
 // ============================================================================
@@ -484,7 +418,7 @@ export interface RunPipelineOptions extends PipelineOptions {
 
 /**
  * Run the complete pipeline from scratch.
- * User provides story details during intake conversation.
+ * User provides story details during draft conversation.
  *
  * @param options - Pipeline options including ui for user interaction
  */
@@ -495,18 +429,13 @@ export const runPipeline = async (
 
   let state: PipelineState = { history: [] };
 
-  // Run intake stage (gathers brief through conversation)
-  state = await runIntakeStage(state, { ui, logger });
+  // Run draft stage (gathers brief + plot through single conversation)
+  state = await runDraftStage(state, { ui, logger });
 
-  // Save brief if we have an output manager
+  // Save brief and plot
   if (state.brief) {
     await outputManager?.saveBrief(state.brief);
   }
-
-  // Run plot stage (generates and refines plot)
-  state = await runPlotStage(state, { ui, logger });
-
-  // Save plot
   if (state.brief && state.plot) {
     const storyWithPlot = assembleStoryWithPlot(state.brief, state.plot);
     await outputManager?.savePlot(storyWithPlot);
