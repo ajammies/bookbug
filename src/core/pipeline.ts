@@ -283,63 +283,115 @@ export const runPipelineIncremental = async (
     for (const design of characterDesigns) await outputManager.saveCharacterDesign(design);
   }
 
-  // Page processing
+  // ============================================================================
+  // Phase 1: Prose (sequential - needs previousPages context)
+  // ============================================================================
   const prosePages = [...(state.prosePages ?? [])];
-  const illustratedPages = [...(state.illustratedPages ?? [])];
-  const renderedPages = [...(state.renderedPages ?? [])];
-  let heroPage = state.heroPage ?? renderedPages[0];
+  const startPage = prosePages.length + 1;
 
-  for (let pageNumber = renderedPages.length + 1; pageNumber <= story.pageCount; pageNumber++) {
-    logger?.debug({ pageNumber, totalPages: story.pageCount }, 'Processing page');
-
-    ui?.progress(`Writing page ${pageNumber}...`);
+  for (let pageNumber = startPage; pageNumber <= story.pageCount; pageNumber++) {
+    ui?.progress(`Writing page ${pageNumber} of ${story.pageCount}...`);
+    logger?.debug({ pageNumber, totalPages: story.pageCount }, 'Generating prose');
     const prosePage = await prosePageAgent({ story, proseSetup, pageNumber, previousPages: prosePages, logger });
     prosePages.push(prosePage);
+  }
 
-    ui?.progress(`Directing page ${pageNumber}...`);
-    const illustratedPage = await pageVisualsAgent({ story, styleGuide, pageNumber, prosePage, logger });
-    illustratedPages.push(illustratedPage);
+  // Save prose after all pages generated
+  if (outputManager) {
+    await outputManager.saveProse({ ...story, prose: assembleProse(proseSetup, prosePages) });
+  }
 
-    // Save visuals incrementally after each page
-    if (outputManager) {
-      await outputManager.saveVisuals({ style: styleGuide, illustratedPages });
+  // ============================================================================
+  // Phase 2: Visuals (parallel - each page independent)
+  // ============================================================================
+  const existingIllustratedPages = state.illustratedPages ?? [];
+  const pagesToIllustrate = prosePages.slice(existingIllustratedPages.length);
+
+  ui?.progress(`Directing ${pagesToIllustrate.length} pages in parallel...`);
+  logger?.info({ count: pagesToIllustrate.length }, 'Starting parallel visual generation');
+
+  const newIllustratedPages = await Promise.all(
+    pagesToIllustrate.map((prosePage, i) => {
+      const pageNumber = existingIllustratedPages.length + i + 1;
+      return pageVisualsAgent({ story, styleGuide, pageNumber, prosePage, logger });
+    })
+  );
+
+  const illustratedPages = [...existingIllustratedPages, ...newIllustratedPages];
+
+  // Save visuals after all pages illustrated
+  if (outputManager) {
+    await outputManager.saveVisuals({ style: styleGuide, illustratedPages });
+  }
+
+  // ============================================================================
+  // Phase 3: Render (parallel - heroPage first for consistency)
+  // ============================================================================
+  const existingRenderedPages = state.renderedPages ?? [];
+  const renderedPages: RenderedPage[] = [...existingRenderedPages];
+  let heroPage = state.heroPage ?? existingRenderedPages[0];
+
+  // Build composed story for rendering
+  const composedStory: ComposedStory = {
+    ...story,
+    prose: assembleProse(proseSetup, prosePages),
+    visuals: assembleVisuals(styleGuide, illustratedPages),
+    characterDesigns,
+  };
+
+  const renderOptions = {
+    format,
+    logger,
+    qualityCheck: qualityCheck?.enabled ? { threshold: qualityCheck.threshold, maxRetries: qualityCheck.maxRetries } : undefined,
+  };
+
+  // Determine which pages still need rendering
+  const startRenderPage = existingRenderedPages.length + 1;
+
+  if (startRenderPage <= story.pageCount) {
+    // Render heroPage first (page 1) if not already rendered
+    if (!heroPage) {
+      ui?.progress('Rendering hero page...');
+      heroPage = await renderPage(composedStory, 1, renderOptions);
+      renderedPages.push(heroPage);
+      if (outputManager) await outputManager.savePageImage(heroPage);
     }
 
-    ui?.progress(`Rendering page ${pageNumber}...`);
-    const currentStory: ComposedStory = {
-      ...story,
-      prose: assembleProse(proseSetup, prosePages),
-      visuals: assembleVisuals(styleGuide, illustratedPages),
-      characterDesigns,
-    };
+    // Render remaining pages in parallel
+    const remainingPageNumbers = Array.from(
+      { length: story.pageCount - renderedPages.length },
+      (_, i) => renderedPages.length + i + 1
+    );
 
-    // Build render options with quality check if enabled
-    const renderOptions = {
-      format,
-      heroPageUrl: heroPage?.url,
-      logger,
-      qualityCheck: qualityCheck?.enabled ? { threshold: qualityCheck.threshold, maxRetries: qualityCheck.maxRetries } : undefined,
-    };
+    if (remainingPageNumbers.length > 0) {
+      ui?.progress(`Rendering ${remainingPageNumbers.length} pages in parallel...`);
+      logger?.info({ count: remainingPageNumbers.length }, 'Starting parallel render');
 
-    const renderedPage = await renderPage(currentStory, pageNumber, renderOptions);
-    renderedPages.push(renderedPage);
-    if (!heroPage) heroPage = renderedPage;
+      const newRenderedPages = await Promise.all(
+        remainingPageNumbers.map(pageNumber =>
+          renderPage(composedStory, pageNumber, { ...renderOptions, heroPageUrl: heroPage?.url })
+        )
+      );
 
-    // Save quality result if available
-    if (outputManager && renderedPage.quality) {
-      await outputManager.saveQualityResult(pageNumber, renderedPage.quality);
-    }
+      // Sort by page number and add to list
+      newRenderedPages.sort((a, b) => a.pageNumber - b.pageNumber);
+      renderedPages.push(...newRenderedPages);
 
-    // Save failed attempts for debugging
-    if (outputManager && renderedPage.failedAttempts) {
-      for (let i = 0; i < renderedPage.failedAttempts.length; i++) {
-        const failed = renderedPage.failedAttempts[i]!;
-        await outputManager.saveFailedImage(pageNumber, i + 1, failed.url);
-        await outputManager.saveQualityResult(pageNumber, failed.quality, i + 1);
+      // Save rendered pages
+      if (outputManager) {
+        for (const page of newRenderedPages) {
+          await outputManager.savePageImage(page);
+          if (page.quality) await outputManager.saveQualityResult(page.pageNumber, page.quality);
+          if (page.failedAttempts) {
+            for (let i = 0; i < page.failedAttempts.length; i++) {
+              const failed = page.failedAttempts[i]!;
+              await outputManager.saveFailedImage(page.pageNumber, i + 1, failed.url);
+              await outputManager.saveQualityResult(page.pageNumber, failed.quality, i + 1);
+            }
+          }
+        }
       }
     }
-
-    if (outputManager) await outputManager.savePageImage(renderedPage);
   }
 
   // Assemble final outputs

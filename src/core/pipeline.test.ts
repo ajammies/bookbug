@@ -234,12 +234,14 @@ describe('runPipelineIncremental', () => {
     expect(ui.progress).toHaveBeenCalledWith('Creating style guide...');
     expect(ui.progress).toHaveBeenCalledWith('Setting up prose...');
     expect(ui.progress).toHaveBeenCalledWith('Generating character designs...');
-    expect(ui.progress).toHaveBeenCalledWith('Writing page 1...');
-    expect(ui.progress).toHaveBeenCalledWith('Directing page 1...');
-    expect(ui.progress).toHaveBeenCalledWith('Rendering page 1...');
-    expect(ui.progress).toHaveBeenCalledWith('Writing page 2...');
-    expect(ui.progress).toHaveBeenCalledWith('Directing page 2...');
-    expect(ui.progress).toHaveBeenCalledWith('Rendering page 2...');
+    // Phase 1: Prose (sequential)
+    expect(ui.progress).toHaveBeenCalledWith('Writing page 1 of 2...');
+    expect(ui.progress).toHaveBeenCalledWith('Writing page 2 of 2...');
+    // Phase 2: Visuals (parallel)
+    expect(ui.progress).toHaveBeenCalledWith('Directing 2 pages in parallel...');
+    // Phase 3: Render (parallel)
+    expect(ui.progress).toHaveBeenCalledWith('Rendering hero page...');
+    expect(ui.progress).toHaveBeenCalledWith('Rendering 1 pages in parallel...');
   });
 
   it('saves artifacts when outputManager is provided', async () => {
