@@ -194,7 +194,7 @@ describe('renderBook', () => {
 
 describe('runPipelineIncremental', () => {
   const mockProseSetup = { logline: mockProse.logline, theme: mockProse.theme, styleNotes: mockProse.styleNotes };
-  const mockPipelineState: PipelineState = { history: [], story: mockStoryWithPlot };
+  const mockPipelineState: PipelineState = { story: mockStoryWithPlot };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -277,7 +277,7 @@ describe('runPipelineIncremental', () => {
   });
 
   it('throws when story is missing', async () => {
-    const stateWithoutStory: PipelineState = { history: [], story: undefined };
+    const stateWithoutStory: PipelineState = { story: undefined };
     await expect(runPipelineIncremental(stateWithoutStory)).rejects.toThrow('requires story');
   });
 });

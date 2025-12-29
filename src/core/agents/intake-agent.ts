@@ -1,5 +1,5 @@
 /**
- * Draft Agent: Unified conversation + extraction for story creation
+ * Intake Agent: Unified conversation + extraction for story creation
  *
  * Single agent that progressively fills the StoryDraft schema.
  * No mode switching - one conversation flow from start to finish.
@@ -22,14 +22,14 @@ import type { Logger } from '../utils/logger';
 // Types
 // ============================================================================
 
-export interface DraftAgentOptions {
+export interface IntakeAgentOptions {
   /** Available style presets */
   availableStyles?: string[];
   /** Logger for debugging */
   logger?: Logger;
 }
 
-export interface DraftAgentResult {
+export interface IntakeAgentResult {
   /** Updated draft state */
   draft: Partial<StoryDraft>;
   /** Question to show user (from promptUser tool) */
@@ -130,29 +130,29 @@ const wasFinishIntakeCalled = (
 };
 
 // ============================================================================
-// Draft Agent
+// Intake Agent
 // ============================================================================
 
 /**
- * Run one turn of the draft agent.
+ * Run one turn of the intake agent.
  *
  * @param state - Current draft state
  * @param history - Conversation history
  * @param options - Agent options
  * @returns Updated state and next UI action
  */
-export const draftAgent = async (
+export const intakeAgent = async (
   state: DraftState,
   history: DraftMessage[],
-  options: DraftAgentOptions = {}
-): Promise<DraftAgentResult> => {
+  options: IntakeAgentOptions = {}
+): Promise<IntakeAgentResult> => {
   const { availableStyles = [], logger } = options;
   const policies = getFieldPolicies(StoryDraftSchema);
   const missingFields = getMissingRequiredFields(state.draft);
 
   logger?.debug(
-    { agent: 'draftAgent', missingFields, historyLength: history.length },
-    'Running draft agent turn'
+    { agent: 'intakeAgent', missingFields, historyLength: history.length },
+    'Running intake agent turn'
   );
 
   const systemPrompt = buildSystemPrompt(availableStyles, missingFields, policies);
@@ -174,8 +174,8 @@ ${JSON.stringify(state.draft, null, 2)}`;
   });
 
   logger?.debug(
-    { agent: 'draftAgent', stepCount: result.steps.length, toolCalls: result.steps.flatMap(s => s.toolCalls.map(t => t.toolName)) },
-    'Draft agent turn complete'
+    { agent: 'intakeAgent', stepCount: result.steps.length, toolCalls: result.steps.flatMap(s => s.toolCalls.map(t => t.toolName)) },
+    'Intake agent turn complete'
   );
 
   const promptCall = extractPromptUserCall(result.steps);
@@ -183,12 +183,12 @@ ${JSON.stringify(state.draft, null, 2)}`;
 
   logger?.info(
     {
-      agent: 'draftAgent',
+      agent: 'intakeAgent',
       isComplete,
       hasPrompt: !!promptCall,
       question: promptCall?.question?.substring(0, 60),
     },
-    'Draft turn result'
+    'Intake turn result'
   );
 
   return {

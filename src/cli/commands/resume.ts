@@ -77,7 +77,6 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
       allowCreativeLiberty: composedStory.allowCreativeLiberty,
     };
     return {
-      history: [],
       story,
       styleGuide: composedStory.visuals.style,
       proseSetup: { logline: composedStory.prose.logline, theme: composedStory.prose.theme, styleNotes: composedStory.prose.styleNotes },
@@ -90,7 +89,6 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
   if (files.includes('prose.json')) {
     const storyWithProse = StoryWithProseSchema.parse(await loadJson(path.join(folder, 'prose.json')));
     return {
-      history: [],
       story: storyWithProse,
       proseSetup: { logline: storyWithProse.prose.logline, theme: storyWithProse.prose.theme, styleNotes: storyWithProse.prose.styleNotes },
       prosePages: storyWithProse.prose.pages,
@@ -99,7 +97,7 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
 
   if (files.includes('plot.json')) {
     const story = StoryWithPlotSchema.parse(await loadJson(path.join(folder, 'plot.json')));
-    return { history: [], story };
+    return { story };
   }
 
   // Legacy brief.json - need to run through draft stage (not supported in simplified pipeline)

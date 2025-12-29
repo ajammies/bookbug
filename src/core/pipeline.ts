@@ -26,7 +26,7 @@ import {
   createBook,
   type StylePreset,
 } from './agents';
-import { draftAgent, type DraftMessage } from './agents/draft-agent';
+import { intakeAgent, type DraftMessage } from './agents/intake-agent';
 import { type DraftState } from './schemas/draft-tools';
 import { StoryDraftSchema, type StoryDraft } from './schemas/draft';
 import type { StoryOutputManager } from '../cli/utils/output';
@@ -81,9 +81,6 @@ export type Message = DraftMessage;
  * story is the StoryDraft (unified schema with all story details).
  */
 export interface PipelineState {
-  // Conversation history
-  history: Message[];
-
   // Story draft (progressively filled, then complete)
   story?: StoryDraft;
 
@@ -106,14 +103,14 @@ export interface PipelineState {
 // ============================================================================
 
 /**
- * Draft stage: Gather story details through single progressive conversation.
+ * Intake stage: Gather story details through single progressive conversation.
  * Pure function: (state, options) → state
  * Skips if story already exists.
  *
- * Uses the unified draft agent with tool calling for
+ * Uses the unified intake agent with tool calling for
  * combined conversation + extraction in a single loop.
  */
-export const runDraftStage = async (
+export const runIntakeStage = async (
   state: PipelineState,
   options: StageOptions
 ): Promise<PipelineState> => {
@@ -129,16 +126,16 @@ export const runDraftStage = async (
     isComplete: false,
   };
 
-  // Use existing history or start fresh
-  let history: DraftMessage[] = state.history.length > 0
-    ? state.history
-    : [{ role: 'assistant', content: 'Let\'s create a children\'s book!' }];
+  // Conversation history is local to intake
+  let history: DraftMessage[] = [
+    { role: 'assistant', content: 'Let\'s create a children\'s book!' },
+  ];
 
-  logger?.info({ stage: 'draft' }, 'Starting draft stage');
+  logger?.info({ stage: 'intake' }, 'Starting intake stage');
 
   while (!draftState.isComplete) {
     ui.progress('Thinking...');
-    const result = await draftAgent(draftState, history, {
+    const result = await intakeAgent(draftState, history, {
       availableStyles,
       logger,
     });
@@ -149,13 +146,13 @@ export const runDraftStage = async (
 
     // If complete, break out of loop
     if (result.isComplete) {
-      logger?.debug({ stage: 'draft' }, 'Agent signaled completion');
+      logger?.debug({ stage: 'intake' }, 'Agent signaled completion');
       break;
     }
 
     // If no question, something went wrong - break to avoid infinite loop
     if (!result.question || !result.options) {
-      logger?.warn({ stage: 'draft' }, 'Agent returned no question - forcing completion');
+      logger?.warn({ stage: 'intake' }, 'Agent returned no question - forcing completion');
       break;
     }
 
@@ -174,11 +171,11 @@ export const runDraftStage = async (
   const story = StoryDraftSchema.parse(draftState.draft);
 
   logger?.info(
-    { stage: 'draft', title: story.title, beatCount: story.plotBeats?.length ?? 0 },
-    'Draft stage complete'
+    { stage: 'intake', title: story.title, beatCount: story.plotBeats?.length ?? 0 },
+    'Intake stage complete'
   );
 
-  return { ...state, story, history };
+  return { ...state, story };
 };
 
 // ============================================================================
@@ -379,10 +376,10 @@ export const runPipeline = async (
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
   const { ui, outputManager, format = 'square-large', logger, stylePreset: optionsPreset } = options;
 
-  let state: PipelineState = { history: [] };
+  let state: PipelineState = {};
 
-  // Run draft stage (gathers story through single conversation)
-  state = await runDraftStage(state, { ui, logger });
+  // Run intake stage (gathers story through single conversation)
+  state = await runIntakeStage(state, { ui, logger });
 
   // Save story draft
   if (state.story) {

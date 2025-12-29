@@ -33,16 +33,16 @@ export { progressMessagesAgent } from './progress-messages';
 // Plot generation agent (PlotStructure) - still used for initial generation
 export { plotAgent } from './plot';
 
-// Draft agent (unified conversation + progressive extraction)
+// Intake agent (unified conversation + progressive extraction)
 export {
-  draftAgent,
-  type DraftAgentOptions,
-  type DraftAgentResult,
+  intakeAgent,
+  type IntakeAgentOptions,
+  type IntakeAgentResult,
   type DraftMessage,
-} from './draft-agent';
+} from './intake-agent';
 
 // Re-export DraftMessage as Message for backward compatibility
-export type { DraftMessage as Message } from './draft-agent';
+export type { DraftMessage as Message } from './intake-agent';
 export type MessageRole = 'user' | 'assistant';
 
 // Generic extractor (outputs ExtractionResult<T>)

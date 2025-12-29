@@ -24,24 +24,24 @@ const validStory: StoryDraft = {
 
 describe('hasCompleteStory', () => {
   it('returns false when story is undefined', () => {
-    const state: PipelineState = { history: [] };
+    const state: PipelineState = {};
     expect(hasCompleteStory(state)).toBe(false);
   });
 
   it('returns true when story is defined', () => {
-    const state: PipelineState = { history: [], story: validStory };
+    const state: PipelineState = { story: validStory };
     expect(hasCompleteStory(state)).toBe(true);
   });
 });
 
 describe('legacy aliases', () => {
   it('hasCompleteBrief is alias for hasCompleteStory', () => {
-    expect(hasCompleteBrief({ history: [] })).toBe(false);
-    expect(hasCompleteBrief({ history: [], story: validStory })).toBe(true);
+    expect(hasCompleteBrief({})).toBe(false);
+    expect(hasCompleteBrief({ story: validStory })).toBe(true);
   });
 
   it('hasCompletePlot is alias for hasCompleteStory', () => {
-    expect(hasCompletePlot({ history: [] })).toBe(false);
-    expect(hasCompletePlot({ history: [], story: validStory })).toBe(true);
+    expect(hasCompletePlot({})).toBe(false);
+    expect(hasCompletePlot({ story: validStory })).toBe(true);
   });
 });
