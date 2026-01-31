@@ -54,15 +54,8 @@ const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
     if (isComposed) {
       return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
     }
-    // Check for separate visuals.json with illustratedPages
-    if (files.includes('visuals.json')) {
-      const visuals = await loadJson(path.join(folder, 'visuals.json')) as Record<string, unknown>;
-      const illustratedPages = visuals.illustratedPages as unknown[];
-      if (illustratedPages && illustratedPages.length > 0) {
-        return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
-      }
-    }
-    // Check for separate prose.json or visuals.json (indicates prose stage)
+    // When we have separate files (prose.json, visuals.json), use 'prose' stage
+    // which goes through runPipelineIncremental that correctly loads all files
     if (files.includes('prose.json') || files.includes('visuals.json')) {
       return { folder, stage: 'prose', latestFile: path.join(folder, 'story.json') };
     }

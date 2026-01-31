@@ -33,13 +33,7 @@ const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
     if (isComposed) {
       return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
     }
-    if (files.includes('visuals.json')) {
-      const visuals = (await mockLoadJson(path.join(folder, 'visuals.json'))) as Record<string, unknown>;
-      const illustratedPages = visuals.illustratedPages as unknown[];
-      if (illustratedPages && illustratedPages.length > 0) {
-        return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
-      }
-    }
+    // When we have separate files, use 'prose' stage which goes through runPipelineIncremental
     if (files.includes('prose.json') || files.includes('visuals.json')) {
       return { folder, stage: 'prose', latestFile: path.join(folder, 'story.json') };
     }
@@ -103,8 +97,8 @@ describe('resume command', () => {
       expect(result.latestFile).toBe('/test/folder/story.json');
     });
 
-    // Regression test: visuals.json with illustratedPages should trigger story stage
-    it('detects story stage when visuals.json has illustratedPages', async () => {
+    // Separate files always use prose stage (runPipelineIncremental handles them correctly)
+    it('detects prose stage when visuals.json has illustratedPages (separate files)', async () => {
       vi.mocked(fs.readdir).mockResolvedValue(['story.json', 'prose.json', 'visuals.json'] as unknown as Awaited<
         ReturnType<typeof fs.readdir>
       >);
@@ -120,7 +114,8 @@ describe('resume command', () => {
 
       const result = await detectStage('/test/folder');
 
-      expect(result.stage).toBe('story');
+      // Uses prose stage so runPipelineIncremental loads separate files correctly
+      expect(result.stage).toBe('prose');
     });
 
     it('detects draft stage when only story.json exists without extras', async () => {
