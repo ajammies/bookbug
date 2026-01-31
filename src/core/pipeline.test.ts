@@ -228,7 +228,7 @@ describe('runPipelineIncremental', () => {
     expect(mockedRenderPage).toHaveBeenCalledTimes(2);
   });
 
-  it('calls ui.progress for each stage', async () => {
+  it('calls ui.progress for each stage (sequential by default)', async () => {
     const ui = { progress: vi.fn(), prompt: vi.fn() };
     await runPipelineIncremental(mockPipelineState, { ui });
     expect(ui.progress).toHaveBeenCalledWith('Creating style guide...');
@@ -237,10 +237,19 @@ describe('runPipelineIncremental', () => {
     // Phase 1: Prose (sequential)
     expect(ui.progress).toHaveBeenCalledWith('Writing page 1 of 2...');
     expect(ui.progress).toHaveBeenCalledWith('Writing page 2 of 2...');
+    // Phase 2: Visuals (sequential by default)
+    expect(ui.progress).toHaveBeenCalledWith('Directing 2 pages sequentially...');
+    // Phase 3: Render (sequential by default)
+    expect(ui.progress).toHaveBeenCalledWith('Rendering hero page...');
+    expect(ui.progress).toHaveBeenCalledWith('Rendering 1 pages sequentially...');
+  });
+
+  it('runs in parallel when parallel option is true', async () => {
+    const ui = { progress: vi.fn(), prompt: vi.fn() };
+    await runPipelineIncremental(mockPipelineState, { ui, parallel: true });
     // Phase 2: Visuals (parallel)
     expect(ui.progress).toHaveBeenCalledWith('Directing 2 pages in parallel...');
     // Phase 3: Render (parallel)
-    expect(ui.progress).toHaveBeenCalledWith('Rendering hero page...');
     expect(ui.progress).toHaveBeenCalledWith('Rendering 1 pages in parallel...');
   });
 
