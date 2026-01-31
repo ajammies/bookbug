@@ -51,11 +51,22 @@ const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
     // Check if story.json has prose/visuals (composed) or just base story
     const data = await loadJson(path.join(folder, 'story.json')) as Record<string, unknown>;
     const isComposed = 'prose' in data && 'visuals' in data;
-    return {
-      folder,
-      stage: isComposed ? 'story' : 'draft',  // If not composed, treat as draft stage
-      latestFile: path.join(folder, 'story.json')
-    };
+    if (isComposed) {
+      return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
+    }
+    // Check for separate visuals.json with illustratedPages
+    if (files.includes('visuals.json')) {
+      const visuals = await loadJson(path.join(folder, 'visuals.json')) as Record<string, unknown>;
+      const illustratedPages = visuals.illustratedPages as unknown[];
+      if (illustratedPages && illustratedPages.length > 0) {
+        return { folder, stage: 'story', latestFile: path.join(folder, 'story.json') };
+      }
+    }
+    // Check for separate prose.json or visuals.json (indicates prose stage)
+    if (files.includes('prose.json') || files.includes('visuals.json')) {
+      return { folder, stage: 'prose', latestFile: path.join(folder, 'story.json') };
+    }
+    return { folder, stage: 'draft', latestFile: path.join(folder, 'story.json') };
   }
   if (files.includes('prose.json')) return { folder, stage: 'prose', latestFile: path.join(folder, 'prose.json') };
   // plot.json and brief.json are legacy - treat as draft stage
@@ -86,8 +97,32 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
       };
     }
 
-    // Base story only
-    return { story };
+    // Check for separate prose.json and visuals.json files
+    const state: PipelineState = { story };
+
+    if (files.includes('prose.json')) {
+      const proseData = await loadJson(path.join(folder, 'prose.json')) as Record<string, unknown>;
+      if ('prose' in proseData) {
+        const prose = proseData.prose as { logline: string; theme: string; styleNotes?: string; pages: unknown[] };
+        state.proseSetup = { logline: prose.logline, theme: prose.theme, styleNotes: prose.styleNotes };
+        state.prosePages = prose.pages as import('../../core/schemas').ProsePage[];
+      }
+    }
+
+    if (files.includes('visuals.json')) {
+      const visualsData = await loadJson(path.join(folder, 'visuals.json')) as Record<string, unknown>;
+      if ('style' in visualsData) {
+        state.styleGuide = visualsData.style as import('../../core/schemas').VisualStyleGuide;
+      }
+      if ('illustratedPages' in visualsData) {
+        const pages = visualsData.illustratedPages as import('../../core/schemas').IllustratedPage[];
+        if (pages.length > 0) {
+          state.illustratedPages = pages;
+        }
+      }
+    }
+
+    return state;
   }
 
   if (files.includes('prose.json')) {
