@@ -66,6 +66,8 @@ export interface PipelineOptions {
   stylePreset?: StylePreset;
   /** Quality checking options for rendered images */
   qualityCheck?: QualityCheckOptions;
+  /** Run visual generation and rendering in parallel (default: false for rate limit safety) */
+  parallel?: boolean;
 }
 
 export interface StageOptions {
@@ -255,7 +257,7 @@ export const runPipelineIncremental = async (
   state: PipelineState,
   options: PipelineOptions = {}
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { ui, outputManager, format = 'square-large', stylePreset: optionsPreset, qualityCheck, logger } = options;
+  const { ui, outputManager, format = 'square-large', stylePreset: optionsPreset, qualityCheck, logger, parallel = false } = options;
 
   if (!state.story) throw new Error('PipelineState requires story to run pipeline');
 
@@ -302,20 +304,36 @@ export const runPipelineIncremental = async (
   }
 
   // ============================================================================
-  // Phase 2: Visuals (parallel - each page independent)
+  // Phase 2: Visuals (parallel or sequential based on option)
   // ============================================================================
   const existingIllustratedPages = state.illustratedPages ?? [];
   const pagesToIllustrate = prosePages.slice(existingIllustratedPages.length);
 
-  ui?.progress(`Directing ${pagesToIllustrate.length} pages in parallel...`);
-  logger?.info({ count: pagesToIllustrate.length }, 'Starting parallel visual generation');
+  const newIllustratedPages: IllustratedPage[] = [];
 
-  const newIllustratedPages = await Promise.all(
-    pagesToIllustrate.map((prosePage, i) => {
+  if (parallel) {
+    ui?.progress(`Directing ${pagesToIllustrate.length} pages in parallel...`);
+    logger?.info({ count: pagesToIllustrate.length }, 'Starting parallel visual generation');
+
+    const pages = await Promise.all(
+      pagesToIllustrate.map((prosePage, i) => {
+        const pageNumber = existingIllustratedPages.length + i + 1;
+        return pageVisualsAgent({ story, styleGuide, pageNumber, prosePage, logger });
+      })
+    );
+    newIllustratedPages.push(...pages);
+  } else {
+    ui?.progress(`Directing ${pagesToIllustrate.length} pages sequentially...`);
+    logger?.info({ count: pagesToIllustrate.length }, 'Starting sequential visual generation');
+
+    for (let i = 0; i < pagesToIllustrate.length; i++) {
+      const prosePage = pagesToIllustrate[i]!;
       const pageNumber = existingIllustratedPages.length + i + 1;
-      return pageVisualsAgent({ story, styleGuide, pageNumber, prosePage, logger });
-    })
-  );
+      ui?.progress(`Directing page ${pageNumber}/${story.pageCount}...`);
+      const page = await pageVisualsAgent({ story, styleGuide, pageNumber, prosePage, logger });
+      newIllustratedPages.push(page);
+    }
+  }
 
   const illustratedPages = [...existingIllustratedPages, ...newIllustratedPages];
 
@@ -325,7 +343,7 @@ export const runPipelineIncremental = async (
   }
 
   // ============================================================================
-  // Phase 3: Render (parallel - heroPage first for consistency)
+  // Phase 3: Render (parallel or sequential based on option)
   // ============================================================================
   const existingRenderedPages = state.renderedPages ?? [];
   const renderedPages: RenderedPage[] = [...existingRenderedPages];
@@ -357,36 +375,60 @@ export const runPipelineIncremental = async (
       if (outputManager) await outputManager.savePageImage(heroPage);
     }
 
-    // Render remaining pages in parallel
+    // Render remaining pages
     const remainingPageNumbers = Array.from(
       { length: story.pageCount - renderedPages.length },
       (_, i) => renderedPages.length + i + 1
     );
 
     if (remainingPageNumbers.length > 0) {
-      ui?.progress(`Rendering ${remainingPageNumbers.length} pages in parallel...`);
-      logger?.info({ count: remainingPageNumbers.length }, 'Starting parallel render');
+      if (parallel) {
+        ui?.progress(`Rendering ${remainingPageNumbers.length} pages in parallel...`);
+        logger?.info({ count: remainingPageNumbers.length }, 'Starting parallel render');
 
-      const newRenderedPages = await Promise.all(
-        remainingPageNumbers.map(pageNumber =>
-          renderPage(composedStory, pageNumber, { ...renderOptions, heroPageUrl: heroPage?.url })
-        )
-      );
+        const newRenderedPages = await Promise.all(
+          remainingPageNumbers.map(pageNumber =>
+            renderPage(composedStory, pageNumber, { ...renderOptions, heroPageUrl: heroPage?.url })
+          )
+        );
 
-      // Sort by page number and add to list
-      newRenderedPages.sort((a, b) => a.pageNumber - b.pageNumber);
-      renderedPages.push(...newRenderedPages);
+        // Sort by page number and add to list
+        newRenderedPages.sort((a, b) => a.pageNumber - b.pageNumber);
+        renderedPages.push(...newRenderedPages);
 
-      // Save rendered pages
-      if (outputManager) {
-        for (const page of newRenderedPages) {
-          await outputManager.savePageImage(page);
-          if (page.quality) await outputManager.saveQualityResult(page.pageNumber, page.quality);
-          if (page.failedAttempts) {
-            for (let i = 0; i < page.failedAttempts.length; i++) {
-              const failed = page.failedAttempts[i]!;
-              await outputManager.saveFailedImage(page.pageNumber, i + 1, failed.url);
-              await outputManager.saveQualityResult(page.pageNumber, failed.quality, i + 1);
+        // Save rendered pages
+        if (outputManager) {
+          for (const page of newRenderedPages) {
+            await outputManager.savePageImage(page);
+            if (page.quality) await outputManager.saveQualityResult(page.pageNumber, page.quality);
+            if (page.failedAttempts) {
+              for (let i = 0; i < page.failedAttempts.length; i++) {
+                const failed = page.failedAttempts[i]!;
+                await outputManager.saveFailedImage(page.pageNumber, i + 1, failed.url);
+                await outputManager.saveQualityResult(page.pageNumber, failed.quality, i + 1);
+              }
+            }
+          }
+        }
+      } else {
+        ui?.progress(`Rendering ${remainingPageNumbers.length} pages sequentially...`);
+        logger?.info({ count: remainingPageNumbers.length }, 'Starting sequential render');
+
+        for (const pageNumber of remainingPageNumbers) {
+          ui?.progress(`Rendering page ${pageNumber}/${story.pageCount}...`);
+          const page = await renderPage(composedStory, pageNumber, { ...renderOptions, heroPageUrl: heroPage?.url });
+          renderedPages.push(page);
+
+          // Save each page immediately after rendering
+          if (outputManager) {
+            await outputManager.savePageImage(page);
+            if (page.quality) await outputManager.saveQualityResult(page.pageNumber, page.quality);
+            if (page.failedAttempts) {
+              for (let i = 0; i < page.failedAttempts.length; i++) {
+                const failed = page.failedAttempts[i]!;
+                await outputManager.saveFailedImage(page.pageNumber, i + 1, failed.url);
+                await outputManager.saveQualityResult(page.pageNumber, failed.quality, i + 1);
+              }
             }
           }
         }
