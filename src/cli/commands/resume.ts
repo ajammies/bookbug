@@ -153,7 +153,8 @@ export const resumeCommand = new Command('resume')
   .argument('[folder]', 'Story folder path (defaults to latest)')
   .option('-f, --format <format>', 'Book format for rendering', 'square-large')
   .option('-m, --mock', 'Use mock images instead of real generation')
-  .action(async (folderArg: string | undefined, options: { format: BookFormatKey; mock?: boolean }) => {
+  .option('-p, --parallel', 'Run visual generation and rendering in parallel (faster but may hit rate limits)')
+  .action(async (folderArg: string | undefined, options: { format: BookFormatKey; mock?: boolean; parallel?: boolean }) => {
     const ui = createCliUI();
 
     try {
@@ -194,7 +195,7 @@ export const resumeCommand = new Command('resume')
           console.log(`\n📍 Resuming from: ${info.latestFile.split('/').pop()}`);
           const pipelineState = await loadPipelineState(folder);
           if (!pipelineState) throw new Error('Failed to load pipeline state');
-          const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format });
+          const result = await runPipelineIncremental(pipelineState, { ui, outputManager, format: options.format, parallel: options.parallel });
           ui.succeed('Book complete!');
           displayBook(result.book);
           console.log(`\nAll files saved to: ${folder}`);

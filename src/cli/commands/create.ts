@@ -9,7 +9,8 @@ export const createCommand = new Command('create')
   .description('Create a complete children\'s book')
   .option('-o, --output <path>', 'Output directory for generated files')
   .option('--no-save', 'Disable automatic artifact saving')
-  .action(async (options: { output?: string; save?: boolean }) => {
+  .option('-p, --parallel', 'Run visual generation and rendering in parallel (faster but may hit rate limits)')
+  .action(async (options: { output?: string; save?: boolean; parallel?: boolean }) => {
     const ui = createCliUI();
 
     try {
@@ -24,6 +25,7 @@ export const createCommand = new Command('create')
         ui,
         logger,
         outputManager: options.save !== false ? outputManager : undefined,
+        parallel: options.parallel,
       });
 
       ui.succeed('Book complete!');
