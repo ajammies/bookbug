@@ -171,7 +171,8 @@ ${JSON.stringify(context)}`;
 /** Extract reference image URLs for image_input (hero page + sprite sheets) */
 const extractReferenceImages = (context: PageRenderContext, heroPageUrl: string | undefined): string[] => {
   const refs: string[] = [];
-  if (heroPageUrl) refs.push(heroPageUrl);
+  // Only include HTTP URLs - file:// URLs from local storage won't work with Replicate
+  if (heroPageUrl?.startsWith('http')) refs.push(heroPageUrl);
   const spriteUrls = (context.characterDesigns ?? [])
     .map(d => d.spriteSheetUrl)
     .filter((url): url is string => Boolean(url) && url.startsWith('http'));
