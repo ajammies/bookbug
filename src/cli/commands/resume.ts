@@ -9,6 +9,7 @@ import {
   RenderedBookSchema,
   type BookFormatKey,
   type Story,
+  type RenderedPage,
 } from '../../core/schemas';
 import { displayBook } from '../output/display';
 import { loadOutputManager } from '../utils/output';
@@ -68,6 +69,34 @@ const detectStage = async (folder: string): Promise<StoryFolderInfo> => {
   throw new Error(`No resumable artifacts found in ${folder}`);
 };
 
+/**
+ * Scan assets folder for existing rendered pages (page-N.png files)
+ * Returns RenderedPage entries sorted by page number
+ */
+const scanRenderedPages = async (folder: string): Promise<RenderedPage[]> => {
+  const assetsPath = path.join(folder, 'assets');
+  try {
+    const files = await fs.readdir(assetsPath);
+    const pageFiles = files.filter(f => /^page-\d+\.png$/.test(f));
+
+    const pages: RenderedPage[] = pageFiles.map(filename => {
+      const pageNumber = parseInt(filename.match(/page-(\d+)\.png/)![1]!, 10);
+      const localPath = path.join(assetsPath, filename);
+      return {
+        pageNumber,
+        url: `file://${localPath}`,
+      };
+    });
+
+    // Sort by page number
+    pages.sort((a, b) => a.pageNumber - b.pageNumber);
+    return pages;
+  } catch {
+    // Assets folder doesn't exist or can't be read
+    return [];
+  }
+};
+
 const loadPipelineState = async (folder: string): Promise<PipelineState | null> => {
   const files = await fs.readdir(folder);
 
@@ -80,6 +109,10 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
     const hasExtras = 'prose' in data && 'visuals' in data;
     if (hasExtras) {
       const composed = data as { prose: { logline: string; theme: string; styleNotes?: string; pages: unknown[] }; visuals: { style: unknown; illustratedPages: unknown[] }; characterDesigns?: unknown[] };
+
+      // Scan for existing rendered pages in assets folder
+      const renderedPages = await scanRenderedPages(folder);
+
       return {
         story,
         styleGuide: composed.visuals.style as import('../../core/schemas').VisualStyleGuide,
@@ -87,6 +120,8 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
         characterDesigns: composed.characterDesigns as import('../../core/schemas').CharacterDesign[],
         prosePages: composed.prose.pages as import('../../core/schemas').ProsePage[],
         illustratedPages: composed.visuals.illustratedPages as import('../../core/schemas').IllustratedPage[],
+        renderedPages: renderedPages.length > 0 ? renderedPages : undefined,
+        heroPage: renderedPages[0],
       };
     }
 
@@ -115,15 +150,25 @@ const loadPipelineState = async (folder: string): Promise<PipelineState | null> 
       }
     }
 
+    // Scan for existing rendered pages in assets folder
+    const renderedPages = await scanRenderedPages(folder);
+    if (renderedPages.length > 0) {
+      state.renderedPages = renderedPages;
+      state.heroPage = renderedPages[0];
+    }
+
     return state;
   }
 
   if (files.includes('prose.json')) {
     const storyWithProse = StoryWithProseSchema.parse(await loadJson(path.join(folder, 'prose.json')));
+    const renderedPages = await scanRenderedPages(folder);
     return {
       story: storyWithProse,
       proseSetup: { logline: storyWithProse.prose.logline, theme: storyWithProse.prose.theme, styleNotes: storyWithProse.prose.styleNotes },
       prosePages: storyWithProse.prose.pages,
+      renderedPages: renderedPages.length > 0 ? renderedPages : undefined,
+      heroPage: renderedPages[0],
     };
   }
 
