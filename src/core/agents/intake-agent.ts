@@ -25,6 +25,8 @@ import type { Logger } from '../utils/logger';
 export interface IntakeAgentOptions {
   /** Available style presets */
   availableStyles?: string[];
+  /** Pre-written manuscript content (used as context for intake) */
+  manuscript?: string;
   /** Logger for debugging */
   logger?: Logger;
 }
@@ -52,7 +54,8 @@ export type IntakeMessage = {
 const buildSystemPrompt = (
   availableStyles: string[],
   missingFields: string[],
-  policies: Record<string, FieldPolicy>
+  policies: Record<string, FieldPolicy>,
+  manuscript?: string
 ): string => {
   const hasPresets = availableStyles.length > 0;
   const styleHint = hasPresets
@@ -67,9 +70,24 @@ const buildSystemPrompt = (
     .filter(([_, p]) => p === 'prompted')
     .map(([f]) => f);
 
+  const manuscriptContext = manuscript
+    ? `
+MANUSCRIPT PROVIDED:
+The user has provided a pre-written manuscript. Use this to:
+- Pre-fill story details (title, characters, setting, plot beats) from the manuscript
+- Still ask about visual style, age range, and any details not clear from the text
+- The manuscript text will be used as-is for the book pages
+
+<manuscript>
+${manuscript}
+</manuscript>
+`
+    : '';
+
   return `You are helping create a children's picture book. Guide the user through providing story details.
 
 ${styleHint}
+${manuscriptContext}
 
 REQUIRED FIELDS (must fill before finishing):
 ${missingFields.length > 0 ? missingFields.map(f => `- ${f}`).join('\n') : '- All required fields filled!'}
@@ -83,6 +101,7 @@ WORKFLOW:
 2. Use set*() or add*() tools to record user's answers
 3. For plot beats: suggest a complete story arc (setup → conflict → climax → resolution)
 4. Call finishIntake() when all required fields are filled
+${manuscript ? '5. Since a manuscript is provided, extract as much as possible from it first, then ask about remaining details' : ''}
 
 RULES:
 - Always use tools to record information
@@ -146,16 +165,16 @@ export const intakeAgent = async (
   history: IntakeMessage[],
   options: IntakeAgentOptions = {}
 ): Promise<IntakeAgentResult> => {
-  const { availableStyles = [], logger } = options;
+  const { availableStyles = [], manuscript, logger } = options;
   const policies = getFieldPolicies(StorySchema);
   const missingFields = getMissingRequiredFields(state.story);
 
   logger?.debug(
-    { agent: 'intakeAgent', missingFields, historyLength: history.length },
+    { agent: 'intakeAgent', missingFields, historyLength: history.length, hasManuscript: !!manuscript },
     'Running intake agent turn'
   );
 
-  const systemPrompt = buildSystemPrompt(availableStyles, missingFields, policies);
+  const systemPrompt = buildSystemPrompt(availableStyles, missingFields, policies, manuscript);
 
   const stateContext = `CURRENT STORY:
 ${JSON.stringify(state.story, null, 2)}`;

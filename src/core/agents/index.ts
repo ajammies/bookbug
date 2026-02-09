@@ -56,3 +56,6 @@ export { promptCondenserAgent } from './prompt-condenser';
 
 // Manuscript extraction agent (outputs ManuscriptResult)
 export { manuscriptAgent, type ManuscriptResult, type ManuscriptAgentOptions } from './manuscript-agent';
+
+// Manuscript prose extraction agent (outputs ManuscriptProseResult)
+export { manuscriptProseAgent, type ManuscriptProseResult, type ManuscriptProseAgentOptions } from './manuscript-prose-agent';

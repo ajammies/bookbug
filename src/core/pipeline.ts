@@ -27,6 +27,7 @@ import {
   type StylePreset,
 } from './agents';
 import { intakeAgent, type IntakeMessage } from './agents/intake-agent';
+import { manuscriptProseAgent } from './agents/manuscript-prose-agent';
 import { type StoryState } from './schemas/story-tools';
 import { StorySchema } from './schemas/story';
 import type { StoryOutputManager } from '../cli/utils/output';
@@ -68,11 +69,15 @@ export interface PipelineOptions {
   qualityCheck?: QualityCheckOptions;
   /** Run visual generation and rendering in parallel (default: false for rate limit safety) */
   parallel?: boolean;
+  /** Pre-written manuscript content (used as context during intake, then for prose pages) */
+  manuscript?: string;
 }
 
 export interface StageOptions {
   ui: PipelineUI;
   logger?: Logger;
+  /** Manuscript content to use as context during intake */
+  manuscript?: string;
 }
 
 // Re-export IntakeMessage as Message for backward compatibility
@@ -119,7 +124,7 @@ export const runIntakeStage = async (
   // Skip if already have a complete story
   if (state.story) return state;
 
-  const { ui, logger } = options;
+  const { ui, logger, manuscript } = options;
   const availableStyles = await listStyles();
 
   // Initialize story state
@@ -129,16 +134,20 @@ export const runIntakeStage = async (
   };
 
   // Conversation history is local to intake
+  const initialMessage = manuscript
+    ? 'I have your manuscript! Let me set up the story details...'
+    : 'Let\'s create a children\'s book!';
   let history: IntakeMessage[] = [
-    { role: 'assistant', content: 'Let\'s create a children\'s book!' },
+    { role: 'assistant', content: initialMessage },
   ];
 
-  logger?.info({ stage: 'intake' }, 'Starting intake stage');
+  logger?.info({ stage: 'intake', hasManuscript: !!manuscript }, 'Starting intake stage');
 
   while (!storyState.isComplete) {
     ui.progress('Thinking...');
     const result = await intakeAgent(storyState, history, {
       availableStyles,
+      manuscript,
       logger,
     });
 
@@ -468,21 +477,30 @@ export interface RunPipelineOptions extends PipelineOptions {
 export const runPipeline = async (
   options: RunPipelineOptions
 ): Promise<{ story: ComposedStory; book: RenderedBook }> => {
-  const { ui, outputManager, format = 'square-large', logger, stylePreset: optionsPreset } = options;
+  const { ui, outputManager, format = 'square-large', logger, stylePreset: optionsPreset, manuscript } = options;
 
   let state: PipelineState = {};
 
   // Run intake stage (gathers story through single conversation)
-  state = await runIntakeStage(state, { ui, logger });
+  state = await runIntakeStage(state, { ui, logger, manuscript });
 
   // Save story after intake (intermediate checkpoint)
   if (state.story) {
     await outputManager?.saveStory(state.story as ComposedStory);
   }
 
+  // If manuscript provided, extract prose from it (skip prose generation)
+  if (manuscript && state.story) {
+    ui.progress('Extracting prose from manuscript...');
+    const { proseSetup, prosePages } = await manuscriptProseAgent(manuscript, { logger });
+    // Update pageCount to match extracted pages
+    const updatedStory: Story = { ...state.story, pageCount: prosePages.length };
+    state = { ...state, story: updatedStory, proseSetup, prosePages };
+  }
+
   const stylePreset = optionsPreset ?? (state.story?.stylePreset ? await loadStylePreset(state.story.stylePreset) : undefined);
 
-  return runPipelineIncremental(state, { ui, outputManager, format, logger, stylePreset });
+  return runPipelineIncremental(state, { ui, outputManager, format, logger, stylePreset, parallel: options.parallel });
 };
 
 // ============================================================================
