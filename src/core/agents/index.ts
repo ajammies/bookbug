@@ -53,3 +53,6 @@ export { imageQualityAgent, type ImageQualityOptions, type ImageInput } from './
 
 // Prompt condenser for image generation (outputs plain text prompt)
 export { promptCondenserAgent } from './prompt-condenser';
+
+// Manuscript extraction agent (outputs ManuscriptResult)
+export { manuscriptAgent, type ManuscriptResult, type ManuscriptAgentOptions } from './manuscript-agent';
